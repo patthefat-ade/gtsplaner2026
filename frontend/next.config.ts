@@ -1,7 +1,5 @@
 import type { NextConfig } from "next";
 
-const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api";
-
 const nextConfig: NextConfig = {
   output: "standalone",
   images: {
@@ -15,15 +13,11 @@ const nextConfig: NextConfig = {
         protocol: "https",
         hostname: "*.ondigitalocean.app",
       },
-    ],
-  },
-  async rewrites() {
-    return [
       {
-        source: "/api/:path*",
-        destination: `${apiUrl}/:path*`,
+        protocol: "https",
+        hostname: "api.gtsplaner.app",
       },
-    ];
+    ],
   },
 };
 
