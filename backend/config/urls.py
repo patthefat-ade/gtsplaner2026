@@ -48,6 +48,9 @@ urlpatterns = [
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
-from django.http import HttpResponse
+from django.http import JsonResponse
 
-urlpatterns.append(path("api/health-check/", lambda request: HttpResponse("OK")))
+def health_check(request):
+    return JsonResponse({"status": "ok"})
+
+urlpatterns.append(path("api/health-check/", health_check))

@@ -103,7 +103,6 @@ if DATABASE_URL and "://" in DATABASE_URL and not DATABASE_URL.startswith("://")
             DATABASE_URL,
             conn_max_age=600,
             conn_health_checks=True,
-            ssl_require=not DEBUG,
         )
     }
 else:
@@ -247,10 +246,15 @@ SPECTACULAR_SETTINGS = {
 
 CORS_ALLOWED_ORIGINS = config(
     "CORS_ALLOWED_ORIGINS",
-    default="http://localhost:3000,http://127.0.0.1:3000",
+    default="http://localhost:3000,http://127.0.0.1:3000,https://gtsplaner-58p4a.ondigitalocean.app,https://gtsplaner.app",
     cast=Csv(),
 )
 CORS_ALLOW_CREDENTIALS = True
+CSRF_TRUSTED_ORIGINS = config(
+    "CSRF_TRUSTED_ORIGINS",
+    default="http://localhost:3000,https://gtsplaner-58p4a.ondigitalocean.app,https://gtsplaner.app",
+    cast=Csv(),
+)
 
 # ---------------------------------------------------------------------------
 # Celery Configuration
