@@ -1,0 +1,93 @@
+name: gtsplaner2026
+region: fra # Frankfurt
+
+# ---------------------------------------------------------------------------
+# Services (Backend, Frontend, Worker)
+# ---------------------------------------------------------------------------
+services:
+  # Django Backend
+  - name: backend
+    git:
+      repo_url: https://github.com/patthefat-ade/gtsplaner2026.git
+      branch: main
+      dockerfile_path: backend/Dockerfile
+    envs:
+      - key: SECRET_KEY
+        scope: RUN_TIME
+        value: ${SECRET_KEY}
+      - key: DEBUG
+        scope: RUN_TIME
+        value: "False"
+      - key: ALLOWED_HOSTS
+        scope: RUN_TIME
+        value: ${APP_URL}
+      - key: DATABASE_URL
+        scope: RUN_TIME
+        value: ${db.DATABASE_URL}
+      - key: CELERY_BROKER_URL
+        scope: RUN_TIME
+        value: ${redis.INTERNAL_URL}
+      - key: CORS_ALLOWED_ORIGINS
+        scope: RUN_TIME
+        value: ${frontend.URL}
+    instance_size_slug: basic-xxs # Kleinste Instanz für den Anfang
+    instance_count: 1
+    http_port: 8000
+    routes:
+      - path: /api
+    health_check:
+      http_path: /api/health-check/
+
+  # Next.js Frontend
+  - name: frontend
+    git:
+      repo_url: https://github.com/patthefat-ade/gtsplaner2026.git
+      branch: main
+      dockerfile_path: frontend/Dockerfile
+    envs:
+      - key: NEXT_PUBLIC_API_URL
+        scope: BUILD_TIME
+        value: ${backend.URL}/api
+    instance_size_slug: basic-xxs
+    instance_count: 1
+    http_port: 3000
+    routes:
+      - path: /
+
+# ---------------------------------------------------------------------------
+# Worker (Celery)
+# ---------------------------------------------------------------------------
+workers:
+  - name: celery-worker
+    git:
+      repo_url: https://github.com/patthefat-ade/gtsplaner2026.git
+      branch: main
+      dockerfile_path: backend/Dockerfile
+    envs:
+      - key: DATABASE_URL
+        scope: RUN_TIME
+        value: ${db.DATABASE_URL}
+      - key: CELERY_BROKER_URL
+        scope: RUN_TIME
+        value: ${redis.INTERNAL_URL}
+    instance_size_slug: basic-xxs
+    instance_count: 1
+    run_command: celery -A config worker -l info
+
+# ---------------------------------------------------------------------------
+# Datenbanken (PostgreSQL, Redis)
+# ---------------------------------------------------------------------------
+databases:
+  # Managed PostgreSQL
+  - name: db
+    engine: PG # PostgreSQL
+    version: "16"
+    production: true
+    instance_size_slug: db-s-1vcpu-1gb # Kleinste Instanz
+
+  # Managed Redis
+  - name: redis
+    engine: REDIS
+    version: "7"
+    production: true
+    instance_size_slug: db-s-1vcpu-1gb # Kleinste Instanz

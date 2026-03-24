@@ -1,0 +1,326 @@
+/**
+ * TypeScript type definitions for the Kassenbuch App v2 data models.
+ * These types mirror the Django models and API serializers.
+ */
+
+// ─── Enums ───────────────────────────────────────────────────────────────────
+
+export type UserRole = "educator" | "location_manager" | "admin" | "super_admin";
+export type TransactionType = "income" | "expense";
+export type TransactionStatus = "pending" | "approved" | "rejected";
+export type LeaveRequestStatus = "pending" | "approved" | "rejected" | "cancelled";
+export type CategoryType = "income" | "expense";
+export type GroupMemberRole = "educator" | "assistant" | "substitute";
+
+// ─── Core ────────────────────────────────────────────────────────────────────
+
+export interface User {
+  id: number;
+  username: string;
+  email: string;
+  first_name: string;
+  last_name: string;
+  role: UserRole;
+  role_display?: string;
+  location: number | null;
+  location_name?: string;
+  phone: string;
+  profile_picture: string | null;
+  is_active: boolean;
+  is_deleted: boolean;
+  last_login: string | null;
+  date_joined: string;
+}
+
+export interface UserCompact {
+  id: number;
+  username: string;
+  first_name: string;
+  last_name: string;
+  role: UserRole;
+}
+
+export interface Organization {
+  id: number;
+  name: string;
+  description: string;
+  email: string;
+  phone: string;
+  website: string;
+  street: string;
+  city: string;
+  postal_code: string;
+  country: string;
+  logo: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Location {
+  id: number;
+  organization: number;
+  name: string;
+  description: string;
+  email: string;
+  phone: string;
+  street: string;
+  city: string;
+  postal_code: string;
+  manager: number | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+// ─── Finance ─────────────────────────────────────────────────────────────────
+
+export interface TransactionCategory {
+  id: number;
+  name: string;
+  description: string;
+  category_type: CategoryType;
+  location: number;
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface Transaction {
+  id: number;
+  group: number;
+  group_name?: string;
+  category: number;
+  category_name?: string;
+  description: string;
+  amount: string;
+  transaction_type: TransactionType;
+  transaction_date: string;
+  status: TransactionStatus;
+  created_by: UserCompact | null;
+  approved_by: UserCompact | null;
+  approved_at: string | null;
+  rejection_reason: string;
+  notes: string;
+  receipts?: Receipt[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TransactionCreate {
+  group: number;
+  category: number;
+  description: string;
+  amount: number;
+  transaction_type: TransactionType;
+  transaction_date: string;
+  notes?: string;
+}
+
+export interface Receipt {
+  id: number;
+  transaction: number;
+  file: string;
+  file_name: string;
+  file_size: number;
+  file_type: string;
+  uploaded_by: UserCompact | null;
+  created_at: string;
+}
+
+export interface GroupBalance {
+  group_id: number;
+  group_name: string;
+  total_income: string;
+  total_expenses: string;
+  balance: string;
+}
+
+// ─── Timetracking ────────────────────────────────────────────────────────────
+
+export interface TimeEntry {
+  id: number;
+  user: number;
+  user_name?: string;
+  group: number;
+  group_name?: string;
+  date: string;
+  start_time: string;
+  end_time: string;
+  break_minutes: number;
+  duration_minutes: number;
+  notes: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TimeEntryCreate {
+  group: number;
+  date: string;
+  start_time: string;
+  end_time: string;
+  break_minutes?: number;
+  notes?: string;
+}
+
+export interface LeaveType {
+  id: number;
+  name: string;
+  description: string;
+  location: number;
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface LeaveRequest {
+  id: number;
+  user: number;
+  user_name?: string;
+  leave_type: number;
+  leave_type_name?: string;
+  start_date: string;
+  end_date: string;
+  total_days: number;
+  reason: string;
+  status: LeaveRequestStatus;
+  approved_by: UserCompact | null;
+  approved_at: string | null;
+  rejection_reason: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface LeaveRequestCreate {
+  leave_type: number;
+  start_date: string;
+  end_date: string;
+  reason?: string;
+}
+
+// ─── Groups ──────────────────────────────────────────────────────────────────
+
+export interface SchoolYear {
+  id: number;
+  name: string;
+  location: number;
+  start_date: string;
+  end_date: string;
+  is_active: boolean;
+  semesters?: Semester[];
+  created_at: string;
+}
+
+export interface Semester {
+  id: number;
+  school_year: number;
+  name: string;
+  start_date: string;
+  end_date: string;
+}
+
+export interface Group {
+  id: number;
+  name: string;
+  description: string;
+  location: number;
+  location_name?: string;
+  school_year: number;
+  school_year_name?: string;
+  group_leader: number | null;
+  group_leader_name?: string;
+  balance: string;
+  max_children: number | null;
+  is_active: boolean;
+  member_count?: number;
+  student_count?: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface GroupCreate {
+  name: string;
+  description?: string;
+  location: number;
+  school_year: number;
+  group_leader?: number;
+}
+
+export interface GroupMember {
+  id: number;
+  user: number | UserCompact;
+  user_name?: string;
+  group: number;
+  role: GroupMemberRole;
+  joined_at: string;
+}
+
+export interface Student {
+  id: number;
+  first_name: string;
+  last_name: string;
+  group: number;
+  group_name?: string;
+  date_of_birth: string | null;
+  enrollment_date: string | null;
+  notes: string;
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface StudentCreate {
+  first_name: string;
+  last_name: string;
+  group: number;
+  date_of_birth?: string;
+  enrollment_date?: string;
+  notes?: string;
+}
+
+// ─── System ──────────────────────────────────────────────────────────────────
+
+export interface AuditLogEntry {
+  id: number;
+  user: number | null;
+  user_name?: string;
+  action: string;
+  model_name: string;
+  object_id: string;
+  changes: Record<string, unknown>;
+  ip_address: string | null;
+  user_agent: string;
+  created_at: string;
+}
+
+export interface SystemSetting {
+  id: number;
+  key: string;
+  value: string;
+  description: string;
+  created_at: string;
+  updated_at: string;
+}
+
+// ─── API Response Types ──────────────────────────────────────────────────────
+
+export interface PaginatedResponse<T> {
+  count: number;
+  next: string | null;
+  previous: string | null;
+  results: T[];
+}
+
+export interface ApiError {
+  detail: string;
+  code?: string;
+}
+
+// ─── Dashboard Stats ─────────────────────────────────────────────────────────
+
+export interface DashboardStats {
+  total_groups: number;
+  total_transactions: number;
+  pending_approvals: number;
+  total_balance: string;
+  recent_transactions: Transaction[];
+  recent_time_entries: TimeEntry[];
+  pending_leave_requests: LeaveRequest[];
+}

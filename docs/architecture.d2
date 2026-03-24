@@ -1,0 +1,44 @@
+direction: right
+
+Benutzer: {
+  Educator
+  LocationManager
+  Admin
+}
+
+KassenbuchApp: {
+  Frontend: {
+    shape: package
+    "UI Komponenten (shadcn/ui)"
+    "Seiten (Routen)"
+    "State Management (TanStack Query)"
+    "API Client (axios)"
+
+    "Seiten (Routen)" -> "State Management (TanStack Query)" -> "API Client (axios)"
+  }
+
+  Backend: {
+    shape: package
+    "API Endpunkte (DRF)"
+    "Business Logik"
+    "Datenbank ORM"
+    "Async Tasks (Celery)"
+
+    "API Endpunkte (DRF)" -> "Business Logik" -> "Datenbank ORM"
+    "Business Logik" -> "Async Tasks (Celery)"
+  }
+
+  Datenbank: {
+    shape: package
+    PostgreSQL
+    Redis
+  }
+
+  Frontend."API Client (axios)" -> Backend."API Endpunkte (DRF)"
+  Backend."Datenbank ORM" -> Datenbank.PostgreSQL
+  Backend."Async Tasks (Celery)" -> Datenbank.Redis
+}
+
+Benutzer.Educator -> KassenbuchApp.Frontend."Seiten (Routen)"
+Benutzer.LocationManager -> KassenbuchApp.Frontend."Seiten (Routen)"
+Benutzer.Admin -> KassenbuchApp.Frontend."Seiten (Routen)"

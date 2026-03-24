@@ -1,0 +1,32 @@
+# Django Core
+Django>=4.2,<6.0
+djangorestframework>=3.14
+djangorestframework-simplejwt>=5.3
+drf-spectacular>=0.27
+
+# Django Extensions
+django-cors-headers>=4.3
+django-filter>=23.5
+django-unfold>=0.30
+python-decouple>=3.8
+
+# Database
+psycopg2-binary>=2.9
+dj-database-url>=2.1
+
+# Async Tasks
+celery>=5.3
+redis>=5.0
+
+# Server
+gunicorn>=21.2
+whitenoise>=6.6
+
+# Media
+Pillow>=10.2
+
+# Testing
+pytest>=8.0
+pytest-django>=4.8
+pytest-cov>=4.1
+factory-boy>=3.3

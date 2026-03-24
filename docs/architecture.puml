@@ -1,0 +1,49 @@
+@startuml Architektur
+
+!theme vibrant
+
+left to right direction
+
+package "Benutzer" {
+  actor Educator
+  actor LocationManager
+  actor Admin
+}
+
+package "Kassenbuch App v2" {
+  package "Frontend (Next.js)" {
+    [UI Komponenten] <<shadcn/ui>>
+    [Seiten (Routen)]
+    [State Management] <<TanStack Query>>
+    [API Client] <<axios>>
+  }
+
+  package "Backend (Django)" {
+    [API Endpunkte] <<DRF>>
+    [Business Logik]
+    [Datenbank ORM]
+    [Async Tasks] <<Celery>>
+  }
+
+  package "Datenbank" {
+    [PostgreSQL]
+    [Redis]
+  }
+}
+
+Educator --> [Seiten (Routen)]
+LocationManager --> [Seiten (Routen)]
+Admin --> [Seiten (Routen)]
+
+[Seiten (Routen)] --> [State Management]
+[State Management] --> [API Client]
+[API Client] --> [API Endpunkte]
+
+[API Endpunkte] --> [Business Logik]
+[Business Logik] --> [Datenbank ORM]
+[Business Logik] --> [Async Tasks]
+
+[Datenbank ORM] --> [PostgreSQL]
+[Async Tasks] --> [Redis]
+
+@enduml
