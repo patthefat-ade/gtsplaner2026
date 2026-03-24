@@ -93,15 +93,17 @@ WSGI_APPLICATION = "config.wsgi.application"
 
 # DATABASE_URL wird von DigitalOcean Managed Database automatisch injiziert.
 # Fallback auf einzelne DB_* Variablen oder SQLite für lokale Entwicklung.
-DATABASE_URL = config("DATABASE_URL", default="")
+DATABASE_URL = os.environ.get("DATABASE_URL", "")
 
-if DATABASE_URL:
+# DigitalOcean Dev Databases können eine leere oder ungültige URL injizieren.
+# Nur parsen wenn die URL ein gültiges Schema enthält (z.B. postgresql://).
+if DATABASE_URL and "://" in DATABASE_URL and not DATABASE_URL.startswith("://"):
     DATABASES = {
         "default": dj_database_url.parse(
             DATABASE_URL,
             conn_max_age=600,
             conn_health_checks=True,
-            ssl_require=True,
+            ssl_require=not DEBUG,
         )
     }
 else:
