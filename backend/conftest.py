@@ -6,10 +6,19 @@ and authenticated API clients.
 """
 
 import pytest
+from django.core.cache import cache
 from django.test import override_settings
 from rest_framework.test import APIClient
 
 from core.models import Location, Organization, User
+
+
+@pytest.fixture(autouse=True)
+def clear_throttle_cache():
+    """Clear the throttle cache before each test to prevent 429 responses."""
+    cache.clear()
+    yield
+    cache.clear()
 
 
 @pytest.fixture
