@@ -17,6 +17,15 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = config("SECRET_KEY", default="django-insecure-dev-key")
 
+# Fernet encryption key for field-level encryption of personal data (GDPR/DSGVO)
+# Generate with: python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+FERNET_KEYS = [
+    config("FERNET_KEY", default="ZL-7EfMwbBMSRCnDqGgVbkVcCwJLPOlXKaJCgAMiWnA="),
+]
+
+# Salt Key für django-fernet-encrypted-fields (verhindert Abhängigkeit von SECRET_KEY)
+SALT_KEY = config("SALT_KEY", default="gtsplaner-salt-key-change-in-production")
+
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config("DEBUG", default=False, cast=bool)
 
@@ -55,6 +64,7 @@ INSTALLED_APPS = [
     "drf_spectacular",
     "corsheaders",
     "django_filters",
+    "encrypted_fields",
     # Project Apps
     "core.apps.CoreConfig",
     "finance.apps.FinanceConfig",

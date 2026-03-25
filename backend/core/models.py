@@ -3,10 +3,17 @@ Core models for the Kassenbuch App v2.
 
 Contains the custom User model, Organization, and Location models
 that form the foundation of the multi-tenant architecture.
+
+Personal data fields are encrypted at rest using Fernet encryption
+to comply with GDPR/DSGVO requirements.
 """
 
 from django.contrib.auth.models import AbstractUser
 from django.db import models
+from encrypted_fields.fields import (
+    EncryptedCharField,
+    EncryptedEmailField,
+)
 
 
 class User(AbstractUser):
@@ -15,6 +22,12 @@ class User(AbstractUser):
 
     Extends Django's AbstractUser with additional fields for the
     four-role hierarchy: Educator, LocationManager, Admin, SuperAdmin.
+
+    Sensitive fields (phone) are encrypted at rest.
+    Note: first_name, last_name, email are inherited from AbstractUser
+    and cannot be easily replaced with encrypted variants without
+    breaking Django's auth system. These are protected by database-level
+    encryption (DigitalOcean Managed Database encryption at rest).
     """
 
     class Role(models.TextChoices):
@@ -37,7 +50,9 @@ class User(AbstractUser):
         related_name="users",
         verbose_name="Standort",
     )
-    phone = models.CharField(max_length=20, blank=True, verbose_name="Telefon")
+    phone = EncryptedCharField(
+        max_length=255, blank=True, null=True, default="", verbose_name="Telefon"
+    )
     profile_picture = models.ImageField(
         upload_to="profiles/", null=True, blank=True, verbose_name="Profilbild"
     )
@@ -52,7 +67,6 @@ class User(AbstractUser):
         verbose_name_plural = "Benutzer"
         ordering = ["last_name", "first_name"]
         indexes = [
-            models.Index(fields=["email"]),
             models.Index(fields=["role"]),
             models.Index(fields=["location"]),
         ]
@@ -82,18 +96,38 @@ class User(AbstractUser):
 
 
 class Organization(models.Model):
-    """Represents a parent organization (e.g., Hilfswerk Kärnten)."""
+    """
+    Represents a parent organization (e.g., Hilfswerk Kärnten).
+
+    Contact information (email, phone, address) is encrypted at rest.
+
+    Note: All encrypted fields use null=True because django-fernet-encrypted-fields
+    returns None from get_prep_value() for empty/falsy values. PostgreSQL enforces
+    NOT NULL strictly, so null=True is required for compatibility.
+    """
 
     name = models.CharField(max_length=255, verbose_name="Name")
     description = models.TextField(blank=True, verbose_name="Beschreibung")
-    email = models.EmailField(verbose_name="E-Mail")
-    phone = models.CharField(max_length=20, blank=True, verbose_name="Telefon")
+    email = EncryptedEmailField(
+        max_length=255, blank=True, null=True, default="", verbose_name="E-Mail"
+    )
+    phone = EncryptedCharField(
+        max_length=255, blank=True, null=True, default="", verbose_name="Telefon"
+    )
     website = models.URLField(blank=True, verbose_name="Website")
-    street = models.CharField(max_length=255, verbose_name="Straße")
-    city = models.CharField(max_length=100, verbose_name="Stadt")
-    postal_code = models.CharField(max_length=10, verbose_name="PLZ")
+    street = EncryptedCharField(
+        max_length=255, blank=True, null=True, default="", verbose_name="Straße"
+    )
+    city = EncryptedCharField(
+        max_length=255, blank=True, null=True, default="", verbose_name="Stadt"
+    )
+    postal_code = EncryptedCharField(
+        max_length=255, blank=True, null=True, default="", verbose_name="PLZ"
+    )
     country = models.CharField(max_length=100, default="Österreich", verbose_name="Land")
-    logo = models.ImageField(upload_to="organizations/", null=True, blank=True, verbose_name="Logo")
+    logo = models.ImageField(
+        upload_to="organizations/", null=True, blank=True, verbose_name="Logo"
+    )
     is_active = models.BooleanField(default=True, verbose_name="Aktiv")
     is_deleted = models.BooleanField(default=False, verbose_name="Gelöscht")
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Erstellt am")
@@ -110,21 +144,46 @@ class Organization(models.Model):
 
 
 class Location(models.Model):
-    """Represents a physical location/site within an organization."""
+    """
+    Represents a physical location/site within an organization.
+
+    Contact information (email, phone, address) is encrypted at rest.
+
+    Note: All encrypted fields use null=True because django-fernet-encrypted-fields
+    returns None from get_prep_value() for empty/falsy values. PostgreSQL enforces
+    NOT NULL strictly, so null=True is required for compatibility.
+    """
 
     organization = models.ForeignKey(
-        Organization, on_delete=models.CASCADE, related_name="locations", verbose_name="Organisation"
+        Organization,
+        on_delete=models.CASCADE,
+        related_name="locations",
+        verbose_name="Organisation",
     )
     name = models.CharField(max_length=255, verbose_name="Name")
     description = models.TextField(blank=True, verbose_name="Beschreibung")
-    email = models.EmailField(verbose_name="E-Mail")
-    phone = models.CharField(max_length=20, blank=True, verbose_name="Telefon")
-    street = models.CharField(max_length=255, verbose_name="Straße")
-    city = models.CharField(max_length=100, verbose_name="Stadt")
-    postal_code = models.CharField(max_length=10, verbose_name="PLZ")
+    email = EncryptedEmailField(
+        max_length=255, blank=True, null=True, default="", verbose_name="E-Mail"
+    )
+    phone = EncryptedCharField(
+        max_length=255, blank=True, null=True, default="", verbose_name="Telefon"
+    )
+    street = EncryptedCharField(
+        max_length=255, blank=True, null=True, default="", verbose_name="Straße"
+    )
+    city = EncryptedCharField(
+        max_length=255, blank=True, null=True, default="", verbose_name="Stadt"
+    )
+    postal_code = EncryptedCharField(
+        max_length=255, blank=True, null=True, default="", verbose_name="PLZ"
+    )
     manager = models.ForeignKey(
-        User, on_delete=models.SET_NULL, null=True, blank=True,
-        related_name="managed_locations", verbose_name="Standortleitung"
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="managed_locations",
+        verbose_name="Standortleitung",
     )
     is_active = models.BooleanField(default=True, verbose_name="Aktiv")
     is_deleted = models.BooleanField(default=False, verbose_name="Gelöscht")

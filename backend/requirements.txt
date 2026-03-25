@@ -10,6 +10,10 @@ django-filter>=23.5
 django-unfold>=0.30
 python-decouple>=3.8
 
+# Security / Encryption
+django-fernet-encrypted-fields>=0.3
+cryptography>=42.0
+
 # Database
 psycopg2-binary>=2.9
 dj-database-url>=2.1
