@@ -5,6 +5,7 @@ import { ProtectedRoute } from "@/components/protected-route";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Header } from "@/components/layout/header";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { SessionTimeoutWrapper } from "@/components/session-timeout-wrapper";
 import { cn } from "@/lib/utils";
 
 export default function DashboardLayout({
@@ -37,6 +38,9 @@ export default function DashboardLayout({
             <main className="flex-1 p-4 sm:p-6">{children}</main>
           </div>
         </div>
+
+        {/* Session Timeout Warning Dialog */}
+        <SessionTimeoutWrapper />
       </TooltipProvider>
     </ProtectedRoute>
   );
