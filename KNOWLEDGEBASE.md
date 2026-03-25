@@ -1,8 +1,8 @@
 # GTS Planner – Kassenbuch App v2 – Knowledgebase
 
-**Version:** v9 (nach Sprint 15)
+**Version:** v10 (nach Sprint 16)
 **Letzte Aktualisierung:** 2026-03-25
-**Status:** Sprint 15 abgeschlossen
+**Status:** Sprint 16 abgeschlossen
 
 ---
 
@@ -14,14 +14,14 @@
 | **Backend** | Django 5.2 + DRF + drf-spectacular + Django Unfold |
 | **Frontend** | Next.js 16 + TypeScript + Tailwind CSS 4 + shadcn/ui |
 | **Datenbank** | PostgreSQL 16 (Docker) / SQLite (Dev) |
-| **Auth** | JWT (SimpleJWT) – Login, Logout, Refresh, Password Reset/Change |
+| **Auth** | JWT (SimpleJWT) + 2FA/OTP (django-otp) |
 | **Async** | Celery + Redis |
-| **API-Standard** | OpenAPI 3.0.3 (48 Pfade) |
+| **API-Standard** | OpenAPI 3.0.3 (53 Pfade) |
 | **Theme** | Dark Mode (Standard), Light Mode |
 | **Primärfarbe** | #FFCC00 (Gold/Gelb) |
-| **Frontend-Routen** | 16 Routen (Build erfolgreich) |
+| **Frontend-Routen** | 18 Routen (Build erfolgreich) |
 | **Zod-Version** | v4.3.6 (Zod v4 API – `error` statt `required_error`) |
-| **Security** | Field-level Encryption, Brute-Force Protection, Security Headers, JWT Hardening |
+| **Security** | Field-level Encryption, Brute-Force Protection, Security Headers, JWT Hardening, 2FA/OTP |
 
 ---
 
@@ -41,6 +41,7 @@
 12. **TypeScript:** Prop-Namen müssen exakt mit den Interface-Definitionen übereinstimmen (z.B. `entry` statt `timeEntry`)
 13. **GroupCreate:** Benötigt `location`-Feld – muss aus Auth-Context oder als Default gesetzt werden
 14. **Encryption:** `django-fernet-encrypted-fields` für PII-Daten. Alle verschlüsselten Felder müssen `null=True` haben für PostgreSQL-Kompatibilität.
+15. **2FA/OTP:** `django-otp` + `pyotp` für TOTP-basierte 2FA. QR-Code-Generierung via `qrcode`.
 
 ---
 
@@ -63,31 +64,38 @@
 | Sprint 13 – Production Ready | OFFEN | – | – |
 | Sprint 14 – Launch | OFFEN | – | – |
 | Sprint 15 – Security Hardening | **ERLEDIGT** | 2026-03-25 | Field Encryption, Brute-Force Protection, JWT Hardening |
+| Sprint 16 – UI & Security | **ERLEDIGT** | 2026-03-25 | Login Redesign, 2FA/OTP, Password Reset, Session Timeout |
 
 ---
 
-## Sprint 15 – Erledigte Aufgaben
+## Sprint 16 – Erledigte Aufgaben
 
-### Feld-Verschlüsselung (DSGVO-Konformität) - PR #18
-- [x] `django-fernet-encrypted-fields` für At-Rest-Verschlüsselung
-- [x] Student: Vorname, Nachname, Geburtsdatum, E-Mail, Telefon, Adresse verschlüsselt
-- [x] User: Telefon verschlüsselt
-- [x] Organization/Location: E-Mail, Telefon, Adresse verschlüsselt
-- [x] PostgreSQL-kompatibel mit `null=True` für alle verschlüsselten Felder
+### Login-Seite Redesign (#4)
+- [x] 40/60 Splitscreen: Gelber Hilfswerk-Gradient links, animierte Kinder rechts
+- [x] Hilfswerk Logo statt GTS Icon
+- [x] Neuer Slogan: "Digitale Unterstützung in der täglichen Zusammenarbeit"
+- [x] Light/Dark Mode Support
 
-### API-Dokumentation gesichert - PR #19
-- [x] Swagger/ReDoc nur für authentifizierte Staff-User zugänglich
-- [x] Schema-Endpoint geschützt
+### Django Admin Login Redesign (#22)
+- [x] Splitscreen mit AI-generiertem Kinderbetreuung-Foto
+- [x] Hilfswerk Logo + "GTS Planer Admin" Branding
+- [x] Custom Login Template für Django Unfold
 
-### Brute-Force-Schutz & Security Headers - PR #20
-- [x] `django-axes`: 5 Versuche, 30 Min Sperre
-- [x] HSTS, X-Content-Type-Options, X-Frame-Options
-- [x] Rate Limiting: 100 req/min allgemein, 5 req/min Login
+### 2FA/OTP Authentifizierung (#23)
+- [x] TOTP-basierte 2FA mit `django-otp` + `pyotp`
+- [x] Backend: Setup, Verify, Disable, Login-Verify Endpoints
+- [x] Frontend: 2FA-Setup auf Profil-Seite mit QR-Code
+- [x] Login-Flow: OTP-Eingabe nach Passwort bei aktivierter 2FA
 
-### JWT Token-Optimierung - PR #21
-- [x] Access Token: 15 Minuten Lebensdauer
-- [x] Refresh Token: 7 Tage mit Rotation
-- [x] Custom Claims: `role`, `location_id`
+### Passwort-Vergessen Flow (#25)
+- [x] Celery Task für E-Mail-Versand mit Reset-Link
+- [x] Frontend: `/forgot-password` + `/reset-password` Seiten
+- [x] `FRONTEND_URL` Setting für Link-Generierung
+
+### Session-Timeout-Warnung (#24)
+- [x] JWT-Token-Expiry-Monitoring mit 2-Minuten-Countdown
+- [x] "Sitzung verlängern" oder "Abmelden" Dialog
+- [x] Automatischer Logout bei Ablauf
 
 ---
 
@@ -95,7 +103,7 @@
 
 | App | Model | Tabelle | Status |
 |---|---|---|---|
-| core | User | users_user | Sprint 1 |
+| core | User | users_user | Sprint 1, 2FA in Sprint 16 |
 | core | Organization | users_organization | Sprint 1 |
 | core | Location | users_location | Sprint 1 |
 | system | AuditLog | system_auditlog | Sprint 1 |
@@ -115,13 +123,13 @@
 
 ---
 
-## Projektstruktur (aktualisiert nach Sprint 15)
+## Projektstruktur (aktualisiert nach Sprint 16)
 
 ```
 kassenbuch-app/
 ├── backend/
 │   ├── config/                    # Django Konfiguration
-│   ├── core/                      # User, Auth, Permissions
+│   ├── core/                      # User, Auth, Permissions, 2FA
 │   ├── finance/                   # TransactionCategory, Transaction, Receipt
 │   ├── timetracking/              # TimeEntry, LeaveType, LeaveRequest
 │   ├── groups/                    # SchoolYear, Semester, Group, Student
@@ -132,7 +140,7 @@ kassenbuch-app/
 ├── frontend/
 │   ├── src/
 │   │   ├── app/
-│   │   │   ├── (auth)/            # Login, Forgot Password
+│   │   │   ├── (auth)/            # Login, Forgot/Reset Password, 2FA
 │   │   │   ├── (dashboard)/       # Dashboard Layout + alle Seiten (voll integriert)
 │   │   │   ├── layout.tsx         # Root Layout mit Providers (Theme, Query, Auth, Toast)
 │   │   │   └── globals.css        # Tailwind + Dark Mode CSS Variables
@@ -145,7 +153,7 @@ kassenbuch-app/
 │   │   │   ├── query-provider.tsx
 │   │   │   ├── theme-provider.tsx
 │   │   │   └── protected-route.tsx
-│   │   ├── hooks/                 # use-auth, use-finance, use-timetracking, use-groups, use-admin, use-debounce
+│   │   ├── hooks/                 # use-auth, use-finance, use-timetracking, use-groups, use-admin, use-debounce, use-session-timeout
 │   │   ├── lib/                   # api.ts, utils.ts, format.ts, constants.ts, auth-api.ts, validations.ts, form-utils.ts
 │   │   ├── types/                 # models.ts, auth.ts
 │   │   └── middleware.ts
@@ -158,7 +166,7 @@ kassenbuch-app/
 
 ---
 
-## Nächster Sprint: Sprint 16 – PWA & Mobile App
+## Nächster Sprint: Sprint 17 – PWA & Mobile App
 
 ### Geplante Aufgaben
 
