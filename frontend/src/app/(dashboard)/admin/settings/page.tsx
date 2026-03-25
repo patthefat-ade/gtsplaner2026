@@ -12,29 +12,42 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Settings, Save } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useMemo, useCallback } from "react";
 
 export default function SettingsPage() {
   const toast = useToast();
   const { data, isLoading, error, refetch } = useSystemSettings();
   const updateMutation = useUpdateSystemSetting();
-  const [editValues, setEditValues] = useState<Record<number, string>>({});
+  const [localEdits, setLocalEdits] = useState<Record<number, string>>({});
 
-  useEffect(() => {
+  // Berechne die angezeigten Werte: lokale Edits haben Vorrang vor Server-Daten
+  const displayValues = useMemo(() => {
+    const values: Record<number, string> = {};
     if (data?.results) {
-      const values: Record<number, string> = {};
       data.results.forEach((s) => {
-        values[s.id] = s.value;
+        values[s.id] = s.id in localEdits ? localEdits[s.id] : s.value;
       });
-      setEditValues(values);
     }
-  }, [data]);
+    return values;
+  }, [data, localEdits]);
+
+  const handleEdit = useCallback((id: number, value: string) => {
+    setLocalEdits((prev) => ({ ...prev, [id]: value }));
+  }, []);
 
   const handleSave = (id: number, key: string) => {
     updateMutation.mutate(
-      { id, value: editValues[id] },
+      { id, value: displayValues[id] },
       {
-        onSuccess: () => toast.success(`"${key}" gespeichert`),
+        onSuccess: () => {
+          toast.success(`"${key}" gespeichert`);
+          // Lokalen Edit entfernen, da Server-Daten jetzt aktuell sind
+          setLocalEdits((prev) => {
+            const next = { ...prev };
+            delete next[id];
+            return next;
+          });
+        },
         onError: () => toast.error("Fehler", "Einstellung konnte nicht gespeichert werden."),
       }
     );
@@ -73,16 +86,13 @@ export default function SettingsPage() {
                       <div className="flex items-center gap-2">
                         <Switch
                           id={`setting-${setting.id}`}
-                          checked={editValues[setting.id] === "true"}
+                          checked={displayValues[setting.id] === "true"}
                           onCheckedChange={(checked) =>
-                            setEditValues((prev) => ({
-                              ...prev,
-                              [setting.id]: checked ? "true" : "false",
-                            }))
+                            handleEdit(setting.id, checked ? "true" : "false")
                           }
                         />
                         <span className="text-sm text-muted-foreground">
-                          {editValues[setting.id] === "true"
+                          {displayValues[setting.id] === "true"
                             ? "Aktiviert"
                             : "Deaktiviert"}
                         </span>
@@ -90,12 +100,9 @@ export default function SettingsPage() {
                     ) : (
                       <Input
                         id={`setting-${setting.id}`}
-                        value={editValues[setting.id] || ""}
+                        value={displayValues[setting.id] || ""}
                         onChange={(e) =>
-                          setEditValues((prev) => ({
-                            ...prev,
-                            [setting.id]: e.target.value,
-                          }))
+                          handleEdit(setting.id, e.target.value)
                         }
                       />
                     )}
@@ -105,7 +112,7 @@ export default function SettingsPage() {
                     onClick={() => handleSave(setting.id, setting.key)}
                     disabled={
                       updateMutation.isPending ||
-                      editValues[setting.id] === setting.value
+                      displayValues[setting.id] === setting.value
                     }
                   >
                     <Save className="mr-2 h-4 w-4" />
