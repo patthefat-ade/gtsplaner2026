@@ -228,6 +228,50 @@ class PasswordResetConfirmView(APIView):
         )
 
 
+class AcceptTermsView(APIView):
+    """
+    POST /api/v1/auth/accept-terms/
+
+    Accept privacy policy and terms of service.
+    Must be called before the user can access the dashboard.
+    """
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    @extend_schema(
+        tags=["Auth"],
+        summary="Datenschutz & Nutzungsbedingungen akzeptieren",
+        description="Markiert den Benutzer als einverstanden mit Datenschutz und Nutzungsbedingungen.",
+        request=None,
+        responses={
+            200: OpenApiResponse(description="Bedingungen akzeptiert"),
+        },
+    )
+    def post(self, request):
+        from django.utils import timezone as tz
+
+        user = request.user
+        user.has_accepted_terms = True
+        user.terms_accepted_at = tz.now()
+        user.save(update_fields=["has_accepted_terms", "terms_accepted_at"])
+
+        # Notify super admins
+        try:
+            from system.notification_service import notify_terms_accepted
+            notify_terms_accepted(user)
+        except Exception:
+            pass  # Don't fail the request if notification fails
+
+        return Response(
+            {
+                "detail": "Datenschutz und Nutzungsbedingungen akzeptiert.",
+                "has_accepted_terms": True,
+                "terms_accepted_at": user.terms_accepted_at.isoformat(),
+            },
+            status=status.HTTP_200_OK,
+        )
+
+
 class PasswordChangeView(APIView):
     """
     POST /api/v1/auth/password-change/
@@ -254,6 +298,14 @@ class PasswordChangeView(APIView):
         )
         serializer.is_valid(raise_exception=True)
         serializer.save()
+
+        # Notify user about password change
+        try:
+            from system.notification_service import notify_password_changed
+            notify_password_changed(request.user)
+        except Exception:
+            pass  # Don't fail the request if notification fails
+
         return Response(
             {"detail": "Passwort wurde erfolgreich geändert."},
             status=status.HTTP_200_OK,

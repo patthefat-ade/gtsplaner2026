@@ -2,6 +2,7 @@
 
 import { useTheme } from "next-themes";
 import { useSyncExternalStore } from "react";
+import { LoginFooter } from "@/components/login-footer";
 
 // Hydration-safe mounted check ohne useEffect + setState
 const emptySubscribe = () => () => {};
@@ -53,10 +54,11 @@ export default function AuthLayout({
 
         <div className="relative z-10 w-full max-w-md">{children}</div>
 
-        {/* Bottom branding */}
-        <div className="absolute bottom-6 left-0 right-0 z-10 text-center">
+        {/* Footer with legal links */}
+        <div className="absolute bottom-0 left-0 right-0 z-10">
+          <LoginFooter />
           <p
-            className={`text-xs tracking-wide ${
+            className={`text-center text-xs tracking-wide pb-2 ${
               isDark ? "text-yellow-600/60" : "text-yellow-800/40"
             }`}
           >

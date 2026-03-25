@@ -51,6 +51,8 @@ class UserProfileSerializer(serializers.ModelSerializer):
             "last_login",
             "date_joined",
             "last_password_change",
+            "has_accepted_terms",
+            "terms_accepted_at",
         ]
         read_only_fields = [
             "id",
@@ -61,6 +63,8 @@ class UserProfileSerializer(serializers.ModelSerializer):
             "last_login",
             "date_joined",
             "last_password_change",
+            "has_accepted_terms",
+            "terms_accepted_at",
         ]
 
     def get_full_name(self, obj: User) -> str:

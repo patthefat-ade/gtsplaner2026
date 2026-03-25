@@ -3,7 +3,7 @@
 from django.contrib import admin
 from unfold.admin import ModelAdmin
 
-from .models import AuditLog, SystemSetting
+from .models import AuditLog, EmailNotificationConfig, SystemSetting
 
 
 @admin.register(AuditLog)
@@ -32,3 +32,53 @@ class SystemSettingAdmin(ModelAdmin):
     list_display = ("key", "value", "is_public", "updated_at")
     list_filter = ("is_public",)
     search_fields = ("key", "description")
+
+
+@admin.register(EmailNotificationConfig)
+class EmailNotificationConfigAdmin(ModelAdmin):
+    """Admin for configuring email notification events."""
+
+    list_display = (
+        "event_type",
+        "get_event_display",
+        "is_enabled",
+        "notify_super_admins",
+        "notify_user",
+        "updated_at",
+    )
+    list_filter = ("is_enabled", "notify_super_admins", "notify_user")
+    list_editable = ("is_enabled", "notify_super_admins", "notify_user")
+    search_fields = ("event_type",)
+    readonly_fields = ("created_at", "updated_at")
+
+    fieldsets = (
+        (
+            "Ereignis",
+            {
+                "fields": ("event_type",),
+            },
+        ),
+        (
+            "Benachrichtigungseinstellungen",
+            {
+                "fields": (
+                    "is_enabled",
+                    "notify_super_admins",
+                    "notify_user",
+                    "custom_recipients",
+                ),
+            },
+        ),
+        (
+            "Zeitstempel",
+            {
+                "fields": ("created_at", "updated_at"),
+                "classes": ("collapse",),
+            },
+        ),
+    )
+
+    def get_event_display(self, obj):
+        return obj.get_event_type_display()
+
+    get_event_display.short_description = "Beschreibung"

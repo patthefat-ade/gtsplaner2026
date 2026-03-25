@@ -79,19 +79,161 @@
         }
         .login-footer {
             position: absolute;
-            bottom: 1.5rem;
+            bottom: 0;
             left: 0;
             right: 0;
             text-align: center;
-            font-size: 0.75rem;
-            color: rgba(146, 64, 14, 0.4);
+            padding-bottom: 0.5rem;
         }
-        .dark .login-footer {
-            color: rgba(251, 191, 36, 0.3);
+        .login-footer-links {
+            display: flex;
+            justify-content: center;
+            gap: 0.75rem;
+            margin-bottom: 0.25rem;
+        }
+        .login-footer-links a {
+            font-size: 0.7rem;
+            color: rgba(146, 64, 14, 0.5);
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+        .login-footer-links a:hover {
+            color: rgba(146, 64, 14, 0.9);
+            text-decoration: underline;
+        }
+        .dark .login-footer-links a {
+            color: rgba(251, 191, 36, 0.4);
+        }
+        .dark .login-footer-links a:hover {
+            color: rgba(251, 191, 36, 0.8);
+        }
+        .login-footer-links .separator {
+            color: rgba(146, 64, 14, 0.3);
+            font-size: 0.7rem;
+        }
+        .dark .login-footer-links .separator {
+            color: rgba(251, 191, 36, 0.2);
+        }
+        .login-footer-copyright {
+            font-size: 0.7rem;
+            color: rgba(146, 64, 14, 0.3);
+        }
+        .dark .login-footer-copyright {
+            color: rgba(251, 191, 36, 0.2);
         }
         @media (max-width: 1024px) {
             .login-right { display: none; }
             .login-left { width: 100%; }
+        }
+
+        /* Legal Modal Styles */
+        .legal-modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 9999;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(4px);
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+        }
+        .legal-modal-overlay.active {
+            display: flex;
+        }
+        .legal-modal {
+            background: white;
+            border-radius: 1rem;
+            max-width: 42rem;
+            width: 100%;
+            max-height: 85vh;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.25);
+            overflow: hidden;
+        }
+        .dark .legal-modal {
+            background: #18181b;
+        }
+        .legal-modal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        .dark .legal-modal-header {
+            border-bottom-color: #3f3f46;
+        }
+        .legal-modal-header h2 {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: #18181b;
+            margin: 0;
+        }
+        .dark .legal-modal-header h2 {
+            color: white;
+        }
+        .legal-modal-close {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 0.5rem;
+            border-radius: 0.5rem;
+            color: #71717a;
+            font-size: 1.25rem;
+            line-height: 1;
+            transition: background 0.2s;
+        }
+        .legal-modal-close:hover {
+            background: #f4f4f5;
+        }
+        .dark .legal-modal-close:hover {
+            background: #27272a;
+        }
+        .legal-modal-body {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1.5rem;
+            font-size: 0.875rem;
+            line-height: 1.6;
+            color: #3f3f46;
+        }
+        .dark .legal-modal-body {
+            color: #d4d4d8;
+        }
+        .legal-modal-body h3 {
+            font-weight: 700;
+            margin-top: 1rem;
+            margin-bottom: 0.5rem;
+            color: #18181b;
+        }
+        .dark .legal-modal-body h3 {
+            color: white;
+        }
+        .legal-modal-body p {
+            margin-bottom: 0.75rem;
+        }
+        .legal-modal-footer {
+            padding: 1rem 1.5rem;
+            border-top: 1px solid #e5e7eb;
+        }
+        .dark .legal-modal-footer {
+            border-top-color: #3f3f46;
+        }
+        .legal-modal-footer button {
+            width: 100%;
+            padding: 0.625rem 1rem;
+            background: #eab308;
+            color: white;
+            border: none;
+            border-radius: 0.5rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .legal-modal-footer button:hover {
+            background: #ca8a04;
         }
     </style>
 {% endblock %}
@@ -156,7 +298,16 @@
         </div>
 
         <div class="login-footer">
-            &copy; {% now "Y" %} Hilfswerk
+            <div class="login-footer-links">
+                <a href="#" onclick="openLegalModal('impressum'); return false;">Impressum</a>
+                <span class="separator">|</span>
+                <a href="#" onclick="openLegalModal('datenschutz'); return false;">Datenschutz</a>
+                <span class="separator">|</span>
+                <a href="#" onclick="openLegalModal('nutzungsbedingungen'); return false;">Nutzungsbedingungen</a>
+            </div>
+            <div class="login-footer-copyright">
+                &copy; {% now "Y" %} Hilfswerk
+            </div>
         </div>
     </div>
 
@@ -164,4 +315,173 @@
     <div class="login-right" style="background-image: url('{% static 'admin/img/admin-login-photo.webp' %}');">
     </div>
 </div>
+
+<!-- Legal Modals -->
+<div id="legal-modal-overlay" class="legal-modal-overlay" onclick="if(event.target===this)closeLegalModal()">
+    <div class="legal-modal">
+        <div class="legal-modal-header">
+            <h2 id="legal-modal-title"></h2>
+            <button class="legal-modal-close" onclick="closeLegalModal()" aria-label="Schließen">&times;</button>
+        </div>
+        <div class="legal-modal-body" id="legal-modal-body"></div>
+        <div class="legal-modal-footer">
+            <button onclick="closeLegalModal()">Schließen</button>
+        </div>
+    </div>
+</div>
+
+<script>
+const legalContent = {
+    impressum: {
+        title: "Impressum",
+        html: `<h3>Medieninhaber, Hersteller und Herausgeber:</h3>
+<p>Hilfswerk Österreich<br>Bundesgeschäftsstelle</p>
+<p>Grünbergstraße 15/2/5, 1120 Wien<br>
+Tel.: 01 / 40 57 500<br>
+Fax: DW -60<br>
+E-Mail: <a href="mailto:office@hilfswerk.at">office@hilfswerk.at</a><br>
+Internet: <a href="https://www.hilfswerk.at" target="_blank">www.hilfswerk.at</a><br>
+ZVR-Zahl: 878060546</p>
+<h3>Vertretungsbefugte Organe:</h3>
+<p>Präsident: Dr. Othmar Karas<br>
+Geschäftsführerin: Elisabeth Anselm</p>
+<h3>Bankverbindung:</h3>
+<p>ERSTE Bank, Konto lautend auf Hilfswerk Österreich<br>
+IBAN: AT29 2011 1292 4605 3900<br>
+BIC: GIBAATWW</p>
+<h3>Anwendung:</h3>
+<p>GTS Planer – Digitale Unterstützung in der täglichen Zusammenarbeit<br>
+Entwickelt im Auftrag des Hilfswerk Österreich für die Verwaltung von Ganztagesschulen.</p>
+<h3>Haftungsausschluss:</h3>
+<p>Trotz sorgfältiger inhaltlicher Kontrolle übernehmen wir keine Haftung für die Inhalte externer Links. Für den Inhalt der verlinkten Seiten sind ausschließlich deren Betreiber verantwortlich.</p>
+<h3>Urheberrecht:</h3>
+<p>Die durch den Seitenbetreiber erstellten Inhalte und Werke auf diesen Seiten unterliegen dem österreichischen Urheberrecht. Die Vervielfältigung, Bearbeitung, Verbreitung und jede Art der Verwertung außerhalb der Grenzen des Urheberrechtes bedürfen der schriftlichen Zustimmung des jeweiligen Autors bzw. Erstellers.</p>`
+    },
+    datenschutz: {
+        title: "Datenschutzerklärung",
+        html: `<h3>Datenschutzerklärung für die Anwendung GTS Planer</h3>
+<p><em>Information nach Artikel 13 und 14 Datenschutz-Grundverordnung (DSGVO)</em></p>
+<h3>1. Verantwortlicher</h3>
+<p>Hilfswerk Österreich<br>
+Grünbergstraße 15/2/5, 1120 Wien<br>
+Tel.: 01 / 40 57 500<br>
+E-Mail: <a href="mailto:office@hilfswerk.at">office@hilfswerk.at</a></p>
+<p>Externer Datenschutzbeauftragter: Dr. Werner Pilgermair<br>
+E-Mail: <a href="mailto:datenschutz@pilgermair.at">datenschutz@pilgermair.at</a></p>
+<h3>2. Zweck der Datenverarbeitung</h3>
+<p>Die Anwendung GTS Planer dient der digitalen Unterstützung in der täglichen Zusammenarbeit an Ganztagesschulen. Im Rahmen der Nutzung werden folgende personenbezogene Daten verarbeitet:</p>
+<ul>
+<li><strong>Benutzerdaten:</strong> Name, E-Mail-Adresse, Telefonnummer, Rolle, Standortzuordnung</li>
+<li><strong>Schülerdaten:</strong> Name, Geburtsdatum, Kontaktdaten der Erziehungsberechtigten, Allergien, besondere Bedürfnisse</li>
+<li><strong>Zeiterfassungsdaten:</strong> Arbeitszeiten, Urlaubsanträge</li>
+<li><strong>Finanzdaten:</strong> Transaktionen im Rahmen der Kassenbuchführung</li>
+</ul>
+<h3>3. Rechtsgrundlage</h3>
+<p>Die Verarbeitung Ihrer personenbezogenen Daten erfolgt auf Grundlage von:</p>
+<ul>
+<li>Art. 6 Abs. 1 lit. b DSGVO (Erfüllung eines Vertrages bzw. vorvertraglicher Maßnahmen)</li>
+<li>Art. 6 Abs. 1 lit. c DSGVO (Erfüllung rechtlicher Verpflichtungen)</li>
+<li>Art. 6 Abs. 1 lit. f DSGVO (Berechtigtes Interesse des Verantwortlichen)</li>
+</ul>
+<h3>4. Datensicherheit</h3>
+<p>Wir setzen umfangreiche technische und organisatorische Maßnahmen zum Schutz Ihrer Daten ein:</p>
+<ul>
+<li>Verschlüsselung personenbezogener Daten auf Feldebene (Fernet-Verschlüsselung)</li>
+<li>Verschlüsselte Datenübertragung mittels TLS/HTTPS</li>
+<li>Zwei-Faktor-Authentifizierung (2FA/TOTP)</li>
+<li>Rollenbasierte Zugriffskontrolle (RBAC)</li>
+<li>Regelmäßige Sicherheitsaudits und Audit-Logging aller Zugriffe</li>
+<li>Hosting auf ISO 27001 zertifizierten Servern (DigitalOcean, EU-Rechenzentren)</li>
+</ul>
+<h3>5. Speicherdauer</h3>
+<p>Ihre personenbezogenen Daten werden nur so lange gespeichert, wie dies für die Erfüllung der oben genannten Zwecke erforderlich ist oder gesetzliche Aufbewahrungspflichten bestehen.</p>
+<h3>6. Empfänger der Daten</h3>
+<p>Eine Übermittlung Ihrer Daten an Dritte erfolgt nur, soweit dies zur Erfüllung der genannten Zwecke erforderlich ist oder eine gesetzliche Verpflichtung besteht.</p>
+<h3>7. Ihre Rechte</h3>
+<p>Sie haben das Recht auf:</p>
+<ul>
+<li><strong>Auskunft</strong> über die von uns verarbeiteten personenbezogenen Daten (Art. 15 DSGVO)</li>
+<li><strong>Berichtigung</strong> unrichtiger Daten (Art. 16 DSGVO)</li>
+<li><strong>Löschung</strong> Ihrer Daten (Art. 17 DSGVO)</li>
+<li><strong>Einschränkung</strong> der Verarbeitung (Art. 18 DSGVO)</li>
+<li><strong>Datenübertragbarkeit</strong> (Art. 20 DSGVO)</li>
+<li><strong>Widerspruch</strong> gegen die Verarbeitung (Art. 21 DSGVO)</li>
+<li><strong>Beschwerde</strong> bei der österreichischen Datenschutzbehörde (<a href="https://www.dsb.gv.at/" target="_blank">https://www.dsb.gv.at/</a>)</li>
+</ul>
+<h3>8. Kontakt</h3>
+<p>Bei Fragen zum Datenschutz wenden Sie sich bitte an:<br>
+Hilfswerk Österreich, Grünbergstraße 15/2/5, 1120 Wien<br>
+Tel.: 01 / 40 57 500<br>
+E-Mail: <a href="mailto:office@hilfswerk.at">office@hilfswerk.at</a></p>
+<p>Externer Datenschutzbeauftragter: Dr. Werner Pilgermair<br>
+E-Mail: <a href="mailto:datenschutz@pilgermair.at">datenschutz@pilgermair.at</a></p>`
+    },
+    nutzungsbedingungen: {
+        title: "Nutzungsbedingungen",
+        html: `<h3>Nutzungsbedingungen für die Anwendung GTS Planer</h3>
+<p><em>Stand: März 2026</em></p>
+<h3>1. Geltungsbereich</h3>
+<p>Diese Nutzungsbedingungen regeln die Nutzung der Webanwendung GTS Planer, die vom Hilfswerk Österreich, Grünbergstraße 15/2/5, 1120 Wien, betrieben wird. Mit der Nutzung der Anwendung erklären Sie sich mit diesen Nutzungsbedingungen einverstanden.</p>
+<h3>2. Zweck der Anwendung</h3>
+<p>Die Anwendung dient der digitalen Unterstützung in der täglichen Zusammenarbeit an Ganztagesschulen. Sie umfasst insbesondere folgende Funktionen:</p>
+<ul>
+<li>Verwaltung von Gruppen und Schülerdaten</li>
+<li>Zeiterfassung und Urlaubsverwaltung</li>
+<li>Kassenbuchführung und Finanzverwaltung</li>
+<li>Standort- und Organisationsverwaltung</li>
+</ul>
+<h3>3. Zugang und Benutzerkonten</h3>
+<p>3.1. Der Zugang zur Anwendung erfolgt über persönliche Benutzerkonten, die von einem Administrator zugewiesen werden.</p>
+<p>3.2. Sie sind verpflichtet, Ihre Zugangsdaten vertraulich zu behandeln und vor dem Zugriff Dritter zu schützen.</p>
+<p>3.3. Die Nutzung der Zwei-Faktor-Authentifizierung (2FA) wird dringend empfohlen.</p>
+<h3>4. Pflichten der Nutzer</h3>
+<p>4.1. Sie verpflichten sich, die Anwendung ausschließlich für dienstliche Zwecke zu nutzen.</p>
+<p>4.2. Es ist untersagt:</p>
+<ul>
+<li>Die Anwendung für rechtswidrige Zwecke zu verwenden</li>
+<li>Unbefugt auf Daten anderer Benutzer zuzugreifen</li>
+<li>Die Sicherheitsmechanismen zu umgehen oder zu manipulieren</li>
+<li>Daten unbefugt an Dritte weiterzugeben</li>
+</ul>
+<h3>5. Datenschutz</h3>
+<p>Die Verarbeitung personenbezogener Daten erfolgt gemäß der Datenschutzerklärung des GTS Planers und den Bestimmungen der DSGVO.</p>
+<h3>6. Verfügbarkeit</h3>
+<p>Der Betreiber bemüht sich um eine möglichst hohe Verfügbarkeit, kann jedoch keine ununterbrochene Verfügbarkeit garantieren.</p>
+<h3>7. Haftung</h3>
+<p>Der Betreiber haftet nicht für Schäden, die durch die Nutzung oder Nichtverfügbarkeit der Anwendung entstehen, soweit gesetzlich zulässig.</p>
+<h3>8. Geistiges Eigentum</h3>
+<p>Alle Rechte an der Anwendung liegen beim Betreiber. Eine Vervielfältigung oder Verwertung ist ohne Genehmigung untersagt.</p>
+<h3>9. Änderungen</h3>
+<p>Der Betreiber behält sich vor, diese Nutzungsbedingungen jederzeit zu ändern. Über wesentliche Änderungen werden die Nutzer rechtzeitig informiert.</p>
+<h3>10. Kündigung</h3>
+<p>Der Betreiber kann den Zugang jederzeit sperren oder löschen, insbesondere bei Verstößen gegen diese Nutzungsbedingungen.</p>
+<h3>11. Anwendbares Recht</h3>
+<p>Es gilt österreichisches Recht. Gerichtsstand ist Wien, Österreich.</p>
+<h3>12. Kontakt</h3>
+<p>Hilfswerk Österreich<br>
+Grünbergstraße 15/2/5, 1120 Wien<br>
+Tel.: 01 / 40 57 500<br>
+E-Mail: <a href="mailto:office@hilfswerk.at">office@hilfswerk.at</a><br>
+Internet: <a href="https://www.hilfswerk.at" target="_blank">www.hilfswerk.at</a></p>`
+    }
+};
+
+function openLegalModal(key) {
+    const content = legalContent[key];
+    if (!content) return;
+    document.getElementById('legal-modal-title').textContent = content.title;
+    document.getElementById('legal-modal-body').innerHTML = content.html;
+    document.getElementById('legal-modal-overlay').classList.add('active');
+    document.body.style.overflow = 'hidden';
+}
+
+function closeLegalModal() {
+    document.getElementById('legal-modal-overlay').classList.remove('active');
+    document.body.style.overflow = '';
+}
+
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') closeLegalModal();
+});
+</script>
 {% endblock %}
