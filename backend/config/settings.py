@@ -10,6 +10,7 @@ from pathlib import Path
 
 import dj_database_url
 from decouple import Csv, config
+from django.templatetags.static import static
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -176,6 +177,7 @@ USE_TZ = True
 
 STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
+STATICFILES_DIRS = [BASE_DIR / "static"]
 STATICFILES_STORAGE = "whitenoise.storage.CompressedStaticFilesStorage"
 
 MEDIA_URL = "media/"
@@ -327,9 +329,16 @@ DEFAULT_FROM_EMAIL = config("DEFAULT_FROM_EMAIL", default="noreply@kassenbuch.lo
 # ---------------------------------------------------------------------------
 
 UNFOLD = {
-    "SITE_TITLE": "GTS Planner Admin",
-    "SITE_HEADER": "GTS Planner",
+    "SITE_TITLE": "GTS Planer Admin",
+    "SITE_HEADER": "GTS Planer",
     "SITE_SYMBOL": "school",
+    "SITE_LOGO": {
+        "light": lambda request: static("admin/img/hilfswerk-logo.svg"),
+        "dark": lambda request: static("admin/img/hilfswerk-logo.svg"),
+    },
+    "LOGIN": {
+        "image": lambda request: static("admin/img/admin-login-photo.webp"),
+    },
     "SHOW_HISTORY": True,
     "SHOW_VIEW_ON_SITE": True,
     "COLORS": {
