@@ -169,8 +169,8 @@ class StudentAdmin(ModelAdmin):
         "is_active",
     )
     list_filter = ("is_active", "group__location", "group")
-    search_fields = ("first_name", "last_name", "email")
-    ordering = ("last_name", "first_name")
+    search_fields = ("group__name",)  # Encrypted fields cannot be searched
+    ordering = ("id",)  # Encrypted fields cannot be ordered
 
     fieldsets = (
         (

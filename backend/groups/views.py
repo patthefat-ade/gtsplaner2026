@@ -301,9 +301,11 @@ class StudentViewSet(viewsets.ModelViewSet):
     """
 
     filterset_class = StudentFilter
-    search_fields = ["first_name", "last_name", "email"]
-    ordering_fields = ["last_name", "first_name", "created_at"]
-    ordering = ["last_name", "first_name"]
+    # Note: first_name, last_name, email are encrypted and cannot be
+    # searched or ordered via SQL queries. Search must be done in Python.
+    search_fields = []  # Encrypted fields cannot be searched via SQL
+    ordering_fields = ["created_at"]
+    ordering = ["id"]  # Encrypted fields cannot be ordered via SQL
 
     def get_queryset(self):
         if getattr(self, "swagger_fake_view", False):
