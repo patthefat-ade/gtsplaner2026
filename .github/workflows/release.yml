@@ -1,0 +1,48 @@
+name: Release – Create GitHub Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Create Release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Generate changelog
+        id: changelog
+        run: |
+          # Letzten Tag vor dem aktuellen finden
+          PREVIOUS_TAG=$(git tag --sort=-creatordate | head -2 | tail -1)
+          CURRENT_TAG=${GITHUB_REF#refs/tags/}
+          
+          echo "## Änderungen seit ${PREVIOUS_TAG}" > changelog.md
+          echo "" >> changelog.md
+          
+          if [ "$PREVIOUS_TAG" != "$CURRENT_TAG" ]; then
+            git log ${PREVIOUS_TAG}..${CURRENT_TAG} --pretty=format:"- %s (%h)" >> changelog.md
+          else
+            git log --pretty=format:"- %s (%h)" -10 >> changelog.md
+          fi
+          
+          echo "" >> changelog.md
+          echo "" >> changelog.md
+          echo "**Full Changelog:** https://github.com/${{ github.repository }}/compare/${PREVIOUS_TAG}...${CURRENT_TAG}" >> changelog.md
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          body_path: changelog.md
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
