@@ -80,13 +80,13 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="relative flex min-h-screen w-full items-center justify-center p-4">
+    <div className="relative flex w-full flex-col items-center justify-center">
       {/* Theme Toggle in top-right corner */}
-      <div className="absolute right-4 top-4">
+      <div className="absolute right-4 top-4 z-50">
         <ThemeToggle />
       </div>
 
-      <Card className="w-full max-w-md">
+      <Card className="w-full max-w-md border-0 shadow-none bg-transparent lg:border lg:shadow-sm lg:bg-card">
         <CardHeader className="space-y-1 text-center">
           <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-xl bg-primary">
             <span className="text-2xl font-bold text-primary-foreground">

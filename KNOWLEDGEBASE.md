@@ -15,7 +15,7 @@ Status: Sprint 13 abgeschlossen
 | Sprint 11: Dokumentation | ERLEDIGT (im Rahmen Sprint 13) | 2026-03-25 |
 | Sprint 12: Deployment | ERLEDIGT | 2026-03-25 |
 | Sprint 13: Deployment & DevOps-Konzept | ERLEDIGT | 2026-03-25 |
-| Sprint 14: Feature-Erweiterungen (z.B. Login-Redesign) | OFFEN | – |
+| Sprint 14: Login-Redesign | IN ARBEIT (PR #8) | 2026-03-25 |
 | Sprint 15: React Native Mobile App | OFFEN | – |
 
 ## Kennzahlen
@@ -49,9 +49,9 @@ Status: Sprint 13 abgeschlossen
 - DNS-Provider: Hetzner (Empfehlung: Cloudflare fuer Apex-Domain)
 - Autodeploy: Manuell (Empfehlung: GitHub Actions aktivieren)
 
-## Naechster Sprint: Sprint 14 – Feature-Erweiterungen
+## Naechster Sprint: Sprint 15 – React Native Mobile App
 
 Aufgaben:
-1. Login-Redesign: 40/60 Splitscreen mit animierten Cartoon-Kindern
-2. Frontend-Optimierungen und UX-Verbesserungen
-3. GitHub Actions CI/CD Workflows einrichten (.github/workflows/ci.yml, cd.yml)
+1. Monorepo-Struktur vorbereiten (Turborepo/Nx)
+2. Shared Packages extrahieren (api-client, logic)
+3. UI-Komponenten-Strategie evaluieren (Tamagui)
