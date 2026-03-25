@@ -6,7 +6,7 @@ import axios from "axios";
  * Includes automatic JWT token attachment and silent token refresh on 401.
  */
 const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || (typeof window !== "undefined" && window.location.hostname !== "localhost" ? "https://api.gtsplaner.app/api/v1" : "/api/v1"),
+  baseURL: process.env.NEXT_PUBLIC_API_URL || "/api/v1",
   headers: {
     "Content-Type": "application/json",
   },

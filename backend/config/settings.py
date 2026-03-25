@@ -20,7 +20,17 @@ SECRET_KEY = config("SECRET_KEY", default="django-insecure-dev-key")
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config("DEBUG", default=False, cast=bool)
 
-ALLOWED_HOSTS = config("ALLOWED_HOSTS", default="*", cast=Csv())
+ALLOWED_HOSTS = config(
+    "ALLOWED_HOSTS",
+    default="localhost,127.0.0.1,gtsplaner.app,api.gtsplaner.app,www.gtsplaner.app,gtsplaner-58p4a.ondigitalocean.app",
+    cast=Csv(),
+)
+
+# Sicherheitskonfiguration für Produktion hinter Reverse-Proxy
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+if not DEBUG:
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
 
 # ---------------------------------------------------------------------------
 # Application definition

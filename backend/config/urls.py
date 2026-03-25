@@ -7,6 +7,7 @@ Includes all API routes under /api/v1/ and the OpenAPI/Swagger documentation.
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
+from django.http import JsonResponse
 from django.urls import include, path
 from drf_spectacular.views import (
     SpectacularAPIView,
@@ -14,7 +15,27 @@ from drf_spectacular.views import (
     SpectacularSwaggerView,
 )
 
+
+def health_check(request):
+    """Simple health check endpoint for DigitalOcean App Platform."""
+    return JsonResponse({"status": "ok", "service": "gtsplaner-backend"})
+
+
+def root_view(request):
+    """Root endpoint – confirms the API is running."""
+    return JsonResponse({
+        "service": "GTS Planer API",
+        "version": "2.0.0",
+        "docs": "/api/docs/",
+        "health": "/api/health-check/",
+    })
+
+
 urlpatterns = [
+    # Root
+    path("", root_view, name="root"),
+    # Health Check (used by DigitalOcean)
+    path("api/health-check/", health_check, name="health-check"),
     # Django Admin (Unfold)
     path("admin/", admin.site.urls),
     # API v1
@@ -40,17 +61,10 @@ urlpatterns = [
         SpectacularRedocView.as_view(url_name="schema"),
         name="redoc",
     ),
-    # Health Check
+    # Health Check (system module)
     path("api/health/", include("system.urls_health")),
 ]
 
 # Serve media files in development
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
-
-from django.http import JsonResponse
-
-def health_check(request):
-    return JsonResponse({"status": "ok"})
-
-urlpatterns.append(path("api/health-check/", health_check))

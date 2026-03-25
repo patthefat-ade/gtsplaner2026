@@ -15,6 +15,8 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
+# Produktions-API-URL wird zur Build-Zeit eingebettet
+ENV NEXT_PUBLIC_API_URL=https://api.gtsplaner.app/api/v1
 RUN corepack enable pnpm && pnpm build
 
 # --- Stage 3: Production ---
