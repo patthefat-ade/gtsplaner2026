@@ -10,6 +10,7 @@ from pathlib import Path
 
 import dj_database_url
 from decouple import Csv, config
+from django.templatetags.static import static
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -176,6 +177,7 @@ USE_TZ = True
 
 STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
+STATICFILES_DIRS = [BASE_DIR / "static"]
 STATICFILES_STORAGE = "whitenoise.storage.CompressedStaticFilesStorage"
 
 MEDIA_URL = "media/"
@@ -320,16 +322,26 @@ EMAIL_PORT = config("EMAIL_PORT", default=587, cast=int)
 EMAIL_USE_TLS = config("EMAIL_USE_TLS", default=True, cast=bool)
 EMAIL_HOST_USER = config("EMAIL_HOST_USER", default="")
 EMAIL_HOST_PASSWORD = config("EMAIL_HOST_PASSWORD", default="")
-DEFAULT_FROM_EMAIL = config("DEFAULT_FROM_EMAIL", default="noreply@kassenbuch.local")
+DEFAULT_FROM_EMAIL = config("DEFAULT_FROM_EMAIL", default="noreply@gtsplanner.at")
+
+# Frontend URL for password reset links etc.
+FRONTEND_URL = config("FRONTEND_URL", default="http://localhost:3000")
 
 # ---------------------------------------------------------------------------
 # Django Unfold Admin Configuration
 # ---------------------------------------------------------------------------
 
 UNFOLD = {
-    "SITE_TITLE": "GTS Planner Admin",
-    "SITE_HEADER": "GTS Planner",
+    "SITE_TITLE": "GTS Planer Admin",
+    "SITE_HEADER": "GTS Planer",
     "SITE_SYMBOL": "school",
+    "SITE_LOGO": {
+        "light": lambda request: static("admin/img/hilfswerk-logo.svg"),
+        "dark": lambda request: static("admin/img/hilfswerk-logo.svg"),
+    },
+    "LOGIN": {
+        "image": lambda request: static("admin/img/admin-login-photo.webp"),
+    },
     "SHOW_HISTORY": True,
     "SHOW_VIEW_ON_SITE": True,
     "COLORS": {

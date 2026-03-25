@@ -10,13 +10,14 @@ import {
 } from "react";
 import { useRouter } from "next/navigation";
 import { authApi } from "@/lib/auth-api";
-import type { LoginCredentials, UserProfile } from "@/types/auth";
+import type { LoginCredentials, LoginResponse, UserProfile } from "@/types/auth";
 
 interface AuthContextType {
   user: UserProfile | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (credentials: LoginCredentials) => Promise<void>;
+  login: (credentials: LoginCredentials) => Promise<LoginResponse>;
+  loginWith2FA: (userId: number, code: string) => Promise<void>;
   logout: () => Promise<void>;
   refreshProfile: () => Promise<void>;
 }
@@ -71,18 +72,51 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   /**
    * Login with credentials and store tokens.
+   * Returns the response so the caller can check requires_2fa.
    */
   const login = useCallback(
-    async (credentials: LoginCredentials) => {
+    async (credentials: LoginCredentials): Promise<LoginResponse> => {
       const response = await authApi.login(credentials);
-      localStorage.setItem("access_token", response.access);
-      localStorage.setItem("refresh_token", response.refresh);
-      setAuthCookie(true);
 
-      // Fetch full profile after login
-      const profile = await authApi.getProfile();
-      setUser(profile);
-      router.push("/");
+      // If 2FA is required, don't store tokens yet – return response for 2FA page
+      if (response.requires_2fa) {
+        return response;
+      }
+
+      // Standard login without 2FA
+      if (response.access && response.refresh) {
+        localStorage.setItem("access_token", response.access);
+        localStorage.setItem("refresh_token", response.refresh);
+        setAuthCookie(true);
+
+        // Fetch full profile after login
+        const profile = await authApi.getProfile();
+        setUser(profile);
+        router.push("/");
+      }
+
+      return response;
+    },
+    [router],
+  );
+
+  /**
+   * Complete login with 2FA verification.
+   */
+  const loginWith2FA = useCallback(
+    async (userId: number, code: string) => {
+      const response = await authApi.verify2FALogin({ user_id: userId, code });
+
+      if (response.access && response.refresh) {
+        localStorage.setItem("access_token", response.access);
+        localStorage.setItem("refresh_token", response.refresh);
+        setAuthCookie(true);
+
+        // Fetch full profile after login
+        const profile = await authApi.getProfile();
+        setUser(profile);
+        router.push("/");
+      }
     },
     [router],
   );
@@ -125,10 +159,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isAuthenticated: !!user,
       isLoading,
       login,
+      loginWith2FA,
       logout,
       refreshProfile,
     }),
-    [user, isLoading, login, logout, refreshProfile],
+    [user, isLoading, login, loginWith2FA, logout, refreshProfile],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

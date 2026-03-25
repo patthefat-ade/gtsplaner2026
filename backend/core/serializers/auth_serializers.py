@@ -69,6 +69,15 @@ class LoginSerializer(serializers.Serializer):
 
     def create(self, validated_data: dict) -> dict:
         user = validated_data["user"]
+
+        # If 2FA is enabled, return partial response requiring TOTP verification
+        if user.is_2fa_enabled and user.totp_secret:
+            return {
+                "requires_2fa": True,
+                "user_id": user.id,
+            }
+
+        # Standard login without 2FA
         refresh = RefreshToken.for_user(user)
 
         # Update last login
@@ -76,6 +85,7 @@ class LoginSerializer(serializers.Serializer):
         user.save(update_fields=["last_login"])
 
         return {
+            "requires_2fa": False,
             "access": str(refresh.access_token),
             "refresh": str(refresh),
             "user": {

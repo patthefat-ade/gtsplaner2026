@@ -18,6 +18,7 @@ class UserAdmin(BaseUserAdmin, ModelAdmin):
 
     fieldsets = BaseUserAdmin.fieldsets + (
         ("Kassenbuch", {"fields": ("role", "location", "phone", "profile_picture", "is_deleted")}),
+        ("Zwei-Faktor-Authentifizierung", {"fields": ("is_2fa_enabled", "totp_secret")}),
     )
     add_fieldsets = BaseUserAdmin.add_fieldsets + (
         ("Kassenbuch", {"fields": ("role", "location", "first_name", "last_name", "email")}),

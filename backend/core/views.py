@@ -5,6 +5,7 @@ Provides login, logout, token refresh, password reset/change,
 and user profile management.
 """
 
+from django.conf import settings
 from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework import permissions, status
 from rest_framework.response import Response
@@ -166,10 +167,27 @@ class PasswordResetRequestView(APIView):
         serializer.is_valid(raise_exception=True)
         result = serializer.save()
 
-        # In production, send email via Celery
+        # Send password reset email via Celery
         if result and "token" in result:
-            # TODO: Send email via Celery task in Sprint 8
-            pass
+            from system.tasks import send_password_reset_email
+
+            uid = result["uid"]
+            token = result["token"]
+            user = result["user"]
+            # Build the frontend reset URL
+            frontend_url = getattr(
+                settings, "FRONTEND_URL", "http://localhost:3000"
+            )
+            reset_link = f"{frontend_url}/reset-password?uid={uid}&token={token}"
+            try:
+                send_password_reset_email.delay(user.pk, reset_link)
+            except Exception:
+                # Celery/Redis not available – log but don't fail the request
+                import logging
+
+                logging.getLogger(__name__).warning(
+                    "Could not queue password reset email (Celery/Redis unavailable)"
+                )
 
         return Response(
             {

@@ -222,13 +222,13 @@ def send_new_leave_request_notification(self, leave_request_id):
 
 
 @shared_task(bind=True, max_retries=3, default_retry_delay=60)
-def send_password_reset_email(self, user_id, reset_token):
+def send_password_reset_email(self, user_id, reset_link):
     """
-    Send password reset email to user.
+    Send password reset email to user with a link to the frontend reset page.
 
     Args:
         user_id: ID of the user requesting reset
-        reset_token: Password reset token
+        reset_link: Full URL to the frontend password reset page with uid and token
     """
     try:
         from core.models import User
@@ -244,7 +244,9 @@ def send_password_reset_email(self, user_id, reset_token):
         plain_message = (
             f"Hallo {user.first_name},\n\n"
             f"Sie haben eine Passwort-Zurücksetzung angefordert.\n\n"
-            f"Ihr Reset-Code lautet: {reset_token}\n\n"
+            f"Klicken Sie auf den folgenden Link, um Ihr Passwort zurückzusetzen:\n"
+            f"{reset_link}\n\n"
+            f"Dieser Link ist 24 Stunden gültig.\n\n"
             f"Falls Sie diese Anfrage nicht gestellt haben, "
             f"ignorieren Sie bitte diese E-Mail.\n\n"
             f"Mit freundlichen Grüßen,\nGTS Planner"

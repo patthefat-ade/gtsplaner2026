@@ -12,7 +12,7 @@ import type { NextRequest } from "next/server";
  * Protected routes: everything else (dashboard, etc.)
  */
 
-const PUBLIC_PATHS = ["/login", "/forgot-password"];
+const PUBLIC_PATHS = ["/login", "/forgot-password", "/reset-password"];
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -22,6 +22,7 @@ export function middleware(request: NextRequest) {
     PUBLIC_PATHS.some((path) => pathname.startsWith(path)) ||
     pathname.startsWith("/api") ||
     pathname.startsWith("/_next") ||
+    pathname.startsWith("/assets") ||
     pathname.startsWith("/icons") ||
     pathname === "/manifest.json" ||
     pathname === "/favicon.ico"
