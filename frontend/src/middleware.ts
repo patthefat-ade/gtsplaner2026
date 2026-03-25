@@ -12,7 +12,7 @@ import type { NextRequest } from "next/server";
  * Protected routes: everything else (dashboard, etc.)
  */
 
-const PUBLIC_PATHS = ["/login", "/forgot-password"];
+const PUBLIC_PATHS = ["/login", "/forgot-password", "/reset-password"];
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
