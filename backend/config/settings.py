@@ -23,6 +23,9 @@ FERNET_KEYS = [
     config("FERNET_KEY", default="ZL-7EfMwbBMSRCnDqGgVbkVcCwJLPOlXKaJCgAMiWnA="),
 ]
 
+# Salt Key für django-fernet-encrypted-fields (verhindert Abhängigkeit von SECRET_KEY)
+SALT_KEY = config("SALT_KEY", default="gtsplaner-salt-key-change-in-production")
+
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config("DEBUG", default=False, cast=bool)
 
