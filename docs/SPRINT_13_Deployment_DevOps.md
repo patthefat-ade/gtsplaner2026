@@ -292,3 +292,44 @@ Anhand des gewünschten Features ("Überarbeitung Frontend Login Bereich in 40/6
     -   Die neuen Docker-Images werden gebaut und in die DigitalOcean Registry gepusht.
     -   Das Deployment auf der DigitalOcean App Platform wird angestoßen.
 8.  **Verifizierung:** Nach wenigen Minuten ist die neue Login-Seite live auf `www.gtsplaner.app/login` verfügbar.
+
+
+### 2.5 GitHub-Infrastruktur: Labels, Issues, Releases & Branch Protection
+
+Um den oben beschriebenen Workflow zu unterstützen und eine saubere Projektverwaltung zu gewährleisten, wurde folgende Infrastruktur auf GitHub eingerichtet:
+
+#### GitHub Labels
+
+Ein umfassendes Set an Labels wurde erstellt, um Issues und Pull Requests zu kategorisieren:
+
+| Kategorie | Beispiele | Farbe |
+|---|---|---|
+| **Bereich (Scope)** | `scope:backend`, `scope:frontend`, `scope:devops` | Blau, Grün, Gelb |
+| **Typ (Type)** | `type:feature`, `type:bugfix`, `type:chore` | Türkis, Rot, Grau |
+| **Priorität** | `priority:high`, `priority:medium`, `priority:low` | Rot, Gelb, Grün |
+| **Sprint** | `sprint-14`, `sprint-15` | Hellblau |
+| **Status** | `status:in-progress`, `status:review`, `status:blocked` | Gelb, Lila, Rot |
+
+#### GitHub Issues als zentrale Task-Verwaltung
+
+Alle anstehenden Aufgaben, Features und Bugs für den nächsten Sprint (Sprint 14) wurden als Issues im Repository angelegt. Dies ermöglicht:
+- **Zentrales Tracking:** Alle Aufgaben sind an einem Ort sichtbar.
+- **Klare Zuordnung:** Issues werden mit Labels für Sprint, Bereich und Priorität versehen.
+- **Verknüpfung mit Code:** Pull Requests können direkt mit Issues verknüpft werden (z.B. `Closes #4`), was die Nachvollziehbarkeit verbessert.
+
+#### Releases & Tags (Semantic Versioning)
+
+Das Projekt folgt dem **Semantic Versioning (SemVer)**, um Releases klar zu definieren:
+- **MAJOR (v2.0.0):** Breaking Changes.
+- **MINOR (v1.3.0):** Neue, abwärtskompatible Features.
+- **PATCH (v1.2.1):** Abwärtskompatible Bugfixes.
+
+Für die bisherigen Sprints wurden retroaktiv **Git-Tags** und **GitHub Releases** erstellt (`v1.0.0`, `v1.1.0`, `v1.2.0`), um wichtige Meilensteine in der Git-Historie zu markieren. Ein neuer GitHub Actions Workflow (`release.yml`) automatisiert die Erstellung von Releases für zukünftige Tags.
+
+#### Branch Protection Rules
+
+Für den `main`-Branch wurden Schutzregeln eingerichtet, um die Stabilität zu gewährleisten:
+- **PR erforderlich:** Direkte Pushes auf `main` sind blockiert.
+- **Reviews erforderlich:** Jeder PR benötigt mindestens **eine** genehmigende Review.
+- **Status-Checks erforderlich:** Die CI-Jobs (`backend-test`, `frontend-test`) müssen erfolgreich durchlaufen, bevor ein Merge möglich ist.
+- **Force-Pushes deaktiviert:** Verhindert das Überschreiben der öffentlichen Git-Historie.

@@ -1,6 +1,6 @@
 # GTS Planner Kassenbuch App v2 – Knowledge Base
 
-**Version:** v3 (nach Sprint 13: Deployment & DevOps)
+**Version:** v3.1 (nach Sprint 13: GitHub-Infrastruktur)
 **Letzte Aktualisierung:** 2026-03-25
 
 ---
@@ -25,25 +25,41 @@
 
 Wir verwenden den **GitHub Flow** als primäres Branching-Modell.
 
-- **`main` Branch:** Ist immer produktionsreif. Direkte Commits sind verboten.
+- **`main` Branch:** Ist immer produktionsreif. Direkte Commits sind durch **Branch Protection Rules** blockiert.
 - **Feature Branches:** Jede Änderung (Feature, Bugfix, Chore) wird in einem eigenen Branch entwickelt, der von `main` abzweigt. (z.B. `feature/neues-feature`, `fix/alter-bug`).
-- **Pull Requests (PRs):** Änderungen werden ausschließlich über Pull Requests in `main` gemerged. Jeder PR erfordert mindestens ein Review von einem anderen Teammitglied.
+- **Pull Requests (PRs):** Änderungen werden ausschließlich über Pull Requests in `main` gemerged. Jeder PR erfordert mindestens **eine genehmigende Review** und **erfolgreiche CI-Checks**.
 
-### 2.2 CI/CD: GitHub Actions
+### 2.2 Task-Management: GitHub Issues
 
-Zwei Workflows automatisieren den Prozess:
+- **Zentrale Verwaltung:** Alle Tasks, Bugs und Features werden als **GitHub Issues** angelegt.
+- **Kategorisierung:** Issues werden mit **Labels** für Sprint (`sprint-14`), Bereich (`scope:frontend`), Typ (`type:feature`) und Priorität (`priority:high`) versehen.
+- **Nachvollziehbarkeit:** PRs werden mit Issues verknüpft (`Closes #42`), um den Entwicklungszyklus transparent zu machen.
+
+### 2.3 Versionierung: Semantic Versioning & GitHub Releases
+
+- **Schema (SemVer):** `MAJOR.MINOR.PATCH` (z.B. `v1.2.1`)
+- **Tags:** Jeder Release wird mit einem Git-Tag markiert (z.B. `v1.2.1`).
+- **Releases:** Zu jedem Tag wird ein **GitHub Release** mit einem automatisierten Changelog erstellt.
+
+### 2.4 CI/CD: GitHub Actions
+
+Drei Workflows automatisieren den Prozess:
 
 1.  **`ci.yml` (Continuous Integration):**
     -   **Trigger:** Bei jedem Push auf einen Feature-Branch oder PR nach `main`.
-    -   **Aktionen:** Führt Backend-Tests (pytest) gegen eine temporäre PostgreSQL-DB und Frontend-Tests (Vitest) sowie Linting aus.
+    -   **Aktionen:** Führt Backend-Tests (pytest + PostgreSQL) und Frontend-Tests (Vitest + Lint) aus.
     -   **Ziel:** Stellt die Code-Qualität sicher, bevor ein Merge stattfindet.
 
 2.  **`cd.yml` (Continuous Deployment):**
     -   **Trigger:** Nur bei einem Merge in den `main`-Branch.
-    -   **Aktionen:** Baut die Docker-Images für Backend und Frontend, pusht sie in die DigitalOcean Container Registry und löst ein neues Deployment auf der App Platform aus.
+    -   **Aktionen:** Löst ein neues Deployment auf der DigitalOcean App Platform aus.
     -   **Ziel:** Automatisierte und schnelle Veröffentlichung von neuem, getestetem Code.
 
-### 2.3 Zukünftige Skalierung: React Native
+3.  **`release.yml` (Release Automatisierung):**
+    -   **Trigger:** Bei jedem Push eines neuen Tags (`v*.*.*`).
+    -   **Aktionen:** Erstellt automatisch ein GitHub Release mit einem Changelog der Commits seit dem letzten Tag.
+
+### 2.5 Zukünftige Skalierung: React Native
 
 Für die Entwicklung einer mobilen App wird eine Erweiterung des Monorepos empfohlen, um maximalen Code-Austausch zu ermöglichen.
 
@@ -67,23 +83,14 @@ Für die Entwicklung einer mobilen App wird eine Erweiterung des Monorepos empfo
 
 ### 3.1 Plattform: DigitalOcean App Platform
 
-Die Anwendung wird als Multi-Service-App auf der DigitalOcean App Platform gehostet. Die Konfiguration wird über die `do-app-spec.yml` im Root-Verzeichnis des Repositories verwaltet.
-
 -   **Services:** `backend` (Django), `frontend` (Next.js)
 -   **Datenbank:** Managed PostgreSQL von DigitalOcean.
 -   **Domains:**
     -   Frontend: `https://www.gtsplaner.app`
     -   Backend: `https://api.gtsplaner.app`
+-   **Secrets:** `DIGITALOCEAN_ACCESS_TOKEN` und `DO_APP_ID` sind als Repository Secrets für GitHub Actions hinterlegt.
 
-### 3.2 Wichtige Produktions-Konfigurationen
-
--   **`ALLOWED_HOSTS` (Django):** Muss alle verwendeten Domains enthalten. Wird über eine Umgebungsvariable im DigitalOcean Dashboard gesetzt.
--   **`CORS_ALLOWED_ORIGINS` (Django):** Muss die Frontend-Domain (`https://www.gtsplaner.app`) enthalten, damit der Browser API-Anfragen erlaubt.
--   **`CSRF_TRUSTED_ORIGINS` (Django):** Muss ebenfalls die Frontend-Domain enthalten.
--   **`SECURE_PROXY_SSL_HEADER` (Django):** Ist gesetzt, damit Django den `X-Forwarded-Proto`-Header von DigitalOceans Load Balancer korrekt interpretiert und HTTPS-Links generiert.
--   **`NEXT_PUBLIC_API_URL` (Next.js):** Wird zur Build-Zeit im `Dockerfile` auf `https://api.gtsplaner.app/api/v1` gesetzt, um sicherzustellen, dass das Frontend immer die korrekte API-URL verwendet.
-
-### 3.3 DNS-Hinweis
+### 3.2 DNS-Hinweis
 
 -   Die Apex-Domain (`gtsplaner.app`) kann mit Hetzner als DNS-Provider nicht direkt auf DigitalOcean zeigen. **Empfehlung:** Umstieg auf **Cloudflare DNS** (kostenlos), um CNAME Flattening zu nutzen und die Apex-Domain ebenfalls "Active" zu schalten.
 
