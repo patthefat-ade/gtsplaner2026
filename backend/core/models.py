@@ -60,6 +60,13 @@ class User(AbstractUser):
     last_password_change = models.DateTimeField(
         null=True, blank=True, verbose_name="Letzte Passwortänderung"
     )
+    # Two-Factor Authentication (TOTP)
+    totp_secret = models.CharField(
+        max_length=32, blank=True, default="", verbose_name="TOTP Secret"
+    )
+    is_2fa_enabled = models.BooleanField(
+        default=False, verbose_name="2FA aktiviert"
+    )
 
     class Meta:
         db_table = "users_user"

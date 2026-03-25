@@ -15,6 +15,13 @@ from core.views import (
     PasswordResetConfirmView,
     PasswordResetRequestView,
 )
+from core.views_2fa import (
+    TwoFactorDisableView,
+    TwoFactorLoginVerifyView,
+    TwoFactorSetupView,
+    TwoFactorStatusView,
+    TwoFactorVerifyView,
+)
 
 app_name = "auth"
 
@@ -30,4 +37,14 @@ urlpatterns = [
         name="password-reset-confirm",
     ),
     path("password-change/", PasswordChangeView.as_view(), name="password-change"),
+    # Two-Factor Authentication (2FA)
+    path("2fa/setup/", TwoFactorSetupView.as_view(), name="2fa-setup"),
+    path("2fa/verify/", TwoFactorVerifyView.as_view(), name="2fa-verify"),
+    path("2fa/disable/", TwoFactorDisableView.as_view(), name="2fa-disable"),
+    path(
+        "2fa/login-verify/",
+        TwoFactorLoginVerifyView.as_view(),
+        name="2fa-login-verify",
+    ),
+    path("2fa/status/", TwoFactorStatusView.as_view(), name="2fa-status"),
 ]

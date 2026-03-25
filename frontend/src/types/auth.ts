@@ -8,9 +8,11 @@ export interface LoginCredentials {
 }
 
 export interface LoginResponse {
-  access: string;
-  refresh: string;
-  user: AuthUser;
+  requires_2fa: boolean;
+  access?: string;
+  refresh?: string;
+  user?: AuthUser;
+  user_id?: number;
 }
 
 export interface AuthUser {
@@ -59,4 +61,25 @@ export interface PasswordChange {
   old_password: string;
   new_password: string;
   new_password_confirm: string;
+}
+
+// Two-Factor Authentication Types
+export interface TwoFactorSetupResponse {
+  secret: string;
+  qr_code: string;
+  otpauth_url: string;
+}
+
+export interface TwoFactorStatusResponse {
+  is_2fa_enabled: boolean;
+  has_totp_secret: boolean;
+}
+
+export interface TwoFactorLoginVerify {
+  user_id: number;
+  code: string;
+}
+
+export interface TwoFactorVerifyCode {
+  code: string;
 }
