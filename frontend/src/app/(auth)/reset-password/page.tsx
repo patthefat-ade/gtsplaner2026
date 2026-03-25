@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState, useEffect } from "react";
+import { Suspense, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod/v4";
@@ -69,12 +69,7 @@ function ResetPasswordForm() {
   });
 
   // Validate that uid and token are present
-  const [isValid, setIsValid] = useState(true);
-  useEffect(() => {
-    if (!uid || !token) {
-      setIsValid(false);
-    }
-  }, [uid, token]);
+  const isValid = !!(uid && token);
 
   const onSubmit = async (data: ResetFormValues) => {
     if (!uid || !token) return;
