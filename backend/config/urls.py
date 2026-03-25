@@ -2,6 +2,7 @@
 URL configuration for Kassenbuch App v2.
 
 Includes all API routes under /api/v1/ and the OpenAPI/Swagger documentation.
+API documentation is restricted to authenticated staff users (is_staff=True).
 """
 
 from django.conf import settings
@@ -14,6 +15,7 @@ from drf_spectacular.views import (
     SpectacularRedocView,
     SpectacularSwaggerView,
 )
+from rest_framework.permissions import IsAdminUser
 
 
 def health_check(request):
@@ -26,9 +28,21 @@ def root_view(request):
     return JsonResponse({
         "service": "GTS Planer API",
         "version": "2.0.0",
-        "docs": "/api/docs/",
         "health": "/api/health-check/",
     })
+
+
+# Secured API documentation views – only accessible by staff users
+class SecuredSchemaView(SpectacularAPIView):
+    permission_classes = [IsAdminUser]
+
+
+class SecuredSwaggerView(SpectacularSwaggerView):
+    permission_classes = [IsAdminUser]
+
+
+class SecuredRedocView(SpectacularRedocView):
+    permission_classes = [IsAdminUser]
 
 
 urlpatterns = [
@@ -47,18 +61,18 @@ urlpatterns = [
     path("api/v1/admin/", include("admin_panel.urls")),
     path("api/v1/system/", include("system.urls")),
     path("api/v1/export/", include("system.urls_export")),
-    # OpenAPI Schema
-    path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
-    # Swagger UI
+    # OpenAPI Schema (secured – staff only)
+    path("api/schema/", SecuredSchemaView.as_view(), name="schema"),
+    # Swagger UI (secured – staff only)
     path(
         "api/docs/",
-        SpectacularSwaggerView.as_view(url_name="schema"),
+        SecuredSwaggerView.as_view(url_name="schema"),
         name="swagger-ui",
     ),
-    # ReDoc
+    # ReDoc (secured – staff only)
     path(
         "api/redoc/",
-        SpectacularRedocView.as_view(url_name="schema"),
+        SecuredRedocView.as_view(url_name="schema"),
         name="redoc",
     ),
     # Health Check (system module)
