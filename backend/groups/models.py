@@ -239,8 +239,8 @@ class Student(models.Model):
         related_name="students",
         verbose_name="Gruppe",
     )
-    first_name = EncryptedCharField(max_length=255, verbose_name="Vorname")
-    last_name = EncryptedCharField(max_length=255, verbose_name="Nachname")
+    first_name = EncryptedCharField(max_length=255, null=True, verbose_name="Vorname")
+    last_name = EncryptedCharField(max_length=255, null=True, verbose_name="Nachname")
     date_of_birth = EncryptedDateField(
         null=True,
         blank=True,

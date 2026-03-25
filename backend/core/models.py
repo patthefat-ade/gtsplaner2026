@@ -50,7 +50,9 @@ class User(AbstractUser):
         related_name="users",
         verbose_name="Standort",
     )
-    phone = EncryptedCharField(max_length=255, blank=True, null=True, default="", verbose_name="Telefon")
+    phone = EncryptedCharField(
+        max_length=255, blank=True, null=True, default="", verbose_name="Telefon"
+    )
     profile_picture = models.ImageField(
         upload_to="profiles/", null=True, blank=True, verbose_name="Profilbild"
     )
@@ -98,18 +100,34 @@ class Organization(models.Model):
     Represents a parent organization (e.g., Hilfswerk Kärnten).
 
     Contact information (email, phone, address) is encrypted at rest.
+
+    Note: All encrypted fields use null=True because django-fernet-encrypted-fields
+    returns None from get_prep_value() for empty/falsy values. PostgreSQL enforces
+    NOT NULL strictly, so null=True is required for compatibility.
     """
 
     name = models.CharField(max_length=255, verbose_name="Name")
     description = models.TextField(blank=True, verbose_name="Beschreibung")
-    email = EncryptedEmailField(max_length=255, verbose_name="E-Mail")
-    phone = EncryptedCharField(max_length=255, blank=True, null=True, default="", verbose_name="Telefon")
+    email = EncryptedEmailField(
+        max_length=255, blank=True, null=True, default="", verbose_name="E-Mail"
+    )
+    phone = EncryptedCharField(
+        max_length=255, blank=True, null=True, default="", verbose_name="Telefon"
+    )
     website = models.URLField(blank=True, verbose_name="Website")
-    street = EncryptedCharField(max_length=255, verbose_name="Straße")
-    city = EncryptedCharField(max_length=255, verbose_name="Stadt")
-    postal_code = EncryptedCharField(max_length=255, verbose_name="PLZ")
+    street = EncryptedCharField(
+        max_length=255, blank=True, null=True, default="", verbose_name="Straße"
+    )
+    city = EncryptedCharField(
+        max_length=255, blank=True, null=True, default="", verbose_name="Stadt"
+    )
+    postal_code = EncryptedCharField(
+        max_length=255, blank=True, null=True, default="", verbose_name="PLZ"
+    )
     country = models.CharField(max_length=100, default="Österreich", verbose_name="Land")
-    logo = models.ImageField(upload_to="organizations/", null=True, blank=True, verbose_name="Logo")
+    logo = models.ImageField(
+        upload_to="organizations/", null=True, blank=True, verbose_name="Logo"
+    )
     is_active = models.BooleanField(default=True, verbose_name="Aktiv")
     is_deleted = models.BooleanField(default=False, verbose_name="Gelöscht")
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Erstellt am")
@@ -130,21 +148,42 @@ class Location(models.Model):
     Represents a physical location/site within an organization.
 
     Contact information (email, phone, address) is encrypted at rest.
+
+    Note: All encrypted fields use null=True because django-fernet-encrypted-fields
+    returns None from get_prep_value() for empty/falsy values. PostgreSQL enforces
+    NOT NULL strictly, so null=True is required for compatibility.
     """
 
     organization = models.ForeignKey(
-        Organization, on_delete=models.CASCADE, related_name="locations", verbose_name="Organisation"
+        Organization,
+        on_delete=models.CASCADE,
+        related_name="locations",
+        verbose_name="Organisation",
     )
     name = models.CharField(max_length=255, verbose_name="Name")
     description = models.TextField(blank=True, verbose_name="Beschreibung")
-    email = EncryptedEmailField(max_length=255, verbose_name="E-Mail")
-    phone = EncryptedCharField(max_length=255, blank=True, null=True, default="", verbose_name="Telefon")
-    street = EncryptedCharField(max_length=255, verbose_name="Straße")
-    city = EncryptedCharField(max_length=255, verbose_name="Stadt")
-    postal_code = EncryptedCharField(max_length=255, verbose_name="PLZ")
+    email = EncryptedEmailField(
+        max_length=255, blank=True, null=True, default="", verbose_name="E-Mail"
+    )
+    phone = EncryptedCharField(
+        max_length=255, blank=True, null=True, default="", verbose_name="Telefon"
+    )
+    street = EncryptedCharField(
+        max_length=255, blank=True, null=True, default="", verbose_name="Straße"
+    )
+    city = EncryptedCharField(
+        max_length=255, blank=True, null=True, default="", verbose_name="Stadt"
+    )
+    postal_code = EncryptedCharField(
+        max_length=255, blank=True, null=True, default="", verbose_name="PLZ"
+    )
     manager = models.ForeignKey(
-        User, on_delete=models.SET_NULL, null=True, blank=True,
-        related_name="managed_locations", verbose_name="Standortleitung"
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="managed_locations",
+        verbose_name="Standortleitung",
     )
     is_active = models.BooleanField(default=True, verbose_name="Aktiv")
     is_deleted = models.BooleanField(default=False, verbose_name="Gelöscht")
