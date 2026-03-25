@@ -10,7 +10,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
-import Image from "next/image";
 import Link from "next/link";
 
 /**
@@ -83,14 +82,12 @@ export default function LoginPage() {
 
       {/* Logo */}
       <div className="mb-8 flex flex-col items-center">
-        <div className="mb-4 flex h-20 w-20 items-center justify-center overflow-hidden rounded-xl bg-[#FFCC00] shadow-lg">
-          <Image
+        <div className="mb-4 h-20 w-20 overflow-hidden rounded-xl shadow-lg">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
             src="/assets/logos/hilfswerk-logo.svg"
             alt="Hilfswerk Logo"
-            width={80}
-            height={80}
-            className="h-full w-full object-contain"
-            priority
+            className="h-full w-full object-cover"
           />
         </div>
         <h1 className="text-2xl font-bold text-foreground dark:text-yellow-50">

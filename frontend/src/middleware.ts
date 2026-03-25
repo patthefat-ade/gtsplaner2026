@@ -22,6 +22,7 @@ export function middleware(request: NextRequest) {
     PUBLIC_PATHS.some((path) => pathname.startsWith(path)) ||
     pathname.startsWith("/api") ||
     pathname.startsWith("/_next") ||
+    pathname.startsWith("/assets") ||
     pathname.startsWith("/icons") ||
     pathname === "/manifest.json" ||
     pathname === "/favicon.ico"

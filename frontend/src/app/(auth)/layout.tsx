@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import { useTheme } from "next-themes";
 import { useSyncExternalStore } from "react";
 
@@ -119,17 +118,15 @@ export default function AuthLayout({
 
         {/* Main illustration */}
         <div className="relative z-10 flex w-full max-w-2xl items-center justify-center p-8 animate-fade-in-up">
-          <Image
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
             src={
               isDark
                 ? "/assets/login/children-scene-dark.webp"
                 : "/assets/login/children-scene-main.webp"
             }
             alt="Fröhliche Kinder beim Spielen und Lernen – GTS Planner"
-            width={800}
-            height={1067}
             className="h-auto w-full max-h-[80vh] object-contain drop-shadow-2xl animate-gentle-bounce"
-            priority
           />
         </div>
 

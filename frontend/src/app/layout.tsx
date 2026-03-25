@@ -12,9 +12,9 @@ const nunito = Nunito({
 });
 
 export const metadata: Metadata = {
-  title: "GTS Planner – Kassenbuch App",
+  title: "GTS Planner – Digitale Unterstützung in der täglichen Zusammenarbeit",
   description:
-    "Verwaltung von Klassenkassen für Freizeitpädagoginnen – Zeiterfassung, Finanzen, Gruppen",
+    "GTS Planner – Digitale Verwaltung für Freizeitpädagoginnen: Zeiterfassung, Finanzen, Gruppen & mehr",
   manifest: "/manifest.json",
 };
 
