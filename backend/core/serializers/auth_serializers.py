@@ -96,6 +96,7 @@ class LoginSerializer(serializers.Serializer):
                 "last_name": user.last_name,
                 "role": user.role,
                 "location": user.location_id,
+                "has_accepted_terms": user.has_accepted_terms,
             },
         }
 

@@ -67,6 +67,13 @@ class User(AbstractUser):
     is_2fa_enabled = models.BooleanField(
         default=False, verbose_name="2FA aktiviert"
     )
+    # Terms & Conditions acceptance
+    has_accepted_terms = models.BooleanField(
+        default=False, verbose_name="Nutzungsbedingungen akzeptiert"
+    )
+    terms_accepted_at = models.DateTimeField(
+        null=True, blank=True, verbose_name="Nutzungsbedingungen akzeptiert am"
+    )
 
     class Meta:
         db_table = "users_user"

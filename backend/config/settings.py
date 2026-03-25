@@ -316,13 +316,19 @@ CELERY_TIMEZONE = TIME_ZONE
 # Email Configuration
 # ---------------------------------------------------------------------------
 
-EMAIL_BACKEND = config("EMAIL_BACKEND", default="django.core.mail.backends.console.EmailBackend")
-EMAIL_HOST = config("EMAIL_HOST", default="smtp.example.com")
+# In Production: django.core.mail.backends.smtp.EmailBackend
+# In Development: django.core.mail.backends.console.EmailBackend (zeigt E-Mails in der Konsole)
+EMAIL_BACKEND = config(
+    "EMAIL_BACKEND",
+    default="django.core.mail.backends.smtp.EmailBackend" if not DEBUG else "django.core.mail.backends.console.EmailBackend",
+)
+EMAIL_HOST = config("EMAIL_HOST", default="mail.your-server.de")
 EMAIL_PORT = config("EMAIL_PORT", default=587, cast=int)
 EMAIL_USE_TLS = config("EMAIL_USE_TLS", default=True, cast=bool)
-EMAIL_HOST_USER = config("EMAIL_HOST_USER", default="")
+EMAIL_HOST_USER = config("EMAIL_HOST_USER", default="auto_benachrichtigungen@gtsplaner.app")
 EMAIL_HOST_PASSWORD = config("EMAIL_HOST_PASSWORD", default="")
-DEFAULT_FROM_EMAIL = config("DEFAULT_FROM_EMAIL", default="noreply@gtsplanner.at")
+DEFAULT_FROM_EMAIL = config("DEFAULT_FROM_EMAIL", default="GTS Planer <auto_benachrichtigungen@gtsplaner.app>")
+SERVER_EMAIL = config("SERVER_EMAIL", default="auto_benachrichtigungen@gtsplaner.app")
 
 # Frontend URL for password reset links etc.
 FRONTEND_URL = config("FRONTEND_URL", default="http://localhost:3000")

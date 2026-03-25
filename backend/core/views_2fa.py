@@ -151,6 +151,13 @@ class TwoFactorVerifyView(APIView):
         user.is_2fa_enabled = True
         user.save(update_fields=["is_2fa_enabled"])
 
+        # Notify about 2FA activation
+        try:
+            from system.notification_service import notify_2fa_status_changed
+            notify_2fa_status_changed(user, enabled=True)
+        except Exception:
+            pass
+
         return Response(
             {"detail": "Zwei-Faktor-Authentifizierung erfolgreich aktiviert."},
             status=status.HTTP_200_OK,
@@ -202,6 +209,13 @@ class TwoFactorDisableView(APIView):
         user.is_2fa_enabled = False
         user.totp_secret = ""
         user.save(update_fields=["is_2fa_enabled", "totp_secret"])
+
+        # Notify about 2FA deactivation
+        try:
+            from system.notification_service import notify_2fa_status_changed
+            notify_2fa_status_changed(user, enabled=False)
+        except Exception:
+            pass
 
         return Response(
             {"detail": "Zwei-Faktor-Authentifizierung deaktiviert."},

@@ -23,6 +23,7 @@ export interface AuthUser {
   last_name: string;
   role: "educator" | "location_manager" | "admin" | "super_admin";
   location: number | null;
+  has_accepted_terms?: boolean;
 }
 
 export interface UserProfile extends AuthUser {
@@ -39,6 +40,8 @@ export interface UserProfile extends AuthUser {
   last_login: string | null;
   date_joined: string;
   last_password_change: string | null;
+  has_accepted_terms: boolean;
+  terms_accepted_at: string | null;
 }
 
 export interface TokenRefreshResponse {

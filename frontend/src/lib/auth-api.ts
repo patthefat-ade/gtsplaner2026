@@ -127,4 +127,14 @@ export const authApi = {
     const { data } = await api.get<TwoFactorStatusResponse>("/auth/2fa/status/");
     return data;
   },
+
+  // ── Terms & Privacy ─────────────────────────────────────────────
+
+  /**
+   * Accept privacy policy and terms of service.
+   */
+  acceptTerms: async (): Promise<{ detail: string; has_accepted_terms: boolean; terms_accepted_at: string }> => {
+    const { data } = await api.post("/auth/accept-terms/");
+    return data;
+  },
 };

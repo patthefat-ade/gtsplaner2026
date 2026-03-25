@@ -7,6 +7,7 @@ All endpoints are prefixed with /api/v1/auth/ via config/urls.py.
 from django.urls import path
 
 from core.views import (
+    AcceptTermsView,
     CustomTokenRefreshView,
     LoginView,
     LogoutView,
@@ -37,6 +38,7 @@ urlpatterns = [
         name="password-reset-confirm",
     ),
     path("password-change/", PasswordChangeView.as_view(), name="password-change"),
+    path("accept-terms/", AcceptTermsView.as_view(), name="accept-terms"),
     # Two-Factor Authentication (2FA)
     path("2fa/setup/", TwoFactorSetupView.as_view(), name="2fa-setup"),
     path("2fa/verify/", TwoFactorVerifyView.as_view(), name="2fa-verify"),
