@@ -16,9 +16,9 @@ function useMounted() {
 
 /**
  * Auth layout – 40/60 splitscreen layout for login and password reset pages.
- * Left side (40%): Auth form content.
+ * Left side (40%): Auth form on yellow gradient background with Hilfswerk logo.
  * Right side (60%): Animated cartoon children illustration.
- * On mobile: Only the form is shown.
+ * On mobile: Only the form is shown with yellow gradient.
  */
 export default function AuthLayout({
   children,
@@ -31,10 +31,39 @@ export default function AuthLayout({
   const isDark = mounted && resolvedTheme === "dark";
 
   return (
-    <div className="flex min-h-screen w-full bg-background">
-      {/* Left side – Login Form (40%) */}
-      <div className="relative flex w-full flex-col items-center justify-center px-4 py-8 lg:w-[40%] lg:px-8">
-        <div className="w-full max-w-md">{children}</div>
+    <div className="flex min-h-screen w-full">
+      {/* Left side – Login Form (40%) with yellow gradient */}
+      <div
+        className="relative flex w-full flex-col items-center justify-center px-4 py-8 lg:w-[40%] lg:px-8"
+        style={{
+          background: isDark
+            ? "linear-gradient(135deg, #1a1700 0%, #2d2400 30%, #3d3200 60%, #1a1700 100%)"
+            : "linear-gradient(135deg, #FFCC00 0%, #FFD633 30%, #FFE066 60%, #FFF2B2 100%)",
+        }}
+      >
+        {/* Subtle pattern overlay */}
+        <div
+          className="pointer-events-none absolute inset-0 opacity-5"
+          style={{
+            backgroundImage: isDark
+              ? "radial-gradient(circle at 25% 25%, #FFCC00 1px, transparent 1px)"
+              : "radial-gradient(circle at 25% 25%, #000000 1px, transparent 1px)",
+            backgroundSize: "40px 40px",
+          }}
+        />
+
+        <div className="relative z-10 w-full max-w-md">{children}</div>
+
+        {/* Bottom branding */}
+        <div className="absolute bottom-6 left-0 right-0 z-10 text-center">
+          <p
+            className={`text-xs tracking-wide ${
+              isDark ? "text-yellow-600/60" : "text-yellow-800/40"
+            }`}
+          >
+            &copy; {new Date().getFullYear()} Hilfswerk
+          </p>
+        </div>
       </div>
 
       {/* Right side – Illustration (60%) – hidden on mobile */}

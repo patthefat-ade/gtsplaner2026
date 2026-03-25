@@ -9,15 +9,9 @@ import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
+import Image from "next/image";
+import Link from "next/link";
 
 /**
  * Zod validation schema for the login form.
@@ -34,7 +28,8 @@ const loginSchema = z.object({
 type LoginFormValues = z.infer<typeof loginSchema>;
 
 /**
- * Login page with form validation and error handling.
+ * Login page with Hilfswerk branding on yellow gradient background.
+ * Features: Logo, new slogan, form validation, error handling.
  */
 export default function LoginPage() {
   const { login } = useAuth();
@@ -82,45 +77,60 @@ export default function LoginPage() {
   return (
     <div className="relative flex w-full flex-col items-center justify-center">
       {/* Theme Toggle in top-right corner */}
-      <div className="absolute right-4 top-4 z-50">
+      <div className="absolute right-0 top-0 z-50 lg:-right-4 lg:-top-4">
         <ThemeToggle />
       </div>
 
-      <Card className="w-full max-w-md border-0 shadow-none bg-transparent lg:border lg:shadow-sm lg:bg-card">
-        <CardHeader className="space-y-1 text-center">
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-xl bg-primary">
-            <span className="text-2xl font-bold text-primary-foreground">
-              GTS
-            </span>
-          </div>
-          <CardTitle className="text-2xl font-bold">GTS Planner</CardTitle>
-          <CardDescription>
-            Kassenbuch für Freizeitpädagoginnen
-          </CardDescription>
-        </CardHeader>
+      {/* Logo */}
+      <div className="mb-8 flex flex-col items-center">
+        <div className="mb-4 flex h-20 w-20 items-center justify-center overflow-hidden rounded-xl bg-[#FFCC00] shadow-lg">
+          <Image
+            src="/assets/logos/hilfswerk-logo.svg"
+            alt="Hilfswerk Logo"
+            width={80}
+            height={80}
+            className="h-full w-full object-contain"
+            priority
+          />
+        </div>
+        <h1 className="text-2xl font-bold text-foreground dark:text-yellow-50">
+          GTS Planner
+        </h1>
+        <p className="mt-1 text-center text-sm text-foreground/70 dark:text-yellow-100/60">
+          Digitale Unterstützung in der täglichen Zusammenarbeit
+        </p>
+      </div>
 
+      {/* Login Card */}
+      <div className="w-full max-w-sm rounded-2xl bg-white/80 p-6 shadow-xl backdrop-blur-sm dark:bg-black/30 dark:shadow-2xl dark:shadow-yellow-900/10">
         <form onSubmit={handleSubmit(onSubmit)}>
-          <CardContent className="space-y-4">
+          <div className="space-y-4">
             {/* Server Error */}
             {serverError && (
-              <div className="rounded-md border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
+              <div className="rounded-lg border border-red-300 bg-red-50 p-3 text-sm text-red-700 dark:border-red-800 dark:bg-red-950/50 dark:text-red-300">
                 {serverError}
               </div>
             )}
 
             {/* Username / Email */}
             <div className="space-y-2">
-              <Label htmlFor="username">Benutzername oder E-Mail</Label>
+              <Label
+                htmlFor="username"
+                className="text-sm font-medium text-gray-700 dark:text-yellow-100/80"
+              >
+                Benutzername oder E-Mail
+              </Label>
               <Input
                 id="username"
                 type="text"
                 placeholder="name@beispiel.at"
                 autoComplete="username"
                 autoFocus
+                className="border-gray-300 bg-white/90 focus:border-[#FFCC00] focus:ring-[#FFCC00] dark:border-yellow-900/30 dark:bg-black/40 dark:text-yellow-50 dark:placeholder:text-yellow-100/30"
                 {...register("username")}
               />
               {errors.username && (
-                <p className="text-xs text-destructive">
+                <p className="text-xs text-red-600 dark:text-red-400">
                   {errors.username.message}
                 </p>
               )}
@@ -128,26 +138,31 @@ export default function LoginPage() {
 
             {/* Password */}
             <div className="space-y-2">
-              <Label htmlFor="password">Passwort</Label>
+              <Label
+                htmlFor="password"
+                className="text-sm font-medium text-gray-700 dark:text-yellow-100/80"
+              >
+                Passwort
+              </Label>
               <Input
                 id="password"
                 type="password"
                 placeholder="••••••••"
                 autoComplete="current-password"
+                className="border-gray-300 bg-white/90 focus:border-[#FFCC00] focus:ring-[#FFCC00] dark:border-yellow-900/30 dark:bg-black/40 dark:text-yellow-50 dark:placeholder:text-yellow-100/30"
                 {...register("password")}
               />
               {errors.password && (
-                <p className="text-xs text-destructive">
+                <p className="text-xs text-red-600 dark:text-red-400">
                   {errors.password.message}
                 </p>
               )}
             </div>
-          </CardContent>
 
-          <CardFooter className="flex flex-col space-y-4">
+            {/* Submit Button */}
             <Button
               type="submit"
-              className="w-full"
+              className="w-full bg-[#1a1a1a] text-white hover:bg-[#333333] dark:bg-[#FFCC00] dark:text-[#1a1a1a] dark:hover:bg-[#FFD633]"
               disabled={isSubmitting}
             >
               {isSubmitting ? (
@@ -162,20 +177,19 @@ export default function LoginPage() {
                 </>
               )}
             </Button>
-
-            <Button
-              type="button"
-              variant="link"
-              className="text-sm text-muted-foreground"
-              onClick={() => {
-                // TODO: Navigate to password reset page
-              }}
-            >
-              Passwort vergessen?
-            </Button>
-          </CardFooter>
+          </div>
         </form>
-      </Card>
+
+        {/* Forgot Password Link */}
+        <div className="mt-4 text-center">
+          <Link
+            href="/forgot-password"
+            className="text-sm text-gray-500 transition-colors hover:text-gray-700 dark:text-yellow-100/50 dark:hover:text-yellow-100/80"
+          >
+            Passwort vergessen?
+          </Link>
+        </div>
+      </div>
     </div>
   );
 }
