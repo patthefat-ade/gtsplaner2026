@@ -3,10 +3,18 @@ Groups models for the Kassenbuch App v2.
 
 Contains SchoolYear, Semester, Group, GroupMember, and Student models
 for managing the organizational structure of groups and children.
+
+Student personal data is encrypted at rest using Fernet encryption
+to comply with GDPR/DSGVO requirements (data of minors).
 """
 
 from django.conf import settings
 from django.db import models
+from encrypted_fields.fields import (
+    EncryptedCharField,
+    EncryptedDateField,
+    EncryptedEmailField,
+)
 
 
 class SchoolYear(models.Model):
@@ -221,6 +229,8 @@ class Student(models.Model):
     A child/student enrolled in a group.
 
     Contains personal and contact information for each student.
+    ALL personal data fields are encrypted at rest using Fernet encryption
+    to comply with GDPR/DSGVO requirements for data of minors.
     """
 
     group = models.ForeignKey(
@@ -229,18 +239,18 @@ class Student(models.Model):
         related_name="students",
         verbose_name="Gruppe",
     )
-    first_name = models.CharField(max_length=150, verbose_name="Vorname")
-    last_name = models.CharField(max_length=150, verbose_name="Nachname")
-    date_of_birth = models.DateField(
+    first_name = EncryptedCharField(max_length=255, verbose_name="Vorname")
+    last_name = EncryptedCharField(max_length=255, verbose_name="Nachname")
+    date_of_birth = EncryptedDateField(
         null=True,
         blank=True,
         verbose_name="Geburtsdatum",
     )
-    email = models.EmailField(blank=True, verbose_name="E-Mail")
-    phone = models.CharField(max_length=20, blank=True, verbose_name="Telefon")
-    street = models.CharField(max_length=255, blank=True, verbose_name="Strasse")
-    city = models.CharField(max_length=100, blank=True, verbose_name="Stadt")
-    postal_code = models.CharField(max_length=10, blank=True, verbose_name="PLZ")
+    email = EncryptedEmailField(max_length=255, blank=True, verbose_name="E-Mail")
+    phone = EncryptedCharField(max_length=255, blank=True, verbose_name="Telefon")
+    street = EncryptedCharField(max_length=255, blank=True, verbose_name="Strasse")
+    city = EncryptedCharField(max_length=255, blank=True, verbose_name="Stadt")
+    postal_code = EncryptedCharField(max_length=255, blank=True, verbose_name="PLZ")
     is_active = models.BooleanField(default=True, verbose_name="Aktiv")
     is_deleted = models.BooleanField(default=False, verbose_name="Geloescht")
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Erstellt am")
@@ -250,7 +260,7 @@ class Student(models.Model):
         db_table = "groups_student"
         verbose_name = "Schueler"
         verbose_name_plural = "Schueler"
-        ordering = ["last_name", "first_name"]
+        ordering = ["id"]  # Cannot order by encrypted fields
         indexes = [
             models.Index(fields=["group"]),
         ]
