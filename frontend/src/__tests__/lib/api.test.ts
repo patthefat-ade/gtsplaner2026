@@ -7,7 +7,8 @@ describe("api instance", () => {
   });
 
   it("should have correct baseURL", () => {
-    expect(api.defaults.baseURL).toBe("/api/v1");
+    const expectedBase = process.env.NEXT_PUBLIC_API_URL || "/api/v1";
+    expect(api.defaults.baseURL).toBe(expectedBase);
   });
 
   it("should have JSON content type", () => {
