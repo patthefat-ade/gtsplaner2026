@@ -246,11 +246,11 @@ class Student(models.Model):
         blank=True,
         verbose_name="Geburtsdatum",
     )
-    email = EncryptedEmailField(max_length=255, blank=True, verbose_name="E-Mail")
-    phone = EncryptedCharField(max_length=255, blank=True, verbose_name="Telefon")
-    street = EncryptedCharField(max_length=255, blank=True, verbose_name="Strasse")
-    city = EncryptedCharField(max_length=255, blank=True, verbose_name="Stadt")
-    postal_code = EncryptedCharField(max_length=255, blank=True, verbose_name="PLZ")
+    email = EncryptedEmailField(max_length=255, blank=True, null=True, default="", verbose_name="E-Mail")
+    phone = EncryptedCharField(max_length=255, blank=True, null=True, default="", verbose_name="Telefon")
+    street = EncryptedCharField(max_length=255, blank=True, null=True, default="", verbose_name="Strasse")
+    city = EncryptedCharField(max_length=255, blank=True, null=True, default="", verbose_name="Stadt")
+    postal_code = EncryptedCharField(max_length=255, blank=True, null=True, default="", verbose_name="PLZ")
     is_active = models.BooleanField(default=True, verbose_name="Aktiv")
     is_deleted = models.BooleanField(default=False, verbose_name="Geloescht")
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Erstellt am")

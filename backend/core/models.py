@@ -50,7 +50,7 @@ class User(AbstractUser):
         related_name="users",
         verbose_name="Standort",
     )
-    phone = EncryptedCharField(max_length=255, blank=True, verbose_name="Telefon")
+    phone = EncryptedCharField(max_length=255, blank=True, null=True, default="", verbose_name="Telefon")
     profile_picture = models.ImageField(
         upload_to="profiles/", null=True, blank=True, verbose_name="Profilbild"
     )
@@ -103,7 +103,7 @@ class Organization(models.Model):
     name = models.CharField(max_length=255, verbose_name="Name")
     description = models.TextField(blank=True, verbose_name="Beschreibung")
     email = EncryptedEmailField(max_length=255, verbose_name="E-Mail")
-    phone = EncryptedCharField(max_length=255, blank=True, verbose_name="Telefon")
+    phone = EncryptedCharField(max_length=255, blank=True, null=True, default="", verbose_name="Telefon")
     website = models.URLField(blank=True, verbose_name="Website")
     street = EncryptedCharField(max_length=255, verbose_name="Straße")
     city = EncryptedCharField(max_length=255, verbose_name="Stadt")
@@ -138,7 +138,7 @@ class Location(models.Model):
     name = models.CharField(max_length=255, verbose_name="Name")
     description = models.TextField(blank=True, verbose_name="Beschreibung")
     email = EncryptedEmailField(max_length=255, verbose_name="E-Mail")
-    phone = EncryptedCharField(max_length=255, blank=True, verbose_name="Telefon")
+    phone = EncryptedCharField(max_length=255, blank=True, null=True, default="", verbose_name="Telefon")
     street = EncryptedCharField(max_length=255, verbose_name="Straße")
     city = EncryptedCharField(max_length=255, verbose_name="Stadt")
     postal_code = EncryptedCharField(max_length=255, verbose_name="PLZ")
