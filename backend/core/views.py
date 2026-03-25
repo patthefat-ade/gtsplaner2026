@@ -8,6 +8,7 @@ and user profile management.
 from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework import permissions, status
 from rest_framework.response import Response
+from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
 from rest_framework_simplejwt.views import TokenRefreshView
 
@@ -28,9 +29,12 @@ class LoginView(APIView):
 
     Authenticate a user with username/email and password.
     Returns JWT access and refresh tokens along with user data.
+    Rate limited to 5 attempts per minute to prevent brute-force attacks.
     """
 
     permission_classes = [permissions.AllowAny]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "login"
     serializer_class = LoginSerializer
 
     @extend_schema(
@@ -138,9 +142,12 @@ class PasswordResetRequestView(APIView):
 
     Request a password reset email.
     Always returns 200 to prevent email enumeration.
+    Rate limited to 3 requests per hour to prevent abuse.
     """
 
     permission_classes = [permissions.AllowAny]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "password_reset"
     serializer_class = PasswordResetRequestSerializer
 
     @extend_schema(
