@@ -211,17 +211,25 @@ REST_FRAMEWORK = {
 # ---------------------------------------------------------------------------
 
 SIMPLE_JWT = {
+    # Access Token: kurze Lebensdauer für Sicherheit (Default: 15 Min)
+    # Kann über Umgebungsvariable JWT_ACCESS_TOKEN_LIFETIME_MINUTES angepasst werden
     "ACCESS_TOKEN_LIFETIME": timedelta(
-        minutes=config("JWT_ACCESS_TOKEN_LIFETIME_MINUTES", default=60, cast=int)
+        minutes=config("JWT_ACCESS_TOKEN_LIFETIME_MINUTES", default=15, cast=int)
     ),
+    # Refresh Token: längere Lebensdauer für Benutzerfreundlichkeit (Default: 7 Tage)
     "REFRESH_TOKEN_LIFETIME": timedelta(
         days=config("JWT_REFRESH_TOKEN_LIFETIME_DAYS", default=7, cast=int)
     ),
+    # Token-Rotation: Bei jedem Refresh wird ein neues Refresh-Token ausgegeben
+    # Das alte wird blacklisted – verhindert Token-Replay-Angriffe
     "ROTATE_REFRESH_TOKENS": True,
     "BLACKLIST_AFTER_ROTATION": True,
     "UPDATE_LAST_LOGIN": True,
     "AUTH_HEADER_TYPES": ("Bearer",),
     "AUTH_TOKEN_CLASSES": ("rest_framework_simplejwt.tokens.AccessToken",),
+    # Sliding Sessions: Token-Refresh verlängert die Session automatisch
+    "SLIDING_TOKEN_REFRESH_LIFETIME": timedelta(days=1),
+    "SLIDING_TOKEN_LIFETIME": timedelta(minutes=15),
 }
 
 # ---------------------------------------------------------------------------
