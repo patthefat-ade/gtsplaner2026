@@ -1,244 +1,461 @@
 """
-Management command to create test users, organizations, and permission groups.
+Management command to create a realistic multi-tenant test environment.
 
-Creates a multi-tenant test environment with:
-  - A main tenant (Bundesland: Kaernten)
-  - Two sub-tenants (schools with locations)
-  - Test users for each role assigned to proper Django Groups
-  - Group memberships for educators
+Creates the Hilfswerk Oesterreich hierarchy:
+  - Main tenant: Hilfswerk Oesterreich
+  - 9 Sub-tenants: one per Bundesland (Kaernten, Wien, NÖ, Tirol, etc.)
+  - Each sub-tenant has one school (Location) with a LocationManager and Educator
+  - Kaernten: VS Annabichl with Anita Anic (LocationManager), Amalia Bogdan (Educator)
+  - Gruene Gruppe with 26 Schueler:innen from various classes
+  - Django Permission Groups assigned to all users
 
 Usage:
     python manage.py create_test_users
 """
 
+import datetime
+
 from django.contrib.auth.models import Group as AuthGroup
 from django.core.management.base import BaseCommand
 
 from core.models import Location, Organization, User
-from groups.models import Group, GroupMember
+from groups.models import Group, GroupMember, SchoolYear, Student
 
 
 class Command(BaseCommand):
     help = (
-        "Erstellt Multi-Tenant-Testumgebung mit Organisationen, "
-        "Standorten, Benutzern und Django Permission Groups."
+        "Erstellt realistische Multi-Tenant-Testumgebung: "
+        "Hilfswerk Oesterreich mit 9 Bundeslaendern, Schulen, Benutzern und Gruppen."
     )
 
     PASSWORD = "Test123!"
 
-    def handle(self, *args, **options):
-        self.stdout.write("\n" + "=" * 70)
-        self.stdout.write("GTS Planer – Multi-Tenant Testumgebung")
-        self.stdout.write("=" * 70)
+    # ── Bundesland-Konfiguration ──────────────────────────────────────────
 
-        # 1. Setup Permission Groups (idempotent)
+    BUNDESLAENDER = [
+        {
+            "name": "Hilfswerk Kaernten",
+            "city": "Klagenfurt",
+            "postal_code": "9020",
+            "street": "8.-Mai-Strasse 47",
+            "phone": "+43 463 55 800",
+            "email": "office@kaernten.hilfswerk.at",
+            "school": {
+                "name": "VS Annabichl",
+                "city": "Klagenfurt",
+                "postal_code": "9020",
+                "street": "Annabichler Strasse 74",
+                "email": "vs.annabichl@klagenfurt.at",
+                "phone": "+43 463 537 5630",
+            },
+            "manager": {
+                "username": "anita.anic",
+                "email": "anita.anic@gtsplaner.app",
+                "first_name": "Anita",
+                "last_name": "Anic",
+            },
+            "educator": {
+                "username": "amalia.bogdan",
+                "email": "amalia.bogdan@gtsplaner.app",
+                "first_name": "Amalia",
+                "last_name": "Bogdan",
+            },
+        },
+        {
+            "name": "Hilfswerk Wien",
+            "city": "Wien",
+            "postal_code": "1010",
+            "street": "Schottenfeldgasse 29",
+            "phone": "+43 1 512 36 61",
+            "email": "office@wien.hilfswerk.at",
+            "school": {
+                "name": "VS Donaustadt",
+                "city": "Wien",
+                "postal_code": "1220",
+                "street": "Schuettpelzgasse 1",
+                "email": "vs.donaustadt@wien.gv.at",
+                "phone": "+43 1 203 22 41",
+            },
+            "manager": {
+                "username": "brigitte.berger",
+                "email": "brigitte.berger@gtsplaner.app",
+                "first_name": "Brigitte",
+                "last_name": "Berger",
+            },
+            "educator": {
+                "username": "clara.czermak",
+                "email": "clara.czermak@gtsplaner.app",
+                "first_name": "Clara",
+                "last_name": "Czermak",
+            },
+        },
+        {
+            "name": "Hilfswerk Niederoesterreich",
+            "city": "St. Poelten",
+            "postal_code": "3100",
+            "street": "Ferstlergasse 4",
+            "phone": "+43 2742 249",
+            "email": "office@noe.hilfswerk.at",
+            "school": {
+                "name": "VS St. Poelten Mitte",
+                "city": "St. Poelten",
+                "postal_code": "3100",
+                "street": "Grenzgasse 18",
+                "email": "vs.stpoelten-mitte@noeschule.at",
+                "phone": "+43 2742 352 140",
+            },
+            "manager": {
+                "username": "doris.decker",
+                "email": "doris.decker@gtsplaner.app",
+                "first_name": "Doris",
+                "last_name": "Decker",
+            },
+            "educator": {
+                "username": "elena.ernst",
+                "email": "elena.ernst@gtsplaner.app",
+                "first_name": "Elena",
+                "last_name": "Ernst",
+            },
+        },
+        {
+            "name": "Hilfswerk Tirol",
+            "city": "Innsbruck",
+            "postal_code": "6020",
+            "street": "Suedtiroler Platz 14-16",
+            "phone": "+43 512 597 900",
+            "email": "office@tirol.hilfswerk.at",
+            "school": {
+                "name": "VS Innsbruck West",
+                "city": "Innsbruck",
+                "postal_code": "6020",
+                "street": "Technikerstrasse 44",
+                "email": "vs.innsbruck-west@tsn.at",
+                "phone": "+43 512 584 263",
+            },
+            "manager": {
+                "username": "franziska.fink",
+                "email": "franziska.fink@gtsplaner.app",
+                "first_name": "Franziska",
+                "last_name": "Fink",
+            },
+            "educator": {
+                "username": "greta.gruber",
+                "email": "greta.gruber@gtsplaner.app",
+                "first_name": "Greta",
+                "last_name": "Gruber",
+            },
+        },
+        {
+            "name": "Hilfswerk Burgenland",
+            "city": "Eisenstadt",
+            "postal_code": "7000",
+            "street": "Ignaz-Till-Strasse 9",
+            "phone": "+43 2682 651 50",
+            "email": "office@bgld.hilfswerk.at",
+            "school": {
+                "name": "VS Eisenstadt",
+                "city": "Eisenstadt",
+                "postal_code": "7000",
+                "street": "Kalvarienbergplatz 8",
+                "email": "vs.eisenstadt@bildungsserver.com",
+                "phone": "+43 2682 622 57",
+            },
+            "manager": {
+                "username": "hanna.hofer",
+                "email": "hanna.hofer@gtsplaner.app",
+                "first_name": "Hanna",
+                "last_name": "Hofer",
+            },
+            "educator": {
+                "username": "irene.illing",
+                "email": "irene.illing@gtsplaner.app",
+                "first_name": "Irene",
+                "last_name": "Illing",
+            },
+        },
+        {
+            "name": "Hilfswerk Steiermark",
+            "city": "Graz",
+            "postal_code": "8010",
+            "street": "Grabenstrasse 90",
+            "phone": "+43 316 813 182",
+            "email": "office@stmk.hilfswerk.at",
+            "school": {
+                "name": "VS Graz Sued",
+                "city": "Graz",
+                "postal_code": "8020",
+                "street": "Triester Strasse 20",
+                "email": "vs.graz-sued@stmk.gv.at",
+                "phone": "+43 316 872 7830",
+            },
+            "manager": {
+                "username": "julia.jandl",
+                "email": "julia.jandl@gtsplaner.app",
+                "first_name": "Julia",
+                "last_name": "Jandl",
+            },
+            "educator": {
+                "username": "katharina.kern",
+                "email": "katharina.kern@gtsplaner.app",
+                "first_name": "Katharina",
+                "last_name": "Kern",
+            },
+        },
+        {
+            "name": "Hilfswerk Oberoesterreich",
+            "city": "Linz",
+            "postal_code": "4020",
+            "street": "Dametzstrasse 6",
+            "phone": "+43 732 775 511",
+            "email": "office@ooe.hilfswerk.at",
+            "school": {
+                "name": "VS Linz Mitte",
+                "city": "Linz",
+                "postal_code": "4020",
+                "street": "Hamerlingstrasse 3",
+                "email": "vs.linz-mitte@ooe.gv.at",
+                "phone": "+43 732 770 444",
+            },
+            "manager": {
+                "username": "laura.lang",
+                "email": "laura.lang@gtsplaner.app",
+                "first_name": "Laura",
+                "last_name": "Lang",
+            },
+            "educator": {
+                "username": "maria.maier",
+                "email": "maria.maier@gtsplaner.app",
+                "first_name": "Maria",
+                "last_name": "Maier",
+            },
+        },
+        {
+            "name": "Hilfswerk Salzburg",
+            "city": "Salzburg",
+            "postal_code": "5020",
+            "street": "Auerspergstrasse 4",
+            "phone": "+43 662 434 702",
+            "email": "office@sbg.hilfswerk.at",
+            "school": {
+                "name": "VS Salzburg Stadt",
+                "city": "Salzburg",
+                "postal_code": "5020",
+                "street": "Faistauergasse 18",
+                "email": "vs.salzburg-stadt@salzburg.gv.at",
+                "phone": "+43 662 843 135",
+            },
+            "manager": {
+                "username": "nina.neuner",
+                "email": "nina.neuner@gtsplaner.app",
+                "first_name": "Nina",
+                "last_name": "Neuner",
+            },
+            "educator": {
+                "username": "olivia.ortner",
+                "email": "olivia.ortner@gtsplaner.app",
+                "first_name": "Olivia",
+                "last_name": "Ortner",
+            },
+        },
+        {
+            "name": "Hilfswerk Vorarlberg",
+            "city": "Bregenz",
+            "postal_code": "6900",
+            "street": "Rathausstrasse 2",
+            "phone": "+43 5574 488 00",
+            "email": "office@vlbg.hilfswerk.at",
+            "school": {
+                "name": "VS Bregenz",
+                "city": "Bregenz",
+                "postal_code": "6900",
+                "street": "Belruptstrasse 37",
+                "email": "vs.bregenz@vobs.at",
+                "phone": "+43 5574 410 18",
+            },
+            "manager": {
+                "username": "petra.pichler",
+                "email": "petra.pichler@gtsplaner.app",
+                "first_name": "Petra",
+                "last_name": "Pichler",
+            },
+            "educator": {
+                "username": "rosa.riedl",
+                "email": "rosa.riedl@gtsplaner.app",
+                "first_name": "Rosa",
+                "last_name": "Riedl",
+            },
+        },
+    ]
+
+    # ── 26 Schueler:innen fuer Gruene Gruppe (VS Annabichl) ──────────────
+
+    STUDENTS = [
+        {"first_name": "Lena", "last_name": "Koller", "class": "1a"},
+        {"first_name": "Maximilian", "last_name": "Steiner", "class": "1a"},
+        {"first_name": "Sophie", "last_name": "Huber", "class": "1b"},
+        {"first_name": "Felix", "last_name": "Wagner", "class": "1b"},
+        {"first_name": "Emma", "last_name": "Berger", "class": "2a"},
+        {"first_name": "Paul", "last_name": "Bauer", "class": "2a"},
+        {"first_name": "Mia", "last_name": "Pichler", "class": "2a"},
+        {"first_name": "Jonas", "last_name": "Moser", "class": "2b"},
+        {"first_name": "Hannah", "last_name": "Gruber", "class": "2b"},
+        {"first_name": "David", "last_name": "Hofer", "class": "3a"},
+        {"first_name": "Anna", "last_name": "Leitner", "class": "3a"},
+        {"first_name": "Lukas", "last_name": "Eder", "class": "3a"},
+        {"first_name": "Laura", "last_name": "Fischer", "class": "3b"},
+        {"first_name": "Elias", "last_name": "Schwarz", "class": "3b"},
+        {"first_name": "Sarah", "last_name": "Winkler", "class": "3b"},
+        {"first_name": "Noah", "last_name": "Reiter", "class": "4a"},
+        {"first_name": "Leonie", "last_name": "Mayr", "class": "4a"},
+        {"first_name": "Ben", "last_name": "Brunner", "class": "4a"},
+        {"first_name": "Marie", "last_name": "Wimmer", "class": "4b"},
+        {"first_name": "Alexander", "last_name": "Egger", "class": "4b"},
+        {"first_name": "Valentina", "last_name": "Haas", "class": "1a"},
+        {"first_name": "Tobias", "last_name": "Fuchs", "class": "1b"},
+        {"first_name": "Emilia", "last_name": "Wolf", "class": "2a"},
+        {"first_name": "Moritz", "last_name": "Lang", "class": "2b"},
+        {"first_name": "Amelie", "last_name": "Wallner", "class": "3a"},
+        {"first_name": "Jakob", "last_name": "Aigner", "class": "4b"},
+    ]
+
+    def handle(self, *args, **options):
+        self.stdout.write("\n" + "=" * 80)
+        self.stdout.write("GTS Planer – Hilfswerk Oesterreich Testumgebung")
+        self.stdout.write("=" * 80)
+
+        # 1. Setup Permission Groups
         self._setup_permission_groups()
 
-        # 2. Create Organization Hierarchy
-        main_org, sub_org_1, sub_org_2 = self._create_organizations()
+        # 2. Create Main Tenant
+        main_org = self._create_main_tenant()
 
-        # 3. Create Locations
-        location_1, location_2 = self._create_locations(sub_org_1, sub_org_2)
+        # 3. Create Sub-Tenants (9 Bundeslaender)
+        bundesland_data = self._create_bundeslaender(main_org)
 
-        # 4. Create Test Users
-        self._create_test_users(main_org, sub_org_1, sub_org_2, location_1, location_2)
+        # 4. Create SuperAdmin and Admin
+        self._create_system_users(main_org, bundesland_data)
 
-        # 5. Assign Educators to Groups
-        self._assign_educator_to_groups(location_1)
+        # 5. Create LocationManagers and Educators per Bundesland
+        self._create_bundesland_users(bundesland_data)
 
-        self.stdout.write("=" * 70)
+        # 6. Create School Year, Group, and Students for Kaernten
+        self._create_kaernten_data(bundesland_data)
+
+        self.stdout.write("\n" + "=" * 80)
         self.stdout.write(
-            self.style.SUCCESS("\nTestumgebung erfolgreich erstellt/aktualisiert.")
+            self.style.SUCCESS("Testumgebung erfolgreich erstellt/aktualisiert.")
         )
-        self.stdout.write("")
+        self.stdout.write("=" * 80 + "\n")
+
+    # ── Step 1: Permission Groups ─────────────────────────────────────────
 
     def _setup_permission_groups(self):
-        """Ensure Django Permission Groups exist by running setup_permissions."""
+        """Ensure Django Permission Groups exist."""
         from django.core.management import call_command
 
-        self.stdout.write("\n  [1/5] Permission Groups einrichten...")
+        self.stdout.write("\n  [1/6] Permission Groups einrichten...")
         try:
             call_command("setup_permissions", verbosity=0)
-            self.stdout.write("        Django Permission Groups erstellt/aktualisiert.")
+            self.stdout.write("        Erstellt/aktualisiert.")
         except Exception as e:
-            self.stdout.write(
-                self.style.WARNING(f"        setup_permissions uebersprungen: {e}")
-            )
+            self.stdout.write(self.style.WARNING(f"        Uebersprungen: {e}"))
 
-    def _create_organizations(self):
-        """Create the organization hierarchy: main tenant + sub-tenants."""
-        self.stdout.write("\n  [2/5] Organisationen erstellen...")
+    # ── Step 2: Main Tenant ───────────────────────────────────────────────
 
-        # Main Tenant (Bundesland)
+    def _create_main_tenant(self):
+        """Create Hilfswerk Oesterreich as main tenant."""
+        self.stdout.write("\n  [2/6] Hauptmandant erstellen...")
+
         main_org, created = Organization.objects.get_or_create(
-            name="GTS Kaernten",
+            name="Hilfswerk Oesterreich",
             defaults={
-                "description": "Ganztagesschulen Kaernten – Hauptmandant",
-                "org_type": Organization.OrgType.MAIN_TENANT,
+                "description": "Hilfswerk Oesterreich – Dachverband",
+                "org_type": Organization.OrgType.MAIN,
                 "parent": None,
-                "email": "office@gts-kaernten.at",
-                "phone": "+43 463 12345",
-                "street": "Arnulfplatz 1",
-                "city": "Klagenfurt",
-                "postal_code": "9020",
-                "country": "AT",
+                "email": "office@hilfswerk.at",
+                "phone": "+43 1 40 57 500",
+                "street": "Grashofgasse 4",
+                "city": "Wien",
+                "postal_code": "1010",
+                "country": "Oesterreich",
             },
         )
         if not created:
-            main_org.org_type = Organization.OrgType.MAIN_TENANT
+            main_org.org_type = Organization.OrgType.MAIN
             main_org.parent = None
             main_org.save(update_fields=["org_type", "parent"])
-        self.stdout.write(
-            f"        Hauptmandant: {main_org.name} ({'NEU' if created else 'VORHANDEN'})"
-        )
 
-        # Sub-Tenant 1 (Schule)
-        sub_org_1, created = Organization.objects.get_or_create(
-            name="VS Klagenfurt Mitte",
-            defaults={
-                "description": "Volksschule Klagenfurt Mitte – GTS Standort",
-                "org_type": Organization.OrgType.SUB_TENANT,
-                "parent": main_org,
-                "email": "direktion@vs-klagenfurt-mitte.at",
-                "phone": "+43 463 23456",
-                "street": "Schulstrasse 5",
-                "city": "Klagenfurt",
-                "postal_code": "9020",
-                "country": "AT",
-            },
-        )
-        if not created:
-            sub_org_1.org_type = Organization.OrgType.SUB_TENANT
-            sub_org_1.parent = main_org
-            sub_org_1.save(update_fields=["org_type", "parent"])
-        self.stdout.write(
-            f"        Sub-Tenant 1: {sub_org_1.name} ({'NEU' if created else 'VORHANDEN'})"
-        )
+        status = "NEU" if created else "VORHANDEN"
+        self.stdout.write(f"        {main_org.name} ({status})")
+        return main_org
 
-        # Sub-Tenant 2 (Schule)
-        sub_org_2, created = Organization.objects.get_or_create(
-            name="VS Villach Sued",
-            defaults={
-                "description": "Volksschule Villach Sued – GTS Standort",
-                "org_type": Organization.OrgType.SUB_TENANT,
-                "parent": main_org,
-                "email": "direktion@vs-villach-sued.at",
-                "phone": "+43 4242 34567",
-                "street": "Hauptplatz 10",
-                "city": "Villach",
-                "postal_code": "9500",
-                "country": "AT",
-            },
-        )
-        if not created:
-            sub_org_2.org_type = Organization.OrgType.SUB_TENANT
-            sub_org_2.parent = main_org
-            sub_org_2.save(update_fields=["org_type", "parent"])
-        self.stdout.write(
-            f"        Sub-Tenant 2: {sub_org_2.name} ({'NEU' if created else 'VORHANDEN'})"
-        )
+    # ── Step 3: Sub-Tenants (Bundeslaender) ───────────────────────────────
 
-        return main_org, sub_org_1, sub_org_2
+    def _create_bundeslaender(self, main_org):
+        """Create 9 Bundesland sub-tenants with locations."""
+        self.stdout.write("\n  [3/6] Bundeslaender und Schulen erstellen...")
 
-    def _create_locations(self, sub_org_1, sub_org_2):
-        """Create locations for each sub-tenant."""
-        self.stdout.write("\n  [3/5] Standorte erstellen...")
+        result = {}
+        for bl in self.BUNDESLAENDER:
+            # Sub-Tenant (Bundesland)
+            sub_org, created = Organization.objects.get_or_create(
+                name=bl["name"],
+                defaults={
+                    "description": f"{bl['name']} – Landesverband",
+                    "org_type": Organization.OrgType.SUB,
+                    "parent": main_org,
+                    "email": bl["email"],
+                    "phone": bl["phone"],
+                    "street": bl["street"],
+                    "city": bl["city"],
+                    "postal_code": bl["postal_code"],
+                    "country": "Oesterreich",
+                },
+            )
+            if not created:
+                sub_org.org_type = Organization.OrgType.SUB
+                sub_org.parent = main_org
+                sub_org.save(update_fields=["org_type", "parent"])
 
-        location_1, created = Location.objects.get_or_create(
-            name="GTS Klagenfurt Mitte",
-            organization=sub_org_1,
-            defaults={
-                "description": "Ganztagesbetreuung VS Klagenfurt Mitte",
-                "email": "gts@vs-klagenfurt-mitte.at",
-                "phone": "+43 463 23456",
-                "street": "Schulstrasse 5",
-                "city": "Klagenfurt",
-                "postal_code": "9020",
-            },
-        )
-        self.stdout.write(
-            f"        Standort 1: {location_1.name} ({'NEU' if created else 'VORHANDEN'})"
-        )
+            # Location (Schule)
+            school = bl["school"]
+            location, loc_created = Location.objects.get_or_create(
+                name=school["name"],
+                organization=sub_org,
+                defaults={
+                    "description": f"GTS Betreuung {school['name']}",
+                    "email": school["email"],
+                    "phone": school["phone"],
+                    "street": school["street"],
+                    "city": school["city"],
+                    "postal_code": school["postal_code"],
+                },
+            )
 
-        location_2, created = Location.objects.get_or_create(
-            name="GTS Villach Sued",
-            organization=sub_org_2,
-            defaults={
-                "description": "Ganztagesbetreuung VS Villach Sued",
-                "email": "gts@vs-villach-sued.at",
-                "phone": "+43 4242 34567",
-                "street": "Hauptplatz 10",
-                "city": "Villach",
-                "postal_code": "9500",
-            },
-        )
-        self.stdout.write(
-            f"        Standort 2: {location_2.name} ({'NEU' if created else 'VORHANDEN'})"
-        )
+            status_org = "NEU" if created else "OK"
+            status_loc = "NEU" if loc_created else "OK"
+            self.stdout.write(
+                f"        {bl['name']:35s} ({status_org}) | "
+                f"{school['name']:25s} ({status_loc})"
+            )
 
-        return location_1, location_2
+            result[bl["name"]] = {
+                "org": sub_org,
+                "location": location,
+                "config": bl,
+            }
 
-    def _create_test_users(self, main_org, sub_org_1, sub_org_2, location_1, location_2):
-        """Create test users for each role and assign to Django Groups."""
-        self.stdout.write("\n  [4/5] Test-Benutzer erstellen...")
+        return result
 
-        test_users = [
-            # Educator at Location 1 (sub-tenant 1)
-            {
-                "username": "educator",
-                "email": "educator@gtsplaner.app",
-                "first_name": "Eva",
-                "last_name": "Paedagogin",
-                "role": User.Role.EDUCATOR,
-                "is_staff": False,
-                "location": location_1,
-                "group_name": "Educator",
-            },
-            # Second Educator at Location 2 (sub-tenant 2)
-            {
-                "username": "educator2",
-                "email": "educator2@gtsplaner.app",
-                "first_name": "Maria",
-                "last_name": "Betreuerin",
-                "role": User.Role.EDUCATOR,
-                "is_staff": False,
-                "location": location_2,
-                "group_name": "Educator",
-            },
-            # Location Manager at Location 1 (sub-tenant 1)
-            {
-                "username": "locationmanager",
-                "email": "locationmanager@gtsplaner.app",
-                "first_name": "Lisa",
-                "last_name": "Standortleitung",
-                "role": User.Role.LOCATION_MANAGER,
-                "is_staff": False,
-                "location": location_1,
-                "group_name": "LocationManager",
-            },
-            # Location Manager at Location 2 (sub-tenant 2)
-            {
-                "username": "locationmanager2",
-                "email": "locationmanager2@gtsplaner.app",
-                "first_name": "Claudia",
-                "last_name": "Standortleitung",
-                "role": User.Role.LOCATION_MANAGER,
-                "is_staff": False,
-                "location": location_2,
-                "group_name": "LocationManager",
-            },
-            # Admin for main tenant (sees all sub-tenants)
-            {
-                "username": "admin",
-                "email": "admin@gtsplaner.app",
-                "first_name": "Anna",
-                "last_name": "Administratorin",
-                "role": User.Role.ADMIN,
-                "is_staff": True,
-                "location": location_1,
-                "group_name": "Admin",
-            },
-            # Super Admin (cross-tenant access)
+    # ── Step 4: System Users (SuperAdmin, Admin) ──────────────────────────
+
+    def _create_system_users(self, main_org, bundesland_data):
+        """Create SuperAdmin and Admin users."""
+        self.stdout.write("\n  [4/6] System-Benutzer erstellen...")
+
+        kaernten_location = bundesland_data["Hilfswerk Kaernten"]["location"]
+
+        system_users = [
             {
                 "username": "superadmin",
                 "email": "superadmin@gtsplaner.app",
@@ -247,87 +464,198 @@ class Command(BaseCommand):
                 "role": User.Role.SUPER_ADMIN,
                 "is_staff": True,
                 "is_superuser": True,
-                "location": location_1,
+                "location": kaernten_location,
                 "group_name": "SuperAdmin",
+            },
+            {
+                "username": "admin",
+                "email": "admin@gtsplaner.app",
+                "first_name": "Anna",
+                "last_name": "Administratorin",
+                "role": User.Role.ADMIN,
+                "is_staff": True,
+                "is_superuser": False,
+                "location": kaernten_location,
+                "group_name": "Admin",
             },
         ]
 
-        for user_data in test_users:
-            is_superuser = user_data.pop("is_superuser", False)
-            location = user_data.pop("location")
-            group_name = user_data.pop("group_name")
-            username = user_data["username"]
-            email = user_data["email"]
+        for user_data in system_users:
+            self._create_user(user_data)
 
-            user, created = User.objects.get_or_create(
-                username=username,
-                defaults={
-                    **user_data,
-                    "is_superuser": is_superuser,
-                },
-            )
+    # ── Step 5: Bundesland Users ──────────────────────────────────────────
 
-            if created:
-                user.set_password(self.PASSWORD)
-                user.location = location
-                user.has_accepted_terms = True
-                user.save()
-                action = "ERSTELLT"
-            else:
-                for key, value in user_data.items():
-                    setattr(user, key, value)
-                user.is_superuser = is_superuser
-                user.location = location
-                user.set_password(self.PASSWORD)
-                user.has_accepted_terms = True
-                user.save()
-                action = "AKTUALISIERT"
+    def _create_bundesland_users(self, bundesland_data):
+        """Create LocationManager and Educator for each Bundesland."""
+        self.stdout.write("\n  [5/6] Standortleitungen und Paedagog:innen erstellen...")
 
-            # Assign to Django Permission Group
-            try:
-                auth_group = AuthGroup.objects.get(name=group_name)
-                user.groups.clear()
-                user.groups.add(auth_group)
-                group_status = f"Gruppe: {group_name}"
-            except AuthGroup.DoesNotExist:
-                group_status = f"Gruppe '{group_name}' nicht gefunden"
+        for bl_name, data in bundesland_data.items():
+            config = data["config"]
+            location = data["location"]
 
-            role_display = user.get_role_display()
-            self.stdout.write(
-                f"        [{action}] {role_display:20s} | {email:35s} | "
-                f"{group_status} | Standort: {location.name}"
-            )
+            # LocationManager
+            mgr_data = {
+                **config["manager"],
+                "role": User.Role.LOCATION_MANAGER,
+                "is_staff": False,
+                "is_superuser": False,
+                "location": location,
+                "group_name": "LocationManager",
+            }
+            manager_user = self._create_user(mgr_data)
 
-    def _assign_educator_to_groups(self, location: Location) -> None:
-        """Assign the educator test user to all groups at the location."""
-        self.stdout.write("\n  [5/5] Gruppenmitgliedschaften zuweisen...")
+            # Set as location manager
+            if manager_user and not location.manager:
+                location.manager = manager_user
+                location.save(update_fields=["manager"])
 
+            # Educator
+            edu_data = {
+                **config["educator"],
+                "role": User.Role.EDUCATOR,
+                "is_staff": False,
+                "is_superuser": False,
+                "location": location,
+                "group_name": "Educator",
+            }
+            self._create_user(edu_data)
+
+    # ── Step 6: Kaernten-spezifische Daten ────────────────────────────────
+
+    def _create_kaernten_data(self, bundesland_data):
+        """Create SchoolYear, Group, GroupMember, and Students for Kaernten."""
+        self.stdout.write("\n  [6/6] Kaernten: Schuljahr, Gruppe und Schueler:innen...")
+
+        kaernten = bundesland_data["Hilfswerk Kaernten"]
+        location = kaernten["location"]
+        org = kaernten["org"]
+
+        # School Year 2025/2026
+        school_year, sy_created = SchoolYear.objects.get_or_create(
+            location=location,
+            name="2025/2026",
+            defaults={
+                "organization": org,
+                "start_date": datetime.date(2025, 9, 1),
+                "end_date": datetime.date(2026, 7, 4),
+                "is_active": True,
+            },
+        )
+        self.stdout.write(
+            f"        Schuljahr: {school_year.name} "
+            f"({'NEU' if sy_created else 'VORHANDEN'})"
+        )
+
+        # Gruene Gruppe
         try:
-            educator = User.objects.get(username="educator")
+            educator = User.objects.get(username="amalia.bogdan")
         except User.DoesNotExist:
-            return
+            educator = None
 
-        groups = Group.objects.filter(location=location, is_active=True)
-        if not groups.exists():
-            self.stdout.write(
-                self.style.WARNING(
-                    "        Keine Gruppen gefunden. Bitte zuerst Gruppen anlegen "
-                    "und dann erneut ausfuehren."
-                )
-            )
-            return
+        group, g_created = Group.objects.get_or_create(
+            location=location,
+            school_year=school_year,
+            name="Gruene Gruppe",
+            defaults={
+                "organization": org,
+                "description": "Nachmittagsbetreuung fuer Schueler:innen der Klassen 1a-4b",
+                "leader": educator,
+                "balance": 0,
+            },
+        )
+        self.stdout.write(
+            f"        Gruppe: {group.name} ({'NEU' if g_created else 'VORHANDEN'})"
+        )
 
-        assigned_count = 0
-        for group in groups:
-            _, created = GroupMember.objects.get_or_create(
+        # Assign Amalia Bogdan as GroupMember
+        if educator:
+            _, gm_created = GroupMember.objects.get_or_create(
                 group=group,
                 user=educator,
-                defaults={"role": GroupMember.MemberRole.EDUCATOR},
+                defaults={
+                    "organization": org,
+                    "role": GroupMember.MemberRole.EDUCATOR,
+                },
             )
-            if created:
-                assigned_count += 1
+            self.stdout.write(
+                f"        Gruppenmitglied: {educator.get_full_name()} "
+                f"({'NEU' if gm_created else 'VORHANDEN'})"
+            )
+
+        # 26 Students
+        student_count_new = 0
+        student_count_existing = 0
+        for s in self.STUDENTS:
+            _, s_created = Student.objects.get_or_create(
+                group=group,
+                first_name=s["first_name"],
+                last_name=s["last_name"],
+                defaults={
+                    "organization": org,
+                    "date_of_birth": datetime.date(
+                        2018 if s["class"].startswith("1") else
+                        2017 if s["class"].startswith("2") else
+                        2016 if s["class"].startswith("3") else 2015,
+                        3, 15,
+                    ),
+                },
+            )
+            if s_created:
+                student_count_new += 1
+            else:
+                student_count_existing += 1
 
         self.stdout.write(
-            f"        Gruppenmitgliedschaften (Educator): {assigned_count} neu, "
-            f"{groups.count() - assigned_count} bereits vorhanden"
+            f"        Schueler:innen: {student_count_new} neu, "
+            f"{student_count_existing} vorhanden (Gesamt: {len(self.STUDENTS)})"
         )
+
+    # ── Helper: Create User ───────────────────────────────────────────────
+
+    def _create_user(self, data: dict) -> User | None:
+        """Create or update a single user and assign to Django Group."""
+        is_superuser = data.pop("is_superuser", False)
+        location = data.pop("location")
+        group_name = data.pop("group_name")
+        username = data["username"]
+        email = data["email"]
+
+        user, created = User.objects.get_or_create(
+            username=username,
+            defaults={
+                **data,
+                "is_superuser": is_superuser,
+            },
+        )
+
+        if created:
+            user.set_password(self.PASSWORD)
+            user.location = location
+            user.has_accepted_terms = True
+            user.save()
+            action = "ERSTELLT"
+        else:
+            for key, value in data.items():
+                setattr(user, key, value)
+            user.is_superuser = is_superuser
+            user.location = location
+            user.set_password(self.PASSWORD)
+            user.has_accepted_terms = True
+            user.save()
+            action = "AKTUALISIERT"
+
+        # Assign to Django Permission Group
+        try:
+            auth_group = AuthGroup.objects.get(name=group_name)
+            user.groups.clear()
+            user.groups.add(auth_group)
+            group_status = group_name
+        except AuthGroup.DoesNotExist:
+            group_status = f"'{group_name}' NICHT GEFUNDEN"
+
+        self.stdout.write(
+            f"        [{action:12s}] {data.get('first_name', '')} {data.get('last_name', ''):20s} "
+            f"| {email:35s} | {group_status:15s} | {location.name}"
+        )
+
+        return user
