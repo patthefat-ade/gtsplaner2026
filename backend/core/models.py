@@ -74,6 +74,10 @@ class User(AbstractUser):
     terms_accepted_at = models.DateTimeField(
         null=True, blank=True, verbose_name="Nutzungsbedingungen akzeptiert am"
     )
+    # GDPR/DSGVO anonymization tracking
+    anonymized_at = models.DateTimeField(
+        null=True, blank=True, verbose_name="Anonymisiert am"
+    )
 
     class Meta:
         db_table = "users_user"
@@ -107,6 +111,34 @@ class User(AbstractUser):
     def is_super_admin(self) -> bool:
         """Check if user has Super Admin role."""
         return self.role == self.Role.SUPER_ADMIN
+
+    @property
+    def is_anonymized(self) -> bool:
+        """Check if user data has been anonymized."""
+        return self.anonymized_at is not None
+
+    def anonymize(self) -> None:
+        """
+        Pseudoanonymize all personal data for GDPR/DSGVO compliance.
+
+        Replaces all PII with placeholder values while preserving
+        the record for referential integrity.
+        """
+        from django.utils import timezone
+
+        self.first_name = "Gelöschter"
+        self.last_name = "Benutzer"
+        self.email = f"deleted_{self.pk}@anonymized.local"
+        self.username = f"deleted_{self.pk}"
+        self.phone = ""
+        self.profile_picture = None
+        self.totp_secret = ""
+        self.is_2fa_enabled = False
+        self.is_active = False
+        self.is_deleted = True
+        self.anonymized_at = timezone.now()
+        self.set_unusable_password()
+        self.save()
 
 
 class Organization(models.Model):
