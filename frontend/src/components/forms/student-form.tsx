@@ -3,6 +3,7 @@
 import * as React from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { format, parse } from "date-fns";
 import { studentSchema, type StudentFormData } from "@/lib/validations";
 import {
   Form,
@@ -30,6 +31,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Loader2 } from "lucide-react";
 import type { Student, Group } from "@/types/models";
 
@@ -40,6 +42,16 @@ interface StudentFormProps {
   groups: Group[];
   onSubmit: (data: StudentFormData) => Promise<void>;
   isLoading?: boolean;
+}
+
+/** Parse a "YYYY-MM-DD" string into a Date, or return undefined. */
+function parseDate(value: string | undefined | null): Date | undefined {
+  if (!value) return undefined;
+  try {
+    return parse(value, "yyyy-MM-dd", new Date());
+  } catch {
+    return undefined;
+  }
 }
 
 export function StudentForm({
@@ -154,7 +166,7 @@ export function StudentForm({
                   >
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Gruppe wählen" />
+                        <SelectValue placeholder="Gruppe waehlen" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
@@ -175,11 +187,17 @@ export function StudentForm({
                 control={form.control}
                 name="date_of_birth"
                 render={({ field }) => (
-                  <FormItem>
+                  <FormItem className="flex flex-col">
                     <FormLabel>Geburtsdatum (optional)</FormLabel>
-                    <FormControl>
-                      <Input type="date" {...field} />
-                    </FormControl>
+                    <DatePicker
+                      value={parseDate(field.value)}
+                      onChange={(date) => {
+                        field.onChange(
+                          date ? format(date, "yyyy-MM-dd") : "",
+                        );
+                      }}
+                      placeholder="Geburtsdatum"
+                    />
                     <FormMessage />
                   </FormItem>
                 )}
@@ -189,11 +207,17 @@ export function StudentForm({
                 control={form.control}
                 name="enrollment_date"
                 render={({ field }) => (
-                  <FormItem>
+                  <FormItem className="flex flex-col">
                     <FormLabel>Eintrittsdatum (optional)</FormLabel>
-                    <FormControl>
-                      <Input type="date" {...field} />
-                    </FormControl>
+                    <DatePicker
+                      value={parseDate(field.value)}
+                      onChange={(date) => {
+                        field.onChange(
+                          date ? format(date, "yyyy-MM-dd") : "",
+                        );
+                      }}
+                      placeholder="Eintrittsdatum"
+                    />
                     <FormMessage />
                   </FormItem>
                 )}
@@ -208,7 +232,7 @@ export function StudentForm({
                   <FormLabel>Notizen (optional)</FormLabel>
                   <FormControl>
                     <Textarea
-                      placeholder="Zusätzliche Informationen..."
+                      placeholder="Zusaetzliche Informationen..."
                       {...field}
                     />
                   </FormControl>

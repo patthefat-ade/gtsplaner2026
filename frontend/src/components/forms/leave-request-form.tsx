@@ -3,6 +3,7 @@
 import * as React from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { format, parse } from "date-fns";
 import {
   leaveRequestSchema,
   type LeaveRequestFormData,
@@ -15,7 +16,6 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import {
@@ -32,6 +32,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Loader2 } from "lucide-react";
 import type { LeaveRequest, LeaveType } from "@/types/models";
 
@@ -42,6 +43,16 @@ interface LeaveRequestFormProps {
   leaveTypes: LeaveType[];
   onSubmit: (data: LeaveRequestFormData) => Promise<void>;
   isLoading?: boolean;
+}
+
+/** Parse a "YYYY-MM-DD" string into a Date, or return undefined. */
+function parseDate(value: string | undefined | null): Date | undefined {
+  if (!value) return undefined;
+  try {
+    return parse(value, "yyyy-MM-dd", new Date());
+  } catch {
+    return undefined;
+  }
 }
 
 export function LeaveRequestForm({
@@ -126,7 +137,7 @@ export function LeaveRequestForm({
                   >
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Typ wählen" />
+                        <SelectValue placeholder="Typ waehlen" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
@@ -147,11 +158,17 @@ export function LeaveRequestForm({
                 control={form.control}
                 name="start_date"
                 render={({ field }) => (
-                  <FormItem>
+                  <FormItem className="flex flex-col">
                     <FormLabel>Von</FormLabel>
-                    <FormControl>
-                      <Input type="date" {...field} />
-                    </FormControl>
+                    <DatePicker
+                      value={parseDate(field.value)}
+                      onChange={(date) => {
+                        field.onChange(
+                          date ? format(date, "yyyy-MM-dd") : "",
+                        );
+                      }}
+                      placeholder="Startdatum"
+                    />
                     <FormMessage />
                   </FormItem>
                 )}
@@ -161,11 +178,17 @@ export function LeaveRequestForm({
                 control={form.control}
                 name="end_date"
                 render={({ field }) => (
-                  <FormItem>
+                  <FormItem className="flex flex-col">
                     <FormLabel>Bis</FormLabel>
-                    <FormControl>
-                      <Input type="date" {...field} />
-                    </FormControl>
+                    <DatePicker
+                      value={parseDate(field.value)}
+                      onChange={(date) => {
+                        field.onChange(
+                          date ? format(date, "yyyy-MM-dd") : "",
+                        );
+                      }}
+                      placeholder="Enddatum"
+                    />
                     <FormMessage />
                   </FormItem>
                 )}
@@ -177,10 +200,10 @@ export function LeaveRequestForm({
               name="reason"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Begründung (optional)</FormLabel>
+                  <FormLabel>Begruendung (optional)</FormLabel>
                   <FormControl>
                     <Textarea
-                      placeholder="Grund für die Abwesenheit..."
+                      placeholder="Grund fuer die Abwesenheit..."
                       {...field}
                     />
                   </FormControl>

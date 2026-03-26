@@ -3,6 +3,7 @@
 import * as React from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { format, parse } from "date-fns";
 import { timeEntrySchema, type TimeEntryFormData } from "@/lib/validations";
 import {
   Form,
@@ -29,6 +30,8 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import { DatePicker } from "@/components/ui/date-picker";
+import { TimePicker } from "@/components/ui/time-picker";
 import { Loader2 } from "lucide-react";
 import type { TimeEntry, Group } from "@/types/models";
 
@@ -39,6 +42,16 @@ interface TimeEntryFormProps {
   groups: Group[];
   onSubmit: (data: TimeEntryFormData) => Promise<void>;
   isLoading?: boolean;
+}
+
+/** Parse a "YYYY-MM-DD" string into a Date, or return undefined. */
+function parseDate(value: string | undefined | null): Date | undefined {
+  if (!value) return undefined;
+  try {
+    return parse(value, "yyyy-MM-dd", new Date());
+  } catch {
+    return undefined;
+  }
 }
 
 export function TimeEntryForm({
@@ -121,7 +134,7 @@ export function TimeEntryForm({
                   >
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Gruppe wählen" />
+                        <SelectValue placeholder="Gruppe waehlen" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
@@ -141,11 +154,17 @@ export function TimeEntryForm({
               control={form.control}
               name="date"
               render={({ field }) => (
-                <FormItem>
+                <FormItem className="flex flex-col">
                   <FormLabel>Datum</FormLabel>
-                  <FormControl>
-                    <Input type="date" {...field} />
-                  </FormControl>
+                  <DatePicker
+                    value={parseDate(field.value)}
+                    onChange={(date) => {
+                      field.onChange(
+                        date ? format(date, "yyyy-MM-dd") : "",
+                      );
+                    }}
+                    placeholder="Datum waehlen"
+                  />
                   <FormMessage />
                 </FormItem>
               )}
@@ -156,11 +175,13 @@ export function TimeEntryForm({
                 control={form.control}
                 name="start_time"
                 render={({ field }) => (
-                  <FormItem>
+                  <FormItem className="flex flex-col">
                     <FormLabel>Startzeit</FormLabel>
-                    <FormControl>
-                      <Input type="time" {...field} />
-                    </FormControl>
+                    <TimePicker
+                      value={field.value}
+                      onChange={field.onChange}
+                      placeholder="Start"
+                    />
                     <FormMessage />
                   </FormItem>
                 )}
@@ -170,11 +191,13 @@ export function TimeEntryForm({
                 control={form.control}
                 name="end_time"
                 render={({ field }) => (
-                  <FormItem>
+                  <FormItem className="flex flex-col">
                     <FormLabel>Endzeit</FormLabel>
-                    <FormControl>
-                      <Input type="time" {...field} />
-                    </FormControl>
+                    <TimePicker
+                      value={field.value}
+                      onChange={field.onChange}
+                      placeholder="Ende"
+                    />
                     <FormMessage />
                   </FormItem>
                 )}
@@ -203,7 +226,7 @@ export function TimeEntryForm({
                   <FormLabel>Notizen (optional)</FormLabel>
                   <FormControl>
                     <Textarea
-                      placeholder="Zusätzliche Informationen..."
+                      placeholder="Zusaetzliche Informationen..."
                       {...field}
                     />
                   </FormControl>

@@ -238,10 +238,10 @@ REST_FRAMEWORK = {
 # ---------------------------------------------------------------------------
 
 SIMPLE_JWT = {
-    # Access Token: kurze Lebensdauer für Sicherheit (Default: 15 Min)
+    # Access Token: Lebensdauer für Benutzerfreundlichkeit (Default: 60 Min)
     # Kann über Umgebungsvariable JWT_ACCESS_TOKEN_LIFETIME_MINUTES angepasst werden
     "ACCESS_TOKEN_LIFETIME": timedelta(
-        minutes=config("JWT_ACCESS_TOKEN_LIFETIME_MINUTES", default=15, cast=int)
+        minutes=config("JWT_ACCESS_TOKEN_LIFETIME_MINUTES", default=60, cast=int)
     ),
     # Refresh Token: längere Lebensdauer für Benutzerfreundlichkeit (Default: 7 Tage)
     "REFRESH_TOKEN_LIFETIME": timedelta(
