@@ -81,7 +81,7 @@ const navigation: NavSection[] = [
     items: [
       {
         title: "Gruppen",
-        href: "/groups",
+        href: "/groups/list",
         icon: Users,
       },
       {

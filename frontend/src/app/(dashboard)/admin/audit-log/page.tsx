@@ -40,6 +40,34 @@ const ACTION_LABELS: Record<string, string> = {
   delete: "Gelöscht",
 };
 
+/**
+ * Extract a readable user display name from an audit log entry.
+ * Falls back to changes.display, then user ID, then "System".
+ */
+function getUserDisplay(entry: { user: number | null; user_name?: string; changes: Record<string, unknown> }): string {
+  if (entry.user_name) return entry.user_name;
+  if (entry.changes?.display && typeof entry.changes.display === "string") {
+    return entry.changes.display;
+  }
+  if (entry.user !== null && entry.user !== undefined) return `Benutzer #${entry.user}`;
+  return "System";
+}
+
+/**
+ * Format audit log changes into a human-readable string.
+ */
+function formatChanges(changes: Record<string, unknown> | null | undefined): string {
+  if (!changes) return "\u2013";
+  const parts: string[] = [];
+  if (changes.action && typeof changes.action === "string") parts.push(changes.action);
+  if (changes.display && typeof changes.display === "string") parts.push(changes.display);
+  if (parts.length > 0) return parts.join(" \u2013 ");
+  // Fallback: show key-value pairs
+  const entries = Object.entries(changes).filter(([k]) => k !== "model");
+  if (entries.length === 0) return "\u2013";
+  return entries.map(([k, v]) => `${k}: ${typeof v === "object" ? JSON.stringify(v) : v}`).join(", ").slice(0, 120);
+}
+
 export default function AuditLogPage() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
@@ -114,7 +142,7 @@ export default function AuditLogPage() {
                       {formatDate(entry.created_at)}
                     </TableCell>
                     <TableCell className="font-medium">
-                      {entry.user_name || `#${entry.user}`}
+                      {getUserDisplay(entry)}
                     </TableCell>
                     <TableCell>
                       <Badge
@@ -128,9 +156,7 @@ export default function AuditLogPage() {
                       {entry.object_id || "–"}
                     </TableCell>
                     <TableCell className="hidden max-w-[300px] truncate lg:table-cell">
-                      {entry.changes
-                        ? JSON.stringify(entry.changes).slice(0, 80)
-                        : "–"}
+                      {formatChanges(entry.changes)}
                     </TableCell>
                   </TableRow>
                 ))}

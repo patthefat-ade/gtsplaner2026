@@ -117,7 +117,7 @@ export function useSystemSettings() {
     queryKey: adminKeys.settings(),
     queryFn: async () => {
       const { data } = await api.get<PaginatedResponse<SystemSetting>>(
-        "/admin/system-settings/"
+        "/admin/settings/"
       );
       return data;
     },
@@ -133,7 +133,7 @@ export function useUpdateSystemSetting() {
       ...payload
     }: Partial<SystemSetting> & { id: number }) => {
       const { data } = await api.patch<SystemSetting>(
-        `/admin/system-settings/${id}/`,
+        `/admin/settings/${id}/`,
         payload
       );
       return data;
