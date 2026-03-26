@@ -15,6 +15,8 @@ from encrypted_fields.fields import (
     EncryptedEmailField,
 )
 
+from core.managers import AllTenantsManager, TenantManager
+
 
 class User(AbstractUser):
     """
@@ -143,7 +145,15 @@ class User(AbstractUser):
 
 class Organization(models.Model):
     """
-    Represents a parent organization (e.g., Hilfswerk Kärnten).
+    Represents an organization in a hierarchical multi-tenant structure.
+
+    Hierarchy:
+        Main tenant (e.g., Hilfswerk Kaernten) -> org_type='main'
+          Sub tenant (e.g., VS Klagenfurt)     -> org_type='sub', parent=main
+          Sub tenant (e.g., VS Villach)         -> org_type='sub', parent=main
+
+    A main tenant has cross-tenant visibility over all its sub tenants.
+    Sub tenants are isolated from each other.
 
     Contact information (email, phone, address) is encrypted at rest.
 
@@ -152,7 +162,26 @@ class Organization(models.Model):
     NOT NULL strictly, so null=True is required for compatibility.
     """
 
+    class OrgType(models.TextChoices):
+        MAIN = "main", "Hauptmandant"
+        SUB = "sub", "Untermandant"
+
     name = models.CharField(max_length=255, verbose_name="Name")
+    parent = models.ForeignKey(
+        "self",
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="children",
+        verbose_name="Uebergeordnete Organisation",
+        help_text="Leer fuer Hauptmandanten. Verweist auf den Hauptmandanten fuer Untermandanten.",
+    )
+    org_type = models.CharField(
+        max_length=10,
+        choices=OrgType.choices,
+        default=OrgType.SUB,
+        verbose_name="Organisationstyp",
+    )
     description = models.TextField(blank=True, verbose_name="Beschreibung")
     email = EncryptedEmailField(
         max_length=255, blank=True, null=True, default="", verbose_name="E-Mail"
@@ -162,7 +191,7 @@ class Organization(models.Model):
     )
     website = models.URLField(blank=True, verbose_name="Website")
     street = EncryptedCharField(
-        max_length=255, blank=True, null=True, default="", verbose_name="Straße"
+        max_length=255, blank=True, null=True, default="", verbose_name="Strasse"
     )
     city = EncryptedCharField(
         max_length=255, blank=True, null=True, default="", verbose_name="Stadt"
@@ -170,12 +199,12 @@ class Organization(models.Model):
     postal_code = EncryptedCharField(
         max_length=255, blank=True, null=True, default="", verbose_name="PLZ"
     )
-    country = models.CharField(max_length=100, default="Österreich", verbose_name="Land")
+    country = models.CharField(max_length=100, default="Oesterreich", verbose_name="Land")
     logo = models.ImageField(
         upload_to="organizations/", null=True, blank=True, verbose_name="Logo"
     )
     is_active = models.BooleanField(default=True, verbose_name="Aktiv")
-    is_deleted = models.BooleanField(default=False, verbose_name="Gelöscht")
+    is_deleted = models.BooleanField(default=False, verbose_name="Geloescht")
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Erstellt am")
     updated_at = models.DateTimeField(auto_now=True, verbose_name="Aktualisiert am")
 
@@ -184,9 +213,46 @@ class Organization(models.Model):
         verbose_name = "Organisation"
         verbose_name_plural = "Organisationen"
         ordering = ["name"]
+        indexes = [
+            models.Index(fields=["parent"]),
+            models.Index(fields=["org_type"]),
+        ]
 
     def __str__(self) -> str:
+        if self.parent:
+            return f"{self.name} ({self.parent.name})"
         return self.name
+
+    @property
+    def is_main_tenant(self) -> bool:
+        """Check if this is a main (parent) tenant."""
+        return self.org_type == self.OrgType.MAIN
+
+    @property
+    def is_sub_tenant(self) -> bool:
+        """Check if this is a sub (child) tenant."""
+        return self.org_type == self.OrgType.SUB
+
+    def get_descendants(self, include_self: bool = True):
+        """
+        Return all descendant organizations (children, grandchildren, etc.).
+
+        Uses a simple recursive approach suitable for shallow hierarchies
+        (typically 2 levels: main -> sub).
+        """
+        result = [self] if include_self else []
+        for child in self.children.filter(is_active=True, is_deleted=False):
+            result.extend(child.get_descendants(include_self=True))
+        return result
+
+    def get_all_organization_ids(self, include_self: bool = True) -> list[int]:
+        """
+        Return a flat list of IDs for this organization and all descendants.
+
+        Used by TenantMiddleware to determine which organizations a user
+        can access based on their organization membership.
+        """
+        return [org.id for org in self.get_descendants(include_self=include_self)]
 
 
 class Location(models.Model):
@@ -248,3 +314,44 @@ class Location(models.Model):
 
     def __str__(self) -> str:
         return f"{self.name} ({self.organization.name})"
+
+
+class TenantModel(models.Model):
+    """
+    Abstract base class for all tenant-scoped models.
+
+    Provides automatic organization-based data isolation through
+    the TenantManager. All models that contain tenant-specific data
+    should inherit from this class instead of models.Model.
+
+    Managers:
+        objects: TenantManager - requires explicit tenant filtering via for_tenant()
+        all_tenants: AllTenantsManager - unfiltered access for SuperAdmin/system use
+
+    Usage:
+        class MyModel(TenantModel):
+            name = models.CharField(max_length=255)
+
+        # Tenant-scoped query:
+        MyModel.objects.for_tenant(request.tenant).filter(name='test')
+
+        # Cross-tenant query (SuperAdmin only):
+        MyModel.all_tenants.all()
+    """
+
+    organization = models.ForeignKey(
+        Organization,
+        on_delete=models.CASCADE,
+        related_name="%(app_label)s_%(class)s_set",
+        verbose_name="Organisation",
+        db_index=True,
+    )
+
+    objects = TenantManager()
+    all_tenants = AllTenantsManager()
+
+    class Meta:
+        abstract = True
+        indexes = [
+            models.Index(fields=["organization"]),
+        ]

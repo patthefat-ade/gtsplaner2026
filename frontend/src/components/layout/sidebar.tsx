@@ -3,8 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { useAuth } from "@/hooks/use-auth";
-import type { UserRole } from "@/types/models";
+import { usePermissions, type PermissionCodename } from "@/hooks/use-permissions";
 import {
   LayoutDashboard,
   Wallet,
@@ -33,7 +32,8 @@ interface NavItem {
   title: string;
   href: string;
   icon: LucideIcon;
-  roles?: UserRole[];
+  /** Permission codename required to see this item. */
+  permission?: PermissionCodename;
   badge?: string;
 }
 
@@ -50,6 +50,7 @@ const navigation: NavSection[] = [
         title: "Dashboard",
         href: "/",
         icon: LayoutDashboard,
+        permission: "view_dashboard",
       },
     ],
   },
@@ -60,22 +61,22 @@ const navigation: NavSection[] = [
         title: "Transaktionen",
         href: "/finance/transactions",
         icon: Wallet,
+        permission: "create_transactions",
       },
       {
         title: "Kategorien",
         href: "/finance/categories",
         icon: Receipt,
-        roles: ["location_manager", "admin", "super_admin"],
+        permission: "manage_categories",
       },
       {
         title: "Berichte",
         href: "/finance/reports",
         icon: BarChart3,
-        roles: ["location_manager", "admin", "super_admin"],
+        permission: "view_reports",
       },
     ],
   },
-
   {
     title: "Gruppen",
     items: [
@@ -88,7 +89,7 @@ const navigation: NavSection[] = [
         title: "Schüler:innen",
         href: "/groups/students",
         icon: GraduationCap,
-        roles: ["location_manager", "admin", "super_admin"],
+        permission: "manage_students",
       },
     ],
   },
@@ -99,6 +100,7 @@ const navigation: NavSection[] = [
         title: "Zeiteinträge",
         href: "/timetracking/entries",
         icon: Clock,
+        permission: "manage_timeentries",
       },
       {
         title: "Abwesenheiten",
@@ -109,7 +111,7 @@ const navigation: NavSection[] = [
         title: "Genehmigungen",
         href: "/timetracking/approval",
         icon: CheckSquare,
-        roles: ["location_manager", "admin", "super_admin"],
+        permission: "approve_leave",
       },
     ],
   },
@@ -120,25 +122,25 @@ const navigation: NavSection[] = [
         title: "Benutzer",
         href: "/admin/users",
         icon: UserCog,
-        roles: ["admin", "super_admin"],
+        permission: "manage_users",
       },
       {
         title: "Organisationen",
         href: "/admin/organizations",
         icon: Building2,
-        roles: ["super_admin"],
+        permission: "manage_organizations",
       },
       {
         title: "Audit Log",
         href: "/admin/audit-log",
         icon: FileText,
-        roles: ["admin", "super_admin"],
+        permission: "view_audit_log",
       },
       {
         title: "Einstellungen",
         href: "/admin/settings",
         icon: Settings,
-        roles: ["admin", "super_admin"],
+        permission: "manage_settings",
       },
     ],
   },
@@ -150,11 +152,11 @@ interface SidebarProps {
 
 export function Sidebar({ collapsed = false }: SidebarProps) {
   const pathname = usePathname();
-  const { user } = useAuth();
+  const { hasPermission, user } = usePermissions();
 
   const isVisible = (item: NavItem) => {
-    if (!item.roles) return true;
-    return user?.role ? item.roles.includes(user.role) : false;
+    if (!item.permission) return true;
+    return hasPermission(item.permission);
   };
 
   const isActive = (href: string) => {

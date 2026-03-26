@@ -1,21 +1,30 @@
 """
 System models for Kassenbuch App v2.
 
-Contains AuditLog and SystemSetting models for system-wide
-configuration and audit trail functionality.
+Contains AuditLog, SystemSetting, and EmailNotificationConfig models
+for system-wide configuration and audit trail functionality.
+
+AuditLog and SystemSetting are tenant-scoped for multi-tenant isolation.
+EmailNotificationConfig is system-wide (not tenant-scoped).
 """
 
 from django.conf import settings
 from django.db import models
 
+from core.models import TenantModel
 
-class AuditLog(models.Model):
-    """Immutable audit log for tracking all critical system actions."""
+
+class AuditLog(TenantModel):
+    """
+    Immutable audit log for tracking all critical system actions.
+
+    Tenant-scoped: each organization sees only its own audit trail.
+    """
 
     class Action(models.TextChoices):
         CREATE = "create", "Erstellt"
         UPDATE = "update", "Aktualisiert"
-        DELETE = "delete", "Gelöscht"
+        DELETE = "delete", "Geloescht"
         LOGIN = "login", "Anmeldung"
         LOGOUT = "logout", "Abmeldung"
         APPROVE = "approve", "Genehmigt"
@@ -31,7 +40,7 @@ class AuditLog(models.Model):
     action = models.CharField(max_length=20, choices=Action.choices, verbose_name="Aktion")
     model_name = models.CharField(max_length=100, verbose_name="Modell")
     object_id = models.CharField(max_length=100, blank=True, verbose_name="Objekt-ID")
-    changes = models.JSONField(default=dict, blank=True, verbose_name="Änderungen")
+    changes = models.JSONField(default=dict, blank=True, verbose_name="Aenderungen")
     ip_address = models.GenericIPAddressField(null=True, blank=True, verbose_name="IP-Adresse")
     user_agent = models.TextField(blank=True, verbose_name="User-Agent")
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Erstellt am")
@@ -49,16 +58,20 @@ class AuditLog(models.Model):
         ]
 
     def __str__(self) -> str:
-        return f"{self.user} – {self.get_action_display()} – {self.model_name} ({self.created_at})"
+        return f"{self.user} - {self.get_action_display()} - {self.model_name} ({self.created_at})"
 
 
-class SystemSetting(models.Model):
-    """Key-value store for system-wide configuration settings."""
+class SystemSetting(TenantModel):
+    """
+    Key-value store for organization-specific configuration settings.
 
-    key = models.CharField(max_length=255, unique=True, verbose_name="Schlüssel")
+    Tenant-scoped: each organization has its own settings.
+    """
+
+    key = models.CharField(max_length=255, verbose_name="Schluessel")
     value = models.TextField(verbose_name="Wert")
     description = models.TextField(blank=True, verbose_name="Beschreibung")
-    is_public = models.BooleanField(default=False, verbose_name="Öffentlich")
+    is_public = models.BooleanField(default=False, verbose_name="Oeffentlich")
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Erstellt am")
     updated_at = models.DateTimeField(auto_now=True, verbose_name="Aktualisiert am")
 
@@ -67,23 +80,25 @@ class SystemSetting(models.Model):
         verbose_name = "Systemeinstellung"
         verbose_name_plural = "Systemeinstellungen"
         ordering = ["key"]
+        unique_together = [("organization", "key")]
 
     def __str__(self) -> str:
         return f"{self.key} = {self.value[:50]}"
 
 
 class EmailNotificationConfig(models.Model):
-    """Configuration for email notification events.
+    """
+    Configuration for email notification events.
 
+    System-wide (NOT tenant-scoped) since notification rules apply globally.
     SuperAdmins can enable/disable specific notification events.
-    Each event type maps to a Celery task that sends the email.
     """
 
     class EventType(models.TextChoices):
         NEW_USER_CREATED = "new_user_created", "Neuer Benutzer erstellt"
-        PASSWORD_CHANGED = "password_changed", "Passwort geändert"
-        PASSWORD_RESET = "password_reset", "Passwort zurückgesetzt"
-        LOGIN_NEW_DEVICE = "login_new_device", "Login von neuem Gerät"
+        PASSWORD_CHANGED = "password_changed", "Passwort geaendert"
+        PASSWORD_RESET = "password_reset", "Passwort zurueckgesetzt"
+        LOGIN_NEW_DEVICE = "login_new_device", "Login von neuem Geraet"
         TWO_FA_ENABLED = "2fa_enabled", "2FA aktiviert"
         TWO_FA_DISABLED = "2fa_disabled", "2FA deaktiviert"
         TRANSACTION_CREATED = "transaction_created", "Transaktion erstellt"
@@ -104,7 +119,7 @@ class EmailNotificationConfig(models.Model):
     is_enabled = models.BooleanField(
         default=True,
         verbose_name="Aktiviert",
-        help_text="Ob E-Mail-Benachrichtigungen für dieses Ereignis gesendet werden.",
+        help_text="Ob E-Mail-Benachrichtigungen fuer dieses Ereignis gesendet werden.",
     )
     notify_super_admins = models.BooleanField(
         default=True,
@@ -118,8 +133,8 @@ class EmailNotificationConfig(models.Model):
     )
     custom_recipients = models.TextField(
         blank=True,
-        verbose_name="Zusätzliche Empfänger",
-        help_text="Kommagetrennte E-Mail-Adressen für zusätzliche Benachrichtigungen.",
+        verbose_name="Zusaetzliche Empfaenger",
+        help_text="Kommagetrennte E-Mail-Adressen fuer zusaetzliche Benachrichtigungen.",
     )
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Erstellt am")
     updated_at = models.DateTimeField(auto_now=True, verbose_name="Aktualisiert am")

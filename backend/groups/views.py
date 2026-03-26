@@ -2,6 +2,8 @@
 Groups API views: SchoolYear, Semester, Group, GroupMember, Student ViewSets.
 
 Includes CRUD operations with RBAC-based access control.
+All ViewSets use TenantViewSetMixin for automatic organization-based
+data isolation.
 """
 
 from django.db.models import Q
@@ -10,7 +12,15 @@ from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
-from core.permissions import IsEducator, IsLocationManagerOrAbove
+from core.mixins import TenantViewSetMixin
+from core.permissions import (
+    IsEducator,
+    IsLocationManagerOrAbove,
+    require_permission,
+    get_user_hierarchy_level,
+    GROUP_HIERARCHY,
+    GROUP_LOCATION_MANAGER,
+)
 from groups.models import Group, GroupMember, SchoolYear, Semester, Student
 from groups.serializers import (
     GroupCreateSerializer,
@@ -69,12 +79,13 @@ class StudentFilter(django_filters.FilterSet):
 # SchoolYear ViewSet
 # ---------------------------------------------------------------------------
 
-class SchoolYearViewSet(viewsets.ModelViewSet):
+class SchoolYearViewSet(TenantViewSetMixin, viewsets.ModelViewSet):
     """
     CRUD for school years.
 
     - Educators: read-only access to their location's school years
     - LocationManager+: full CRUD
+    - Tenant isolation via TenantViewSetMixin
     """
 
     filterset_class = SchoolYearFilter
@@ -85,13 +96,8 @@ class SchoolYearViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         if getattr(self, "swagger_fake_view", False):
             return SchoolYear.objects.none()
-        user = self.request.user
-        qs = SchoolYear.objects.filter(is_deleted=False).select_related("location")
-        if user.role in ["admin", "super_admin"]:
-            return qs
-        if user.location:
-            return qs.filter(location=user.location)
-        return qs.none()
+        qs = super().get_queryset()
+        return qs.filter(is_deleted=False).select_related("location")
 
     def get_serializer_class(self):
         if self.action in ["create", "update", "partial_update"]:
@@ -101,10 +107,16 @@ class SchoolYearViewSet(viewsets.ModelViewSet):
     def get_permissions(self):
         if self.action in ["list", "retrieve"]:
             return [permissions.IsAuthenticated(), IsEducator()]
-        return [permissions.IsAuthenticated(), IsLocationManagerOrAbove()]
+        return [
+            permissions.IsAuthenticated(),
+            require_permission("manage_groups")(),
+        ]
 
     def perform_create(self, serializer):
-        serializer.save(location=self.request.user.location)
+        serializer.save(
+            location=self.request.user.location,
+            organization=self.request.tenant,
+        )
 
     def perform_destroy(self, instance):
         instance.is_deleted = True
@@ -115,7 +127,7 @@ class SchoolYearViewSet(viewsets.ModelViewSet):
 # Semester ViewSet
 # ---------------------------------------------------------------------------
 
-class SemesterViewSet(viewsets.ModelViewSet):
+class SemesterViewSet(TenantViewSetMixin, viewsets.ModelViewSet):
     """
     CRUD for semesters.
 
@@ -131,33 +143,32 @@ class SemesterViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         if getattr(self, "swagger_fake_view", False):
             return Semester.objects.none()
-        user = self.request.user
-        qs = Semester.objects.filter(is_deleted=False).select_related(
+        qs = super().get_queryset()
+        return qs.filter(is_deleted=False).select_related(
             "school_year", "school_year__location"
         )
-        if user.role in ["admin", "super_admin"]:
-            return qs
-        if user.location:
-            return qs.filter(school_year__location=user.location)
-        return qs.none()
 
     def get_permissions(self):
         if self.action in ["list", "retrieve"]:
             return [permissions.IsAuthenticated(), IsEducator()]
-        return [permissions.IsAuthenticated(), IsLocationManagerOrAbove()]
+        return [
+            permissions.IsAuthenticated(),
+            require_permission("manage_groups")(),
+        ]
 
 
 # ---------------------------------------------------------------------------
 # Group ViewSet
 # ---------------------------------------------------------------------------
 
-class GroupViewSet(viewsets.ModelViewSet):
+class GroupViewSet(TenantViewSetMixin, viewsets.ModelViewSet):
     """
     CRUD for groups.
 
-    - Educators: read access to their own groups
+    - Educators: read access to their own groups (via membership)
     - LocationManager+: full CRUD for their location's groups
-    - Admin/SuperAdmin: full access
+    - Admin/SuperAdmin: full access within tenant
+    - Tenant isolation via TenantViewSetMixin
     """
 
     filterset_class = GroupFilter
@@ -168,14 +179,19 @@ class GroupViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         if getattr(self, "swagger_fake_view", False):
             return Group.objects.none()
-        user = self.request.user
-        qs = Group.objects.filter(is_deleted=False).select_related(
+        # Start with tenant-filtered queryset
+        qs = super().get_queryset()
+        qs = qs.filter(is_deleted=False).select_related(
             "location", "school_year", "leader"
         )
-        if user.role in ["admin", "super_admin"]:
+
+        user = self.request.user
+        level = get_user_hierarchy_level(user)
+
+        if level >= GROUP_HIERARCHY[GROUP_LOCATION_MANAGER]:
+            # LocationManager+: all groups in tenant
             return qs
-        if user.role == "location_manager" and user.location:
-            return qs.filter(location=user.location)
+        # Educators: only their groups
         return qs.filter(
             Q(members__user=user) | Q(leader=user)
         ).distinct()
@@ -190,10 +206,16 @@ class GroupViewSet(viewsets.ModelViewSet):
     def get_permissions(self):
         if self.action in ["list", "retrieve"]:
             return [permissions.IsAuthenticated(), IsEducator()]
-        return [permissions.IsAuthenticated(), IsLocationManagerOrAbove()]
+        return [
+            permissions.IsAuthenticated(),
+            require_permission("manage_groups")(),
+        ]
 
     def perform_create(self, serializer):
-        serializer.save(location=self.request.user.location)
+        serializer.save(
+            location=self.request.user.location,
+            organization=self.request.tenant,
+        )
 
     def perform_destroy(self, instance):
         instance.is_deleted = True
@@ -215,7 +237,7 @@ class GroupViewSet(viewsets.ModelViewSet):
         data["group"] = group.id
         serializer = GroupMemberCreateSerializer(data=data)
         serializer.is_valid(raise_exception=True)
-        serializer.save()
+        serializer.save(organization=self.request.tenant)
         return Response(
             GroupMemberSerializer(serializer.instance).data,
             status=status.HTTP_201_CREATED,
@@ -252,11 +274,11 @@ class GroupViewSet(viewsets.ModelViewSet):
 # GroupMember ViewSet
 # ---------------------------------------------------------------------------
 
-class GroupMemberViewSet(viewsets.ModelViewSet):
+class GroupMemberViewSet(TenantViewSetMixin, viewsets.ModelViewSet):
     """
     CRUD for group members.
 
-    - Educators: read-only
+    - Educators: read-only (own memberships)
     - LocationManager+: full CRUD
     """
 
@@ -267,14 +289,14 @@ class GroupMemberViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         if getattr(self, "swagger_fake_view", False):
             return GroupMember.objects.none()
+        qs = super().get_queryset()
+        qs = qs.filter(is_active=True).select_related("group", "user")
+
         user = self.request.user
-        qs = GroupMember.objects.filter(is_active=True).select_related(
-            "group", "user"
-        )
-        if user.role in ["admin", "super_admin"]:
+        level = get_user_hierarchy_level(user)
+
+        if level >= GROUP_HIERARCHY[GROUP_LOCATION_MANAGER]:
             return qs
-        if user.role == "location_manager" and user.location:
-            return qs.filter(group__location=user.location)
         return qs.filter(user=user)
 
     def get_serializer_class(self):
@@ -285,37 +307,43 @@ class GroupMemberViewSet(viewsets.ModelViewSet):
     def get_permissions(self):
         if self.action in ["list", "retrieve"]:
             return [permissions.IsAuthenticated(), IsEducator()]
-        return [permissions.IsAuthenticated(), IsLocationManagerOrAbove()]
+        return [
+            permissions.IsAuthenticated(),
+            require_permission("manage_groups")(),
+        ]
 
 
 # ---------------------------------------------------------------------------
 # Student ViewSet
 # ---------------------------------------------------------------------------
 
-class StudentViewSet(viewsets.ModelViewSet):
+class StudentViewSet(TenantViewSetMixin, viewsets.ModelViewSet):
     """
     CRUD for students.
 
     - Educators: read access to students in their groups
     - LocationManager+: full CRUD
+    - Tenant isolation via TenantViewSetMixin
     """
 
     filterset_class = StudentFilter
     # Note: first_name, last_name, email are encrypted and cannot be
-    # searched or ordered via SQL queries. Search must be done in Python.
-    search_fields = []  # Encrypted fields cannot be searched via SQL
+    # searched or ordered via SQL queries.
+    search_fields = []
     ordering_fields = ["created_at"]
-    ordering = ["id"]  # Encrypted fields cannot be ordered via SQL
+    ordering = ["id"]
 
     def get_queryset(self):
         if getattr(self, "swagger_fake_view", False):
             return Student.objects.none()
+        qs = super().get_queryset()
+        qs = qs.filter(is_deleted=False).select_related("group")
+
         user = self.request.user
-        qs = Student.objects.filter(is_deleted=False).select_related("group")
-        if user.role in ["admin", "super_admin"]:
+        level = get_user_hierarchy_level(user)
+
+        if level >= GROUP_HIERARCHY[GROUP_LOCATION_MANAGER]:
             return qs
-        if user.role == "location_manager" and user.location:
-            return qs.filter(group__location=user.location)
         return qs.filter(
             Q(group__members__user=user) | Q(group__leader=user)
         ).distinct()
@@ -330,7 +358,10 @@ class StudentViewSet(viewsets.ModelViewSet):
     def get_permissions(self):
         if self.action in ["list", "retrieve"]:
             return [permissions.IsAuthenticated(), IsEducator()]
-        return [permissions.IsAuthenticated(), IsLocationManagerOrAbove()]
+        return [
+            permissions.IsAuthenticated(),
+            require_permission("manage_students")(),
+        ]
 
     def perform_destroy(self, instance):
         instance.is_deleted = True

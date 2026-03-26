@@ -107,6 +107,7 @@ class MeView(APIView):
     PATCH /api/v1/auth/me/
 
     Get or update the authenticated user's profile.
+    Includes permissions, group, and tenant context.
     """
 
     permission_classes = [permissions.IsAuthenticated]
@@ -114,12 +115,36 @@ class MeView(APIView):
     @extend_schema(
         tags=["Auth"],
         summary="Eigenes Profil abrufen",
-        description="Gibt die Profildaten des angemeldeten Benutzers zurück.",
+        description="Gibt die Profildaten des angemeldeten Benutzers zurück, inklusive Berechtigungen und Tenant-Kontext.",
         responses={200: UserProfileSerializer},
     )
     def get(self, request):
+        from core.permissions import get_user_group_name
+
         serializer = UserProfileSerializer(request.user)
-        return Response(serializer.data)
+        data = serializer.data
+
+        # Add permissions and tenant context
+        user = request.user
+        user_perms = [
+            p.split(".")[1] for p in user.get_all_permissions()
+            if p.startswith("core.")
+        ]
+        data["group"] = get_user_group_name(user) or ""
+        data["permissions"] = user_perms
+        data["organization_id"] = (
+            user.location.organization_id
+            if hasattr(user, "location") and user.location
+            else None
+        )
+        data["tenant_ids"] = (
+            list(request.tenant_ids) if hasattr(request, "tenant_ids") else []
+        )
+        data["is_cross_tenant"] = (
+            request.is_cross_tenant if hasattr(request, "is_cross_tenant") else False
+        )
+
+        return Response(data)
 
     @extend_schema(
         tags=["Auth"],

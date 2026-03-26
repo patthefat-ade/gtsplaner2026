@@ -10,9 +10,48 @@ from django.utils import timezone
 from django.utils.encoding import force_bytes
 from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
 from rest_framework import serializers
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from core.models import User
+from core.permissions import get_user_group_name
+
+
+class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
+    """
+    Custom JWT token serializer that includes organization_id,
+    role/group, and permissions in the token claims.
+
+    This allows the TenantMiddleware and frontend to extract
+    tenant context without additional database queries.
+    """
+
+    @classmethod
+    def get_token(cls, user):
+        token = super().get_token(user)
+
+        # Add custom claims
+        token["role"] = user.role
+        token["group"] = get_user_group_name(user) or ""
+
+        # Add organization context
+        if hasattr(user, "location") and user.location:
+            token["location_id"] = user.location_id
+            token["organization_id"] = user.location.organization_id
+        else:
+            token["location_id"] = None
+            token["organization_id"] = None
+
+        # Add user permissions as list of codenames
+        perms = list(
+            user.get_all_permissions()
+        )
+        # Only include custom core permissions (not Django defaults)
+        token["permissions"] = [
+            p.split(".")[1] for p in perms if p.startswith("core.")
+        ]
+
+        return token
 
 
 class LoginSerializer(serializers.Serializer):
@@ -84,6 +123,12 @@ class LoginSerializer(serializers.Serializer):
         user.last_login = timezone.now()
         user.save(update_fields=["last_login"])
 
+        # Get user permissions
+        user_perms = [
+            p.split(".")[1] for p in user.get_all_permissions()
+            if p.startswith("core.")
+        ]
+
         return {
             "requires_2fa": False,
             "access": str(refresh.access_token),
@@ -95,7 +140,14 @@ class LoginSerializer(serializers.Serializer):
                 "first_name": user.first_name,
                 "last_name": user.last_name,
                 "role": user.role,
+                "group": get_user_group_name(user) or "",
                 "location": user.location_id,
+                "organization_id": (
+                    user.location.organization_id
+                    if hasattr(user, "location") and user.location
+                    else None
+                ),
+                "permissions": user_perms,
                 "has_accepted_terms": user.has_accepted_terms,
             },
         }

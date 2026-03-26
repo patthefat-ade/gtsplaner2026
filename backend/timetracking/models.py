@@ -3,14 +3,19 @@ Timetracking models for the Kassenbuch App v2.
 
 Contains TimeEntry, LeaveType, LeaveRequest, and WorkingHoursLimit models
 for managing time tracking, leave management, and working hour compliance.
+
+All tenant-scoped models inherit from TenantModel for automatic
+organization-based data isolation.
 """
 
 from django.conf import settings
 from django.core.validators import MinValueValidator
 from django.db import models
 
+from core.models import TenantModel
 
-class TimeEntry(models.Model):
+
+class TimeEntry(TenantModel):
     """
     A single time entry for an educator working with a group.
 
@@ -56,13 +61,17 @@ class TimeEntry(models.Model):
         ]
 
     def save(self, *args, **kwargs):
-        """Calculate duration_minutes before saving."""
+        """Calculate duration_minutes and auto-set organization before saving."""
         from datetime import datetime
 
         start = datetime.combine(self.date, self.start_time)
         end = datetime.combine(self.date, self.end_time)
         delta = end - start
         self.duration_minutes = int(delta.total_seconds() / 60)
+
+        if not self.organization_id and self.group_id:
+            self.organization_id = self.group.organization_id
+
         super().save(*args, **kwargs)
 
     def __str__(self) -> str:
@@ -72,7 +81,7 @@ class TimeEntry(models.Model):
         )
 
 
-class LeaveType(models.Model):
+class LeaveType(TenantModel):
     """
     Types of leave/absence (e.g., Urlaub, Krankheit, Fortbildung).
 
@@ -116,8 +125,14 @@ class LeaveType(models.Model):
     def __str__(self) -> str:
         return f"{self.name} ({self.location.name})"
 
+    def save(self, *args, **kwargs):
+        """Auto-set organization from location if not set."""
+        if not self.organization_id and self.location_id:
+            self.organization_id = self.location.organization_id
+        super().save(*args, **kwargs)
 
-class LeaveRequest(models.Model):
+
+class LeaveRequest(TenantModel):
     """
     A leave/absence request from an educator.
 
@@ -190,8 +205,14 @@ class LeaveRequest(models.Model):
         ]
 
     def save(self, *args, **kwargs):
-        """Calculate total_days before saving."""
+        """Calculate total_days and auto-set organization before saving."""
         self.total_days = (self.end_date - self.start_date).days + 1
+
+        if not self.organization_id and self.user_id:
+            user = self.user
+            if hasattr(user, "location") and user.location:
+                self.organization_id = user.location.organization_id
+
         super().save(*args, **kwargs)
 
     def __str__(self) -> str:
@@ -201,7 +222,7 @@ class LeaveRequest(models.Model):
         )
 
 
-class WorkingHoursLimit(models.Model):
+class WorkingHoursLimit(TenantModel):
     """
     Working hours limits and break policies for a location.
 
@@ -252,3 +273,9 @@ class WorkingHoursLimit(models.Model):
 
     def __str__(self) -> str:
         return f"Arbeitszeitgrenzen - {self.location.name}"
+
+    def save(self, *args, **kwargs):
+        """Auto-set organization from location if not set."""
+        if not self.organization_id and self.location_id:
+            self.organization_id = self.location.organization_id
+        super().save(*args, **kwargs)

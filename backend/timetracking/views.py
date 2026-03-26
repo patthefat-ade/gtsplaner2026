@@ -2,6 +2,8 @@
 Timetracking API views: TimeEntry, LeaveType, LeaveRequest, WorkingHoursLimit ViewSets.
 
 Includes CRUD operations, leave approval workflow, and working hours limits.
+All ViewSets use TenantViewSetMixin for automatic organization-based
+data isolation.
 """
 
 from django.db.models import Q
@@ -11,7 +13,15 @@ from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
-from core.permissions import IsEducator, IsLocationManagerOrAbove
+from core.mixins import TenantViewSetMixin
+from core.permissions import (
+    IsEducator,
+    IsLocationManagerOrAbove,
+    require_permission,
+    get_user_hierarchy_level,
+    GROUP_HIERARCHY,
+    GROUP_LOCATION_MANAGER,
+)
 from timetracking.models import LeaveRequest, LeaveType, TimeEntry, WorkingHoursLimit
 from timetracking.serializers import (
     LeaveRequestApprovalSerializer,
@@ -59,13 +69,13 @@ class LeaveRequestFilter(django_filters.FilterSet):
 # TimeEntry ViewSet
 # ---------------------------------------------------------------------------
 
-class TimeEntryViewSet(viewsets.ModelViewSet):
+class TimeEntryViewSet(TenantViewSetMixin, viewsets.ModelViewSet):
     """
     CRUD for time entries.
 
     - Educators: CRUD for own time entries
-    - LocationManager+: view all entries in their location
-    - Admin/SuperAdmin: full access
+    - LocationManager+: view all entries in their location/tenant
+    - Tenant isolation via TenantViewSetMixin
     """
 
     filterset_class = TimeEntryFilter
@@ -76,14 +86,14 @@ class TimeEntryViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         if getattr(self, "swagger_fake_view", False):
             return TimeEntry.objects.none()
+        qs = super().get_queryset()
+        qs = qs.filter(is_deleted=False).select_related("user", "group")
+
         user = self.request.user
-        qs = TimeEntry.objects.filter(is_deleted=False).select_related(
-            "user", "group"
-        )
-        if user.role in ["admin", "super_admin"]:
+        level = get_user_hierarchy_level(user)
+
+        if level >= GROUP_HIERARCHY[GROUP_LOCATION_MANAGER]:
             return qs
-        if user.role == "location_manager" and user.location:
-            return qs.filter(group__location=user.location)
         return qs.filter(user=user)
 
     def get_serializer_class(self):
@@ -95,7 +105,10 @@ class TimeEntryViewSet(viewsets.ModelViewSet):
         return [permissions.IsAuthenticated(), IsEducator()]
 
     def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
+        serializer.save(
+            user=self.request.user,
+            organization=self.request.tenant,
+        )
 
     def perform_destroy(self, instance):
         instance.is_deleted = True
@@ -106,7 +119,7 @@ class TimeEntryViewSet(viewsets.ModelViewSet):
 # LeaveType ViewSet
 # ---------------------------------------------------------------------------
 
-class LeaveTypeViewSet(viewsets.ModelViewSet):
+class LeaveTypeViewSet(TenantViewSetMixin, viewsets.ModelViewSet):
     """
     CRUD for leave types.
 
@@ -122,21 +135,22 @@ class LeaveTypeViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         if getattr(self, "swagger_fake_view", False):
             return LeaveType.objects.none()
-        user = self.request.user
-        qs = LeaveType.objects.all()
-        if user.role in ["admin", "super_admin"]:
-            return qs
-        if user.location:
-            return qs.filter(location=user.location)
-        return qs.none()
+        qs = super().get_queryset()
+        return qs.all()
 
     def get_permissions(self):
         if self.action in ["list", "retrieve"]:
             return [permissions.IsAuthenticated(), IsEducator()]
-        return [permissions.IsAuthenticated(), IsLocationManagerOrAbove()]
+        return [
+            permissions.IsAuthenticated(),
+            require_permission("manage_timeentries")(),
+        ]
 
     def perform_create(self, serializer):
-        serializer.save(location=self.request.user.location)
+        serializer.save(
+            location=self.request.user.location,
+            organization=self.request.tenant,
+        )
 
     def perform_destroy(self, instance):
         if instance.is_system_type:
@@ -151,12 +165,12 @@ class LeaveTypeViewSet(viewsets.ModelViewSet):
 # LeaveRequest ViewSet
 # ---------------------------------------------------------------------------
 
-class LeaveRequestViewSet(viewsets.ModelViewSet):
+class LeaveRequestViewSet(TenantViewSetMixin, viewsets.ModelViewSet):
     """
     CRUD for leave requests with approval workflow.
 
     - Educators: CRUD for own leave requests
-    - LocationManager+: approve/reject, view all in their location
+    - LocationManager+: approve/reject, view all in their tenant
     """
 
     filterset_class = LeaveRequestFilter
@@ -167,16 +181,16 @@ class LeaveRequestViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         if getattr(self, "swagger_fake_view", False):
             return LeaveRequest.objects.none()
-        user = self.request.user
-        qs = LeaveRequest.objects.filter(is_deleted=False).select_related(
+        qs = super().get_queryset()
+        qs = qs.filter(is_deleted=False).select_related(
             "user", "leave_type", "approved_by"
         )
-        if user.role in ["admin", "super_admin"]:
+
+        user = self.request.user
+        level = get_user_hierarchy_level(user)
+
+        if level >= GROUP_HIERARCHY[GROUP_LOCATION_MANAGER]:
             return qs
-        if user.role == "location_manager" and user.location:
-            return qs.filter(
-                Q(user=user) | Q(user__location=user.location)
-            )
         return qs.filter(user=user)
 
     def get_serializer_class(self):
@@ -190,11 +204,17 @@ class LeaveRequestViewSet(viewsets.ModelViewSet):
 
     def get_permissions(self):
         if self.action in ["approve", "reject"]:
-            return [permissions.IsAuthenticated(), IsLocationManagerOrAbove()]
+            return [
+                permissions.IsAuthenticated(),
+                require_permission("approve_leave")(),
+            ]
         return [permissions.IsAuthenticated(), IsEducator()]
 
     def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
+        serializer.save(
+            user=self.request.user,
+            organization=self.request.tenant,
+        )
 
     def perform_destroy(self, instance):
         instance.is_deleted = True
@@ -283,7 +303,7 @@ class LeaveRequestViewSet(viewsets.ModelViewSet):
 # WorkingHoursLimit ViewSet
 # ---------------------------------------------------------------------------
 
-class WorkingHoursLimitViewSet(viewsets.ModelViewSet):
+class WorkingHoursLimitViewSet(TenantViewSetMixin, viewsets.ModelViewSet):
     """
     CRUD for working hours limits.
 
@@ -297,15 +317,13 @@ class WorkingHoursLimitViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         if getattr(self, "swagger_fake_view", False):
             return WorkingHoursLimit.objects.none()
-        user = self.request.user
-        qs = WorkingHoursLimit.objects.select_related("location")
-        if user.role in ["admin", "super_admin"]:
-            return qs
-        if user.location:
-            return qs.filter(location=user.location)
-        return qs.none()
+        qs = super().get_queryset()
+        return qs.select_related("location")
 
     def get_permissions(self):
         if self.action in ["list", "retrieve"]:
             return [permissions.IsAuthenticated(), IsEducator()]
-        return [permissions.IsAuthenticated(), IsLocationManagerOrAbove()]
+        return [
+            permissions.IsAuthenticated(),
+            require_permission("manage_settings")(),
+        ]
