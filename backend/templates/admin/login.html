@@ -12,15 +12,20 @@
         .login-left {
             display: flex;
             flex-direction: column;
-            align-items: center;
-            justify-content: center;
             width: 45%;
-            padding: 2rem;
             position: relative;
             background: linear-gradient(135deg, #FFCC00 0%, #FFD633 30%, #FFE066 60%, #FFF2B2 100%);
         }
         .dark .login-left {
             background: linear-gradient(135deg, #1a1700 0%, #2d2400 30%, #3d3200 60%, #1a1700 100%);
+        }
+        .login-left-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
         }
         .login-right {
             width: 55%;
@@ -60,45 +65,98 @@
             height: 100%;
             object-fit: cover;
         }
+        /* Title: Black in light mode */
         .login-title {
             font-size: 1.5rem;
             font-weight: 700;
             margin-bottom: 0.25rem;
+            color: #18181b;
         }
         .dark .login-title {
             color: #fef3c7;
         }
         .login-subtitle {
             font-size: 0.875rem;
-            color: #92400e;
+            color: #18181b;
+            opacity: 0.7;
             margin-bottom: 2rem;
         }
         .dark .login-subtitle {
             color: #fbbf24;
             opacity: 0.6;
         }
-        .login-footer {
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            right: 0;
+
+        /* Override Unfold button to black bg + white text */
+        .login-form-container .submit-row,
+        .login-form-container [type="submit"],
+        .login-form-container button[type="submit"],
+        .login-form-container .submit-row a,
+        .login-form-container .btn-primary {
+            background-color: #18181b !important;
+            color: #ffffff !important;
+            border-color: #18181b !important;
+        }
+        .login-form-container .submit-row:hover,
+        .login-form-container [type="submit"]:hover,
+        .login-form-container button[type="submit"]:hover {
+            background-color: #27272a !important;
+        }
+        .dark .login-form-container .submit-row,
+        .dark .login-form-container [type="submit"],
+        .dark .login-form-container button[type="submit"] {
+            background-color: #ffffff !important;
+            color: #18181b !important;
+            border-color: #ffffff !important;
+        }
+        .dark .login-form-container .submit-row:hover,
+        .dark .login-form-container [type="submit"]:hover,
+        .dark .login-form-container button[type="submit"]:hover {
+            background-color: #e4e4e7 !important;
+        }
+
+        /* Password reset link styling */
+        .password-reset-link {
+            display: block;
             text-align: center;
-            padding-bottom: 0.5rem;
+            font-size: 0.8rem;
+            margin-top: 1rem;
+            color: #18181b;
+            opacity: 0.6;
+            text-decoration: none;
+            transition: opacity 0.2s;
+        }
+        .password-reset-link:hover {
+            opacity: 1;
+            text-decoration: underline;
+        }
+        .dark .password-reset-link {
+            color: #fbbf24;
+            opacity: 0.5;
+        }
+        .dark .password-reset-link:hover {
+            opacity: 0.9;
+        }
+
+        /* Footer */
+        .login-footer {
+            padding: 0.75rem 1rem 0.5rem;
+            text-align: center;
         }
         .login-footer-links {
             display: flex;
             justify-content: center;
             gap: 0.75rem;
             margin-bottom: 0.25rem;
+            flex-wrap: wrap;
         }
         .login-footer-links a {
             font-size: 0.7rem;
-            color: rgba(146, 64, 14, 0.5);
+            color: rgba(24, 24, 27, 0.5);
             text-decoration: none;
             transition: color 0.2s;
         }
         .login-footer-links a:hover {
-            color: rgba(146, 64, 14, 0.9);
+            color: rgba(24, 24, 27, 0.9);
             text-decoration: underline;
         }
         .dark .login-footer-links a {
@@ -108,7 +166,7 @@
             color: rgba(251, 191, 36, 0.8);
         }
         .login-footer-links .separator {
-            color: rgba(146, 64, 14, 0.3);
+            color: rgba(24, 24, 27, 0.3);
             font-size: 0.7rem;
         }
         .dark .login-footer-links .separator {
@@ -116,7 +174,7 @@
         }
         .login-footer-copyright {
             font-size: 0.7rem;
-            color: rgba(146, 64, 14, 0.3);
+            color: rgba(24, 24, 27, 0.3);
         }
         .dark .login-footer-copyright {
             color: rgba(251, 191, 36, 0.2);
@@ -131,7 +189,7 @@
             display: none;
             position: fixed;
             inset: 0;
-            z-index: 9999;
+            z-index: 99999;
             background: rgba(0, 0, 0, 0.6);
             backdrop-filter: blur(4px);
             align-items: center;
@@ -224,7 +282,7 @@
         .legal-modal-footer button {
             width: 100%;
             padding: 0.625rem 1rem;
-            background: #eab308;
+            background: #18181b;
             color: white;
             border: none;
             border-radius: 0.5rem;
@@ -233,7 +291,14 @@
             transition: background 0.2s;
         }
         .legal-modal-footer button:hover {
-            background: #ca8a04;
+            background: #27272a;
+        }
+        .dark .legal-modal-footer button {
+            background: #ffffff;
+            color: #18181b;
+        }
+        .dark .legal-modal-footer button:hover {
+            background: #e4e4e7;
         }
     </style>
 {% endblock %}
@@ -253,50 +318,51 @@
 <div class="login-splitscreen">
     <!-- Left: Login Form -->
     <div class="login-left">
-        <div style="display: flex; flex-direction: column; align-items: center; margin-bottom: 2rem;">
-            <div class="login-logo">
-                <img src="{% static 'admin/img/hilfswerk-logo.svg' %}" alt="Hilfswerk Logo">
+        <div class="login-left-content">
+            <div style="display: flex; flex-direction: column; align-items: center; margin-bottom: 2rem;">
+                <div class="login-logo">
+                    <img src="{% static 'admin/img/hilfswerk-logo.svg' %}" alt="Hilfswerk Logo">
+                </div>
+                <h1 class="login-title">GTS Planer Admin</h1>
+                <p class="login-subtitle">Digitale Unterstützung in der täglichen Zusammenarbeit</p>
             </div>
-            <h1 class="login-title">GTS Planer Admin</h1>
-            <p class="login-subtitle">Digitale Unterstützung in der täglichen Zusammenarbeit</p>
+
+            <div class="login-form-container">
+                {% include "unfold/helpers/messages.html" %}
+
+                {% if form.errors or form.non_field_errors %}
+                    <div class="flex flex-col gap-4 mb-6 *:mb-0">
+                        {% include "unfold/helpers/messages/errornote.html" with errors=form.errors %}
+                        {% include "unfold/helpers/messages/error.html" with errors=form.non_field_errors %}
+                        {% if user.is_authenticated %}
+                            {% blocktranslate trimmed asvar message %}
+                                You are authenticated as {{ username }}, but are not authorized to
+                                access this page. Would you like to login to a different account?
+                            {% endblocktranslate %}
+                            {% include "unfold/helpers/messages/error.html" with error=message %}
+                        {% endif %}
+                    </div>
+                {% endif %}
+
+                <form action="{{ app_path }}" method="post" id="login-form">
+                    {% csrf_token %}
+                    {% include "unfold/helpers/field.html" with field=form.username %}
+                    {% include "unfold/helpers/field.html" with field=form.password %}
+                    <div class="flex flex-col gap-3 mt-6">
+                        <button type="submit" class="submit-row w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg font-medium transition-colors" style="background-color: #18181b; color: #ffffff; border: none; cursor: pointer;">
+                            {% translate 'Log in' %}
+                            <span class="material-symbols-outlined text-sm">arrow_forward</span>
+                        </button>
+                    </div>
+                </form>
+
+                <a href="{% url 'admin_password_reset' %}" class="password-reset-link">
+                    {% translate 'Forgotten your password or username?' %}
+                </a>
+            </div>
         </div>
 
-        <div class="login-form-container">
-            {% include "unfold/helpers/messages.html" %}
-
-            {% if form.errors or form.non_field_errors %}
-                <div class="flex flex-col gap-4 mb-6 *:mb-0">
-                    {% include "unfold/helpers/messages/errornote.html" with errors=form.errors %}
-                    {% include "unfold/helpers/messages/error.html" with errors=form.non_field_errors %}
-                    {% if user.is_authenticated %}
-                        {% blocktranslate trimmed asvar message %}
-                            You are authenticated as {{ username }}, but are not authorized to
-                            access this page. Would you like to login to a different account?
-                        {% endblocktranslate %}
-                        {% include "unfold/helpers/messages/error.html" with error=message %}
-                    {% endif %}
-                </div>
-            {% endif %}
-
-            <form action="{{ app_path }}" method="post" id="login-form">
-                {% csrf_token %}
-                {% include "unfold/helpers/field.html" with field=form.username %}
-                {% include "unfold/helpers/field.html" with field=form.password %}
-                <div class="flex flex-col gap-3 mt-6">
-                    {% component "unfold/components/button.html" with submit=1 variant="primary" class="submit-row w-full" %}
-                        {% translate 'Log in' %} <span class="material-symbols-outlined relative right-0 transition-all group-hover:-right-1 text-sm">arrow_forward</span>
-                    {% endcomponent %}
-                    {% url 'admin_password_reset' as password_reset_url %}
-                    {% url 'admin:admin_password_reset' as unfold_password_reset_url %}
-                    {% if password_reset_url or unfold_password_reset_url %}
-                        {% component "unfold/components/button.html" with href=password_reset_url|default:unfold_password_reset_url variant="secondary" class="password-reset-link w-full" %}
-                            {% translate 'Forgotten your password or username?' %}
-                        {% endcomponent %}
-                    {% endif %}
-                </div>
-            </form>
-        </div>
-
+        <!-- Footer – flows naturally, no absolute positioning -->
         <div class="login-footer">
             <div class="login-footer-links">
                 <a href="#" onclick="openLegalModal('impressum'); return false;">Impressum</a>
