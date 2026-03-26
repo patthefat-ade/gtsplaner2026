@@ -293,3 +293,90 @@ def send_system_notification(subject, message, recipient_emails):
         logger.info(f"System notification sent to {len(recipient_emails)} recipients")
     except Exception as e:
         logger.error(f"Failed to send system notification: {e}")
+
+
+# ---------------------------------------------------------------------------
+# GDPR/DSGVO Data Retention Tasks
+# ---------------------------------------------------------------------------
+
+
+@shared_task
+def gdpr_cleanup_expired_data():
+    """
+    Automatically delete anonymized records that have exceeded the
+    configured data retention period.
+
+    Runs daily via Celery Beat. The retention period is configurable
+    via SystemSetting 'data_retention_years' (default: 7 years).
+
+    This task:
+    1. Finds all anonymized Users and Students older than retention period
+    2. Permanently deletes their associated records (cascade)
+    3. Cleans up old AuditLog entries beyond retention period
+    4. Logs all deletions for compliance
+    """
+    from datetime import timedelta
+
+    from django.utils import timezone
+
+    from core.models import User
+    from groups.models import Student
+    from system.models import AuditLog, SystemSetting
+
+    # Get retention period from SystemSetting (default: 7 years)
+    try:
+        setting = SystemSetting.objects.get(key="data_retention_years")
+        retention_years = int(setting.value)
+    except (SystemSetting.DoesNotExist, ValueError):
+        retention_years = 7
+
+    cutoff_date = timezone.now() - timedelta(days=retention_years * 365)
+
+    # Delete anonymized users past retention period
+    expired_users = User.objects.filter(
+        anonymized_at__isnull=False,
+        anonymized_at__lt=cutoff_date,
+    )
+    user_count = expired_users.count()
+    if user_count > 0:
+        expired_users.delete()
+        logger.info(
+            f"GDPR cleanup: Permanently deleted {user_count} anonymized users "
+            f"(retention: {retention_years} years)"
+        )
+
+    # Delete anonymized students past retention period
+    expired_students = Student.objects.filter(
+        anonymized_at__isnull=False,
+        anonymized_at__lt=cutoff_date,
+    )
+    student_count = expired_students.count()
+    if student_count > 0:
+        expired_students.delete()
+        logger.info(
+            f"GDPR cleanup: Permanently deleted {student_count} anonymized students "
+            f"(retention: {retention_years} years)"
+        )
+
+    # Clean up old audit logs past retention period
+    expired_logs = AuditLog.objects.filter(
+        created_at__lt=cutoff_date,
+    )
+    log_count = expired_logs.count()
+    if log_count > 0:
+        expired_logs.delete()
+        logger.info(
+            f"GDPR cleanup: Permanently deleted {log_count} audit log entries "
+            f"(retention: {retention_years} years)"
+        )
+
+    total = user_count + student_count + log_count
+    if total == 0:
+        logger.info("GDPR cleanup: No expired data found")
+
+    return {
+        "deleted_users": user_count,
+        "deleted_students": student_count,
+        "deleted_audit_logs": log_count,
+        "retention_years": retention_years,
+    }

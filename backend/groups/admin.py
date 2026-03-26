@@ -5,7 +5,8 @@ Registers SchoolYear, Semester, Group, GroupMember, and Student models
 with rich admin interfaces including filters, search, and inline editing.
 """
 
-from django.contrib import admin
+from django.contrib import admin, messages
+from django.http import HttpResponse
 from unfold.admin import ModelAdmin, TabularInline
 
 from .models import Group, GroupMember, SchoolYear, Semester, Student
@@ -157,6 +158,42 @@ class GroupMemberAdmin(ModelAdmin):
     ordering = ("group__name", "user__last_name")
 
 
+def anonymize_students(modeladmin, request, queryset):
+    """Admin action: Pseudoanonymize selected students (GDPR/DSGVO)."""
+    from system.gdpr_service import GDPRService
+
+    count = 0
+    for student in queryset:
+        if student.is_anonymized:
+            continue
+        GDPRService.anonymize_student(student)
+        count += 1
+    messages.success(request, f"{count} Schüler:innen erfolgreich anonymisiert.")
+
+
+anonymize_students.short_description = "DSGVO: Ausgewählte Schüler:innen anonymisieren"
+
+
+def export_student_data(modeladmin, request, queryset):
+    """Admin action: Export student data as ZIP (GDPR Art. 15)."""
+    from system.gdpr_service import GDPRService
+
+    if queryset.count() != 1:
+        messages.error(request, "Bitte wählen Sie genau eine:n Schüler:in für den Datenexport aus.")
+        return
+
+    student = queryset.first()
+    zip_buffer = GDPRService.export_student_data(student)
+
+    filename = f"dsgvo_export_schueler_{student.pk}_{student.last_name}.zip"
+    response = HttpResponse(zip_buffer.getvalue(), content_type="application/zip")
+    response["Content-Disposition"] = f'attachment; filename="{filename}"'
+    return response
+
+
+export_student_data.short_description = "DSGVO: Datenexport (Auskunftsanfrage)"
+
+
 @admin.register(Student)
 class StudentAdmin(ModelAdmin):
     """Admin for students/children."""
@@ -167,10 +204,12 @@ class StudentAdmin(ModelAdmin):
         "group",
         "date_of_birth",
         "is_active",
+        "is_anonymized_display",
     )
     list_filter = ("is_active", "group__location", "group")
     search_fields = ("group__name",)  # Encrypted fields cannot be searched
     ordering = ("id",)  # Encrypted fields cannot be ordered
+    actions = [anonymize_students, export_student_data]
 
     fieldsets = (
         (
@@ -201,9 +240,13 @@ class StudentAdmin(ModelAdmin):
         (
             "System",
             {
-                "fields": ("is_active", "is_deleted", "created_at", "updated_at"),
+                "fields": ("is_active", "is_deleted", "anonymized_at", "created_at", "updated_at"),
                 "classes": ("collapse",),
             },
         ),
     )
-    readonly_fields = ("created_at", "updated_at")
+    readonly_fields = ("created_at", "updated_at", "anonymized_at")
+
+    @admin.display(boolean=True, description="Anonymisiert")
+    def is_anonymized_display(self, obj):
+        return obj.anonymized_at is not None

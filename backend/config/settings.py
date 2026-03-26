@@ -312,6 +312,15 @@ CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"
 CELERY_TIMEZONE = TIME_ZONE
 
+# Celery Beat Schedule (periodic tasks)
+CELERY_BEAT_SCHEDULE = {
+    "gdpr-cleanup-expired-data": {
+        "task": "system.tasks.gdpr_cleanup_expired_data",
+        "schedule": 86400.0,  # Every 24 hours (in seconds)
+        "options": {"queue": "default"},
+    },
+}
+
 # ---------------------------------------------------------------------------
 # Email Configuration
 # ---------------------------------------------------------------------------

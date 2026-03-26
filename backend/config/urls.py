@@ -95,6 +95,7 @@ urlpatterns = [
     path("api/v1/admin/", include("admin_panel.urls")),
     path("api/v1/system/", include("system.urls")),
     path("api/v1/export/", include("system.urls_export")),
+    path("api/v1/admin/gdpr/", include("system.urls_gdpr")),
     # OpenAPI Schema (secured – staff only)
     path("api/schema/", SecuredSchemaView.as_view(), name="schema"),
     # Swagger UI (secured – staff only)

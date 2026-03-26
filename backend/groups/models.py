@@ -253,6 +253,10 @@ class Student(models.Model):
     postal_code = EncryptedCharField(max_length=255, blank=True, null=True, default="", verbose_name="PLZ")
     is_active = models.BooleanField(default=True, verbose_name="Aktiv")
     is_deleted = models.BooleanField(default=False, verbose_name="Geloescht")
+    # GDPR/DSGVO anonymization tracking
+    anonymized_at = models.DateTimeField(
+        null=True, blank=True, verbose_name="Anonymisiert am"
+    )
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Erstellt am")
     updated_at = models.DateTimeField(auto_now=True, verbose_name="Aktualisiert am")
 
@@ -272,3 +276,30 @@ class Student(models.Model):
     def full_name(self) -> str:
         """Return the student's full name."""
         return f"{self.first_name} {self.last_name}"
+
+    @property
+    def is_anonymized(self) -> bool:
+        """Check if student data has been anonymized."""
+        return self.anonymized_at is not None
+
+    def anonymize(self) -> None:
+        """
+        Pseudoanonymize all personal data for GDPR/DSGVO compliance.
+
+        Replaces all PII with placeholder values while preserving
+        the record for referential integrity (e.g., group membership).
+        """
+        from django.utils import timezone
+
+        self.first_name = "Anonymisiert"
+        self.last_name = "Kind"
+        self.date_of_birth = None
+        self.email = ""
+        self.phone = ""
+        self.street = ""
+        self.city = ""
+        self.postal_code = ""
+        self.is_active = False
+        self.is_deleted = True
+        self.anonymized_at = timezone.now()
+        self.save()
