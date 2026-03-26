@@ -81,6 +81,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
    */
   const login = useCallback(
     async (credentials: LoginCredentials): Promise<LoginResponse> => {
+      // Clear any stale tokens before attempting login to prevent
+      // the request interceptor from attaching an expired token
+      // that could interfere with the login flow.
+      localStorage.removeItem("access_token");
+      localStorage.removeItem("refresh_token");
+
       const response = await authApi.login(credentials);
 
       // If 2FA is required, don't store tokens yet – return response for 2FA page
