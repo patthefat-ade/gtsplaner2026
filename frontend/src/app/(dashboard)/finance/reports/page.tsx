@@ -175,7 +175,7 @@ export default function FinanceReportsPage() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <PageHeader
           title="Finanzberichte"
-          description="Uebersicht ueber Einnahmen, Ausgaben und Kontostaende."
+          description="Übersicht über Einnahmen, Ausgaben und Kontostände."
         />
         <Select
           value={String(year)}
