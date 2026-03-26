@@ -1,13 +1,15 @@
 """
-Admin panel API views: AuditLog and SystemSettings endpoints.
+Admin panel API views: AuditLog, SystemSettings, and Organization endpoints.
 
-Provides read-only access to audit logs and CRUD for system settings.
+Provides read-only access to audit logs, CRUD for system settings,
+and CRUD for organizations (SuperAdmin only).
 """
 
 from django_filters import rest_framework as django_filters
 from drf_spectacular.utils import extend_schema, extend_schema_view
 from rest_framework import permissions, serializers, viewsets
 
+from core.models import Organization
 from core.permissions import IsAdminOrAbove, IsSuperAdmin
 from system.models import AuditLog, SystemSetting
 
@@ -135,3 +137,67 @@ class SystemSettingViewSet(viewsets.ModelViewSet):
         if self.action in ["list", "retrieve"]:
             return [permissions.IsAuthenticated(), IsAdminOrAbove()]
         return [permissions.IsAuthenticated(), IsSuperAdmin()]
+
+
+# ---------------------------------------------------------------------------
+# Organization Serializer & ViewSet
+# ---------------------------------------------------------------------------
+
+class OrganizationSerializer(serializers.ModelSerializer):
+    """Serializer for organizations."""
+
+    location_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Organization
+        fields = [
+            "id",
+            "name",
+            "description",
+            "email",
+            "phone",
+            "website",
+            "street",
+            "city",
+            "postal_code",
+            "country",
+            "is_active",
+            "location_count",
+            "created_at",
+            "updated_at",
+        ]
+        read_only_fields = ["id", "created_at", "updated_at", "location_count"]
+
+    def get_location_count(self, obj: Organization) -> int:
+        return obj.locations.count()
+
+
+@extend_schema_view(
+    list=extend_schema(tags=["Admin"], summary="Organisationen auflisten"),
+    retrieve=extend_schema(tags=["Admin"], summary="Organisation abrufen"),
+    create=extend_schema(tags=["Admin"], summary="Organisation erstellen"),
+    update=extend_schema(tags=["Admin"], summary="Organisation aktualisieren"),
+    partial_update=extend_schema(tags=["Admin"], summary="Organisation teilweise aktualisieren"),
+    destroy=extend_schema(tags=["Admin"], summary="Organisation loeschen"),
+)
+class OrganizationViewSet(viewsets.ModelViewSet):
+    """
+    CRUD for organizations (SuperAdmin only).
+    """
+
+    serializer_class = OrganizationSerializer
+    permission_classes = [permissions.IsAuthenticated, IsSuperAdmin]
+    search_fields = ["name", "city", "country"]
+    ordering_fields = ["name", "created_at"]
+    ordering = ["name"]
+
+    def get_queryset(self):
+        return Organization.objects.prefetch_related("locations").filter(
+            is_deleted=False
+        )
+
+    def perform_destroy(self, instance: Organization) -> None:
+        """Soft-delete: mark as deleted instead of removing from DB."""
+        instance.is_deleted = True
+        instance.is_active = False
+        instance.save(update_fields=["is_deleted", "is_active", "updated_at"])

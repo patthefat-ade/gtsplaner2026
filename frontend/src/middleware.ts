@@ -15,7 +15,7 @@ import type { NextRequest } from "next/server";
  * CDN/edge caching of authentication-dependent redirects.
  */
 
-const PUBLIC_PATHS = ["/login", "/forgot-password", "/reset-password"];
+const PUBLIC_PATHS = ["/login", "/forgot-password", "/reset-password", "/impressum", "/datenschutz", "/nutzungsbedingungen"];
 
 /**
  * Apply no-cache headers to prevent CDN/edge caching of auth-dependent responses.
