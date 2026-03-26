@@ -150,16 +150,16 @@ export default function DashboardPage() {
           icon={Wallet}
           loading={loadingTx}
         />
-        <StatCard
-          title="Ausstehende Genehmigungen"
-          value={String(pendingTx?.count ?? 0)}
-          description={
-            isManager ? "Warten auf deine Freigabe" : "Warten auf Freigabe"
-          }
-          icon={AlertCircle}
-          trend={pendingTx?.count ? "up" : "neutral"}
-          loading={loadingPending}
-        />
+        {isManager && (
+          <StatCard
+            title="Ausstehende Genehmigungen"
+            value={String(pendingTx?.count ?? 0)}
+            description="Warten auf deine Freigabe"
+            icon={AlertCircle}
+            trend={pendingTx?.count ? "up" : "neutral"}
+            loading={loadingPending}
+          />
+        )}
         <StatCard
           title="Zeiteinträge"
           value={String(timeEntries?.count ?? 0)}

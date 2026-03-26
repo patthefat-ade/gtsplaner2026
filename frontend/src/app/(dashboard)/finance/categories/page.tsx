@@ -48,9 +48,11 @@ import {
   Pencil,
   Trash2,
 } from "lucide-react";
+import { usePermissions } from "@/hooks/use-permissions";
 
 export default function CategoriesPage() {
   const toast = useToast();
+  const { canCreate } = usePermissions();
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
   const [search, setSearch] = useState("");
@@ -138,10 +140,12 @@ export default function CategoriesPage() {
         title="Kategorien"
         description="Verwalte Einnahme- und Ausgabe-Kategorien."
       >
-        <Button onClick={handleCreate}>
-          <Plus className="mr-2 h-4 w-4" />
-          Neue Kategorie
-        </Button>
+        {canCreate("category") && (
+          <Button onClick={handleCreate}>
+            <Plus className="mr-2 h-4 w-4" />
+            Neue Kategorie
+          </Button>
+        )}
       </PageHeader>
 
       {/* Search */}
@@ -250,8 +254,8 @@ export default function CategoriesPage() {
               ? "Keine Kategorien für diese Suche gefunden."
               : "Es wurden noch keine Kategorien angelegt."
           }
-          actionLabel="Neue Kategorie"
-          onAction={handleCreate}
+          actionLabel={canCreate("category") ? "Neue Kategorie" : undefined}
+          onAction={canCreate("category") ? handleCreate : undefined}
         />
       )}
 

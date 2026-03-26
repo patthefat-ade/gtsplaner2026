@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { ProtectedRoute } from "@/components/protected-route";
+import { RouteGuard } from "@/components/route-guard";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Header } from "@/components/layout/header";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -37,7 +38,9 @@ export default function DashboardLayout({
                 sidebarCollapsed={sidebarCollapsed}
                 onToggleSidebar={() => setSidebarCollapsed(!sidebarCollapsed)}
               />
-              <main className="flex-1 p-4 sm:p-6">{children}</main>
+              <main className="flex-1 p-4 sm:p-6">
+                <RouteGuard>{children}</RouteGuard>
+              </main>
             </div>
           </div>
 

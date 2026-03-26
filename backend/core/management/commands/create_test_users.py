@@ -11,6 +11,7 @@ Usage:
 from django.core.management.base import BaseCommand
 
 from core.models import Location, Organization, User
+from groups.models import Group, GroupMember
 
 
 class Command(BaseCommand):
@@ -113,8 +114,45 @@ class Command(BaseCommand):
         self.stdout.write("=" * 70)
         self.stdout.write(
             self.style.SUCCESS(
-                f"\n✓ {len(self.TEST_USERS)} Test-Benutzer erstellt/aktualisiert."
+                f"\n\u2713 {len(self.TEST_USERS)} Test-Benutzer erstellt/aktualisiert."
             )
         )
         self.stdout.write(f"  Organisation: {org.name}")
-        self.stdout.write(f"  Standort:     {location.name}\n")
+        self.stdout.write(f"  Standort:     {location.name}")
+
+        # Assign educator to existing groups as group member
+        self._assign_educator_to_groups(location)
+
+        self.stdout.write("")
+
+    def _assign_educator_to_groups(self, location: Location) -> None:
+        """Assign the educator test user to all groups at the location."""
+        try:
+            educator = User.objects.get(username="educator")
+        except User.DoesNotExist:
+            return
+
+        groups = Group.objects.filter(location=location, is_active=True)
+        if not groups.exists():
+            self.stdout.write(
+                self.style.WARNING(
+                    "  Keine Gruppen gefunden. Bitte zuerst Gruppen anlegen "
+                    "und dann erneut ausfuehren."
+                )
+            )
+            return
+
+        assigned_count = 0
+        for group in groups:
+            _, created = GroupMember.objects.get_or_create(
+                group=group,
+                user=educator,
+                defaults={"role": GroupMember.MemberRole.EDUCATOR},
+            )
+            if created:
+                assigned_count += 1
+
+        self.stdout.write(
+            f"  Gruppenmitgliedschaften (Educator): {assigned_count} neu, "
+            f"{groups.count() - assigned_count} bereits vorhanden"
+        )
