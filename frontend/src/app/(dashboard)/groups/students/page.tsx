@@ -48,9 +48,11 @@ import {
   Trash2,
   Search,
 } from "lucide-react";
+import { usePermissions } from "@/hooks/use-permissions";
 
 export default function StudentsPage() {
   const toast = useToast();
+  const { canCreate } = usePermissions();
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
   const [search, setSearch] = useState("");
@@ -143,10 +145,12 @@ export default function StudentsPage() {
         title="Kinder"
         description="Verwalte alle Kinder und deren Gruppenzuordnung."
       >
-        <Button onClick={handleCreate}>
-          <Plus className="mr-2 h-4 w-4" />
-          Neues Kind
-        </Button>
+        {canCreate("student") && (
+          <Button onClick={handleCreate}>
+            <Plus className="mr-2 h-4 w-4" />
+            Neues Kind
+          </Button>
+        )}
       </PageHeader>
 
       {/* Search */}
@@ -265,8 +269,8 @@ export default function StudentsPage() {
               ? "Keine Kinder für diese Suche gefunden."
               : "Es wurden noch keine Kinder erfasst."
           }
-          actionLabel="Neues Kind"
-          onAction={handleCreate}
+          actionLabel={canCreate("student") ? "Neues Kind" : undefined}
+          onAction={canCreate("student") ? handleCreate : undefined}
         />
       )}
 

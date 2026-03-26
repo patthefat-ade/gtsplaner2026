@@ -50,9 +50,11 @@ import {
   Trash2,
   Search,
 } from "lucide-react";
+import { usePermissions } from "@/hooks/use-permissions";
 
 export default function GroupsListPage() {
   const toast = useToast();
+  const { canCreate } = usePermissions();
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
   const [search, setSearch] = useState("");
@@ -145,10 +147,12 @@ export default function GroupsListPage() {
         title="Gruppen"
         description="Verwalte alle Gruppen und deren Mitglieder."
       >
-        <Button onClick={handleCreate}>
-          <Plus className="mr-2 h-4 w-4" />
-          Neue Gruppe
-        </Button>
+        {canCreate("group") && (
+          <Button onClick={handleCreate}>
+            <Plus className="mr-2 h-4 w-4" />
+            Neue Gruppe
+          </Button>
+        )}
       </PageHeader>
 
       {/* Search */}
@@ -238,23 +242,27 @@ export default function GroupsListPage() {
                               Details
                             </Link>
                           </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() => handleEdit(group)}
-                          >
-                            <Pencil className="mr-2 h-4 w-4" />
-                            Bearbeiten
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem
-                            onClick={() => {
-                              setDeleteId(group.id);
-                              setDeleteDialogOpen(true);
-                            }}
-                            className="text-destructive"
-                          >
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Löschen
-                          </DropdownMenuItem>
+                          {canCreate("group") && (
+                            <>
+                              <DropdownMenuItem
+                                onClick={() => handleEdit(group)}
+                              >
+                                <Pencil className="mr-2 h-4 w-4" />
+                                Bearbeiten
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  setDeleteId(group.id);
+                                  setDeleteDialogOpen(true);
+                                }}
+                                className="text-destructive"
+                              >
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Löschen
+                              </DropdownMenuItem>
+                            </>
+                          )}
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </TableCell>
@@ -284,8 +292,8 @@ export default function GroupsListPage() {
               ? "Keine Gruppen für diese Suche gefunden."
               : "Es wurden noch keine Gruppen angelegt."
           }
-          actionLabel="Neue Gruppe"
-          onAction={handleCreate}
+          actionLabel={canCreate("group") ? "Neue Gruppe" : undefined}
+          onAction={canCreate("group") ? handleCreate : undefined}
         />
       )}
 
