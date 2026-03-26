@@ -1,7 +1,7 @@
 # GTS Planner Kassenbuch App v2 – Knowledge Base
 
-**Version:** v3.1 (nach Sprint 13: GitHub-Infrastruktur)
-**Letzte Aktualisierung:** 2026-03-25
+**Version:** v4.0 (nach Sprint 25: Multi-Tenant-Architektur)
+**Letzte Aktualisierung:** 2026-03-26
 
 ---
 
@@ -96,7 +96,54 @@ Für die Entwicklung einer mobilen App wird eine Erweiterung des Monorepos empfo
 
 ---
 
-## 4. Wichtige Befehle
+## 4. Multi-Tenant-Architektur (Sprint 25)
+
+### 4.1 Architektur-Ansatz
+
+**Shared Database, Shared Schema** mit `organization_id`-Fremdschluessel auf allen Modellen. Kein `django-tenants` (Schema-per-Tenant), da Cross-Tenant-Zugriff fuer Hauptmandanten erforderlich ist.
+
+Siehe [ADR-001](adr/ADR_001_MULTI_TENANCY_AND_PERMISSIONS.md) fuer die vollstaendige Analyse.
+
+### 4.2 Organization-Hierarchie
+
+| Ebene | Typ | Beispiel | Sichtbarkeit |
+|-------|-----|----------|-------------|
+| Hauptmandant | `main_tenant` | GTS Kaernten | Alle Sub-Tenant-Daten |
+| Sub-Tenant | `sub_tenant` | VS Klagenfurt Mitte | Nur eigene Daten |
+| Standort | Location | GTS Klagenfurt Mitte | Gehoert zu Sub-Tenant |
+
+### 4.3 TenantModel und TenantedManager
+
+Alle Datenmodelle erben von `TenantModel` und haben ein `organization`-Feld. Der `TenantedManager` filtert automatisch nach Tenant:
+
+```python
+# Automatische Filterung
+Transaction.tenant_objects.for_tenant(org_ids)  # Nur eigene Daten
+Transaction.objects.all()  # Ungefilterter Zugriff (nur fuer Migrationen)
+```
+
+### 4.4 Django Permission Groups
+
+Statt hardcoded Rollen im Frontend werden Django `auth.Group` + `auth.Permission` verwendet:
+
+| Gruppe | Berechtigungen |
+|--------|---------------|
+| Educator | view_dashboard, create_transactions, manage_timeentries |
+| LocationManager | + manage_groups, manage_students, manage_categories, approve_transactions, view_reports, approve_leave |
+| Admin | + manage_users, manage_settings, view_audit_log |
+| SuperAdmin | + manage_organizations, cross_tenant_access |
+
+### 4.5 TenantMiddleware
+
+Die `TenantMiddleware` extrahiert den Tenant-Kontext aus dem JWT-Token und setzt `request.tenant_ids` und `request.is_cross_tenant`. Alle ViewSets nutzen das `TenantViewSetMixin` fuer automatische Filterung.
+
+### 4.6 Frontend Permissions
+
+Das Frontend nutzt die `/auth/me/`-Response, die jetzt `permissions`, `group`, `tenant_ids` und `is_cross_tenant` enthaelt. Der `usePermissions()`-Hook prueft Berechtigungen gegen die API-Permissions statt gegen hardcoded Rollen.
+
+---
+
+## 5. Wichtige Befehle
 
 ```bash
 # Lokale Entwicklung starten (Docker)

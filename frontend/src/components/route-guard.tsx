@@ -1,37 +1,31 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { useAuth } from "@/hooks/use-auth";
-import { getRequiredRoleForPath } from "@/hooks/use-permissions";
-import type { UserRole } from "@/types/models";
+import { usePermissions, getRequiredPermissionForPath } from "@/hooks/use-permissions";
 import { ShieldOff, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 
-const roleHierarchy: Record<UserRole, number> = {
-  educator: 1,
-  location_manager: 2,
-  admin: 3,
-  super_admin: 4,
-};
-
 /**
  * Route guard component that checks if the current user has
- * permission to access the current page based on the route
- * permission configuration.
+ * the required permission to access the current page.
  *
- * Renders a "Zugriff verweigert" page if the user lacks
- * the required role. Otherwise, renders children normally.
+ * Uses the permissions array from the user profile (returned by /auth/me/)
+ * as the primary source of truth. Falls back to role-based checks when
+ * permissions haven't been loaded yet.
+ *
+ * Renders a "Zugriff verweigert" page if the user lacks the required
+ * permission. Otherwise, renders children normally.
  */
 export function RouteGuard({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const { user } = useAuth();
+  const { hasPermission, user } = usePermissions();
 
   if (!user) return <>{children}</>;
 
-  const requiredRole = getRequiredRoleForPath(pathname);
+  const requiredPerm = getRequiredPermissionForPath(pathname);
 
-  if (requiredRole && roleHierarchy[user.role] < roleHierarchy[requiredRole]) {
+  if (requiredPerm && !hasPermission(requiredPerm)) {
     return (
       <Card className="mx-auto mt-8 max-w-lg">
         <CardContent className="flex flex-col items-center gap-4 py-12 text-center">

@@ -3,6 +3,9 @@ Finance API views: TransactionCategory, Transaction, Receipt ViewSets.
 
 Includes CRUD operations, approval workflow actions, receipt upload,
 and group balance endpoint.
+
+All ViewSets use TenantViewSetMixin for automatic organization-based
+data isolation and permission-based access control.
 """
 
 from decimal import Decimal
@@ -15,7 +18,12 @@ from rest_framework.decorators import action
 from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.response import Response
 
-from core.permissions import IsEducator, IsLocationManagerOrAbove
+from core.mixins import TenantViewSetMixin
+from core.permissions import (
+    IsEducator,
+    IsLocationManagerOrAbove,
+    require_permission,
+)
 from finance.models import Receipt, Transaction, TransactionCategory
 from finance.serializers import (
     GroupBalanceSerializer,
@@ -80,12 +88,13 @@ class TransactionCategoryFilter(django_filters.FilterSet):
 # TransactionCategory ViewSet
 # ---------------------------------------------------------------------------
 
-class TransactionCategoryViewSet(viewsets.ModelViewSet):
+class TransactionCategoryViewSet(TenantViewSetMixin, viewsets.ModelViewSet):
     """
     CRUD for transaction categories.
 
     - Educators: read-only access to categories of their location
     - LocationManager+: full CRUD for their location's categories
+    - Tenant isolation via TenantViewSetMixin
     """
 
     filterset_class = TransactionCategoryFilter
@@ -96,13 +105,12 @@ class TransactionCategoryViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         if getattr(self, "swagger_fake_view", False):
             return TransactionCategory.objects.none()
-        user = self.request.user
-        qs = TransactionCategory.objects.filter(is_deleted=False)
-        if user.role in ["admin", "super_admin"]:
-            return qs
-        if user.location:
-            return qs.filter(location=user.location)
-        return qs.none()
+        qs = super().get_queryset()
+        return qs.filter(is_deleted=False)
+
+    def get_base_queryset(self):
+        """Provide base queryset for TenantViewSetMixin."""
+        return TransactionCategory.objects.all()
 
     def get_serializer_class(self):
         if self.action in ["create", "update", "partial_update"]:
@@ -112,10 +120,16 @@ class TransactionCategoryViewSet(viewsets.ModelViewSet):
     def get_permissions(self):
         if self.action in ["list", "retrieve"]:
             return [permissions.IsAuthenticated(), IsEducator()]
-        return [permissions.IsAuthenticated(), IsLocationManagerOrAbove()]
+        return [
+            permissions.IsAuthenticated(),
+            require_permission("manage_categories")(),
+        ]
 
     def perform_create(self, serializer):
-        serializer.save(location=self.request.user.location)
+        serializer.save(
+            location=self.request.user.location,
+            organization=self.request.tenant,
+        )
 
     def perform_destroy(self, instance):
         if instance.is_system_category:
@@ -132,13 +146,14 @@ class TransactionCategoryViewSet(viewsets.ModelViewSet):
 # Transaction ViewSet
 # ---------------------------------------------------------------------------
 
-class TransactionViewSet(viewsets.ModelViewSet):
+class TransactionViewSet(TenantViewSetMixin, viewsets.ModelViewSet):
     """
     CRUD for financial transactions with approval workflow.
 
     - Educators: CRUD for own transactions in their groups
     - LocationManager+: approve/reject, view all in their location
-    - Admin/SuperAdmin: full access
+    - Admin/SuperAdmin: full access within tenant
+    - Tenant isolation via TenantViewSetMixin
     """
 
     filterset_class = TransactionFilter
@@ -154,17 +169,23 @@ class TransactionViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         if getattr(self, "swagger_fake_view", False):
             return Transaction.objects.none()
-        user = self.request.user
-        qs = Transaction.objects.filter(is_deleted=False).select_related(
+        # Start with tenant-filtered queryset
+        qs = super().get_queryset()
+        qs = qs.filter(is_deleted=False).select_related(
             "group",
             "category",
             "created_by",
             "approved_by",
         )
-        if user.role in ["admin", "super_admin"]:
+
+        user = self.request.user
+        # Within the tenant, further filter by role
+        from core.permissions import get_user_hierarchy_level, GROUP_HIERARCHY, GROUP_LOCATION_MANAGER
+        level = get_user_hierarchy_level(user)
+
+        if level >= GROUP_HIERARCHY[GROUP_LOCATION_MANAGER]:
+            # LocationManager+: all transactions in tenant
             return qs
-        if user.role == "location_manager" and user.location:
-            return qs.filter(group__location=user.location)
         # Educators: only transactions in their groups
         return qs.filter(
             Q(created_by=user) | Q(group__members__user=user)
@@ -183,11 +204,17 @@ class TransactionViewSet(viewsets.ModelViewSet):
 
     def get_permissions(self):
         if self.action in ["approve", "reject"]:
-            return [permissions.IsAuthenticated(), IsLocationManagerOrAbove()]
+            return [
+                permissions.IsAuthenticated(),
+                require_permission("approve_transactions")(),
+            ]
         return [permissions.IsAuthenticated(), IsEducator()]
 
     def perform_create(self, serializer):
-        serializer.save(created_by=self.request.user)
+        serializer.save(
+            created_by=self.request.user,
+            organization=self.request.tenant,
+        )
 
     def perform_destroy(self, instance):
         instance.is_deleted = True
@@ -276,6 +303,7 @@ class TransactionViewSet(viewsets.ModelViewSet):
         serializer.save(
             transaction=transaction,
             uploaded_by=request.user,
+            organization=self.request.tenant,
         )
         return Response(
             ReceiptSerializer(
@@ -295,6 +323,17 @@ class TransactionViewSet(viewsets.ModelViewSet):
             return Response(
                 {"detail": "Gruppe nicht gefunden."},
                 status=status.HTTP_404_NOT_FOUND,
+            )
+
+        # Verify tenant access
+        if (
+            not request.is_cross_tenant
+            and request.tenant_ids
+            and group.organization_id not in request.tenant_ids
+        ):
+            return Response(
+                {"detail": "Zugriff verweigert."},
+                status=status.HTTP_403_FORBIDDEN,
             )
 
         approved_txns = Transaction.objects.filter(
@@ -337,7 +376,7 @@ class TransactionViewSet(viewsets.ModelViewSet):
 # Receipt ViewSet (standalone for delete)
 # ---------------------------------------------------------------------------
 
-class ReceiptViewSet(viewsets.GenericViewSet):
+class ReceiptViewSet(TenantViewSetMixin, viewsets.GenericViewSet):
     """
     Standalone receipt operations (retrieve, delete).
 
@@ -350,7 +389,8 @@ class ReceiptViewSet(viewsets.GenericViewSet):
     def get_queryset(self):
         if getattr(self, "swagger_fake_view", False):
             return Receipt.objects.none()
-        return Receipt.objects.filter(is_deleted=False).select_related(
+        qs = super().get_queryset()
+        return qs.filter(is_deleted=False).select_related(
             "transaction", "uploaded_by"
         )
 

@@ -96,6 +96,7 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "core.middleware.TenantMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "system.middleware.AuditLoggingMiddleware",
@@ -257,6 +258,8 @@ SIMPLE_JWT = {
     # Sliding Sessions: Token-Refresh verlängert die Session automatisch
     "SLIDING_TOKEN_REFRESH_LIFETIME": timedelta(days=1),
     "SLIDING_TOKEN_LIFETIME": timedelta(minutes=15),
+    # Custom token serializer to include organization_id in JWT claims
+    "TOKEN_OBTAIN_SERIALIZER": "core.serializers.auth_serializers.CustomTokenObtainPairSerializer",
 }
 
 # ---------------------------------------------------------------------------

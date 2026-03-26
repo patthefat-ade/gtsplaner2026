@@ -22,7 +22,10 @@ export interface AuthUser {
   first_name: string;
   last_name: string;
   role: "educator" | "location_manager" | "admin" | "super_admin";
+  group: string;
   location: number | null;
+  organization_id: number | null;
+  permissions: string[];
   has_accepted_terms?: boolean;
 }
 
@@ -42,6 +45,8 @@ export interface UserProfile extends AuthUser {
   last_password_change: string | null;
   has_accepted_terms: boolean;
   terms_accepted_at: string | null;
+  tenant_ids: number[];
+  is_cross_tenant: boolean;
 }
 
 export interface TokenRefreshResponse {

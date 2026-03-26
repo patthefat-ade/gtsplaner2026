@@ -3,14 +3,19 @@ Finance models for the Kassenbuch App v2.
 
 Contains TransactionCategory, Transaction, and Receipt models
 for managing the cash book (Kassenbuch) functionality.
+
+All tenant-scoped models inherit from TenantModel for automatic
+organization-based data isolation.
 """
 
 from django.conf import settings
 from django.core.validators import MinValueValidator
 from django.db import models
 
+from core.models import TenantModel
 
-class TransactionCategory(models.Model):
+
+class TransactionCategory(TenantModel):
     """
     Categories for transactions (income/expense).
 
@@ -38,7 +43,7 @@ class TransactionCategory(models.Model):
     is_system_category = models.BooleanField(
         default=False,
         verbose_name="Systemkategorie",
-        help_text="Systemkategorien können nicht gelöscht werden.",
+        help_text="Systemkategorien koennen nicht geloescht werden.",
     )
     color = models.CharField(
         max_length=7,
@@ -53,7 +58,7 @@ class TransactionCategory(models.Model):
         help_text="Lucide Icon-Name",
     )
     is_active = models.BooleanField(default=True, verbose_name="Aktiv")
-    is_deleted = models.BooleanField(default=False, verbose_name="Gelöscht")
+    is_deleted = models.BooleanField(default=False, verbose_name="Geloescht")
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Erstellt am")
     updated_at = models.DateTimeField(auto_now=True, verbose_name="Aktualisiert am")
 
@@ -71,8 +76,14 @@ class TransactionCategory(models.Model):
     def __str__(self) -> str:
         return f"{self.name} ({self.get_category_type_display()})"
 
+    def save(self, *args, **kwargs):
+        """Auto-set organization from location if not set."""
+        if not self.organization_id and self.location_id:
+            self.organization_id = self.location.organization_id
+        super().save(*args, **kwargs)
 
-class Transaction(models.Model):
+
+class Transaction(TenantModel):
     """
     A financial transaction (income or expense) within a group's cash book.
 
@@ -178,8 +189,14 @@ class Transaction(models.Model):
         sign = "+" if self.transaction_type == self.TransactionType.INCOME else "-"
         return f"{sign}{self.amount} EUR - {self.description} ({self.get_status_display()})"
 
+    def save(self, *args, **kwargs):
+        """Auto-set organization from group if not set."""
+        if not self.organization_id and self.group_id:
+            self.organization_id = self.group.organization_id
+        super().save(*args, **kwargs)
 
-class Receipt(models.Model):
+
+class Receipt(TenantModel):
     """
     A file attachment (receipt/invoice) linked to a transaction.
 
@@ -230,3 +247,9 @@ class Receipt(models.Model):
 
     def __str__(self) -> str:
         return f"{self.file_name} ({self.transaction})"
+
+    def save(self, *args, **kwargs):
+        """Auto-set organization from transaction if not set."""
+        if not self.organization_id and self.transaction_id:
+            self.organization_id = self.transaction.organization_id
+        super().save(*args, **kwargs)

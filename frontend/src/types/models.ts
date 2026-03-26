@@ -40,10 +40,15 @@ export interface UserCompact {
   role: UserRole;
 }
 
+export type OrganizationType = "main_tenant" | "sub_tenant";
+
 export interface Organization {
   id: number;
   name: string;
   description: string;
+  org_type: OrganizationType;
+  parent: number | null;
+  parent_name?: string;
   email: string;
   phone: string;
   website: string;
@@ -53,6 +58,7 @@ export interface Organization {
   country: string;
   logo: string | null;
   is_active: boolean;
+  children_count?: number;
   created_at: string;
   updated_at: string;
 }

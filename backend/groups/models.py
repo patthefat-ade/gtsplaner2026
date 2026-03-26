@@ -6,6 +6,9 @@ for managing the organizational structure of groups and children.
 
 Student personal data is encrypted at rest using Fernet encryption
 to comply with GDPR/DSGVO requirements (data of minors).
+
+All tenant-scoped models inherit from TenantModel for automatic
+organization-based data isolation.
 """
 
 from django.conf import settings
@@ -16,8 +19,10 @@ from encrypted_fields.fields import (
     EncryptedEmailField,
 )
 
+from core.models import TenantModel
 
-class SchoolYear(models.Model):
+
+class SchoolYear(TenantModel):
     """
     Represents an academic school year (e.g., 2025/2026).
 
@@ -61,8 +66,14 @@ class SchoolYear(models.Model):
         active = " (aktiv)" if self.is_active else ""
         return f"{self.name} - {self.location.name}{active}"
 
+    def save(self, *args, **kwargs):
+        """Auto-set organization from location if not set."""
+        if not self.organization_id and self.location_id:
+            self.organization_id = self.location.organization_id
+        super().save(*args, **kwargs)
 
-class Semester(models.Model):
+
+class Semester(TenantModel):
     """
     A semester within a school year (e.g., Herbst, Fruehling).
 
@@ -105,8 +116,14 @@ class Semester(models.Model):
     def __str__(self) -> str:
         return f"{self.get_name_display()} - {self.school_year.name}"
 
+    def save(self, *args, **kwargs):
+        """Auto-set organization from school_year if not set."""
+        if not self.organization_id and self.school_year_id:
+            self.organization_id = self.school_year.organization_id
+        super().save(*args, **kwargs)
 
-class Group(models.Model):
+
+class Group(TenantModel):
     """
     A group of children/students managed by educators at a location.
 
@@ -168,8 +185,14 @@ class Group(models.Model):
     def __str__(self) -> str:
         return f"{self.name} ({self.location.name}, {self.school_year.name})"
 
+    def save(self, *args, **kwargs):
+        """Auto-set organization from location if not set."""
+        if not self.organization_id and self.location_id:
+            self.organization_id = self.location.organization_id
+        super().save(*args, **kwargs)
 
-class GroupMember(models.Model):
+
+class GroupMember(TenantModel):
     """
     Through-model for the many-to-many relationship between Group and User.
 
@@ -223,8 +246,14 @@ class GroupMember(models.Model):
             f"({self.get_role_display()})"
         )
 
+    def save(self, *args, **kwargs):
+        """Auto-set organization from group if not set."""
+        if not self.organization_id and self.group_id:
+            self.organization_id = self.group.organization_id
+        super().save(*args, **kwargs)
 
-class Student(models.Model):
+
+class Student(TenantModel):
     """
     A child/student enrolled in a group.
 
@@ -303,3 +332,9 @@ class Student(models.Model):
         self.is_deleted = True
         self.anonymized_at = timezone.now()
         self.save()
+
+    def save(self, *args, **kwargs):
+        """Auto-set organization from group if not set."""
+        if not self.organization_id and self.group_id:
+            self.organization_id = self.group.organization_id
+        super().save(*args, **kwargs)
