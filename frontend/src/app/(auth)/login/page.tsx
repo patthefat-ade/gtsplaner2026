@@ -66,25 +66,36 @@ export default function LoginPage() {
         setPending2FAUserId(response.user_id);
         setShow2FA(true);
       }
+      // If login was successful and no 2FA required, the auth-provider
+      // triggers window.location.href = "/" which reloads the page.
+      // No further action needed here.
     } catch (error: unknown) {
+      // Ignore errors caused by page navigation during successful login.
+      // When window.location.href is set, pending promises may reject
+      // with a cancelled/network error. We detect this by checking if
+      // the error has no HTTP response (i.e. it's not an API error).
       if (
         error &&
         typeof error === "object" &&
         "response" in error &&
-        (error as { response?: { data?: { non_field_errors?: string[] } } })
-          .response?.data?.non_field_errors
+        (error as { response?: unknown }).response
       ) {
-        setServerError(
-          (
-            error as {
-              response: { data: { non_field_errors: string[] } };
-            }
-          ).response.data.non_field_errors[0],
-        );
+        // This is a real API error with a response
+        const apiError = error as { response?: { data?: { non_field_errors?: string[]; detail?: string } } };
+        if (apiError.response?.data?.non_field_errors) {
+          setServerError(apiError.response.data.non_field_errors[0]);
+        } else if (apiError.response?.data?.detail) {
+          setServerError(apiError.response.data.detail);
+        } else {
+          setServerError(
+            "Anmeldung fehlgeschlagen. Bitte \u00FCberpr\u00FCfen Sie Ihre Eingaben.",
+          );
+        }
       } else {
-        setServerError(
-          "Anmeldung fehlgeschlagen. Bitte überprüfen Sie Ihre Eingaben.",
-        );
+        // No response property – likely a network error or cancelled request
+        // due to page navigation. Only show error if we're still on the page
+        // (i.e. navigation didn't happen).
+        console.warn("Login error without API response (possibly navigation):", error);
       }
     }
   };
