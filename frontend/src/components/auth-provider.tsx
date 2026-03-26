@@ -26,13 +26,18 @@ export const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 /**
  * Set a simple cookie to signal authentication status to the middleware.
+ *
+ * Uses Secure flag on HTTPS to ensure the cookie is sent with server requests.
+ * Uses SameSite=Lax for CSRF protection while allowing normal navigation.
  */
 function setAuthCookie(authenticated: boolean) {
   if (typeof document === "undefined") return;
+  const isSecure = window.location.protocol === "https:";
+  const secureFlag = isSecure ? "; Secure" : "";
   if (authenticated) {
-    document.cookie = "is_authenticated=true; path=/; max-age=604800; SameSite=Lax";
+    document.cookie = `is_authenticated=true; path=/; max-age=604800; SameSite=Lax${secureFlag}`;
   } else {
-    document.cookie = "is_authenticated=; path=/; max-age=0; SameSite=Lax";
+    document.cookie = `is_authenticated=; path=/; max-age=0; SameSite=Lax${secureFlag}`;
   }
 }
 
@@ -92,12 +97,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // Fetch full profile after login
         const profile = await authApi.getProfile();
         setUser(profile);
-        router.push("/");
+
+        // Use window.location for a full page navigation to ensure
+        // the middleware sees the newly set cookie on the server request.
+        // router.push() uses client-side navigation which may not trigger
+        // a fresh server request with the updated cookies.
+        window.location.href = "/";
       }
 
       return response;
     },
-    [router],
+    [],
   );
 
   /**
@@ -115,10 +125,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // Fetch full profile after login
         const profile = await authApi.getProfile();
         setUser(profile);
-        router.push("/");
+
+        // Use window.location for a full page navigation (see login above)
+        window.location.href = "/";
       }
     },
-    [router],
+    [],
   );
 
   /**
