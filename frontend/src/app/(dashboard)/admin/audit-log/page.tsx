@@ -42,10 +42,20 @@ const ACTION_LABELS: Record<string, string> = {
 
 /**
  * Extract a readable user display name from an audit log entry.
+ * The API may return `user` as a number (ID) or as an object
+ * `{ id, first_name, last_name }` depending on the action type.
  * Falls back to changes.display, then user ID, then "System".
  */
-function getUserDisplay(entry: { user: number | null; user_name?: string; changes: Record<string, unknown> }): string {
+function getUserDisplay(entry: { user: number | { id: number; first_name?: string; last_name?: string } | null; user_name?: string; changes: Record<string, unknown> }): string {
   if (entry.user_name) return entry.user_name;
+
+  // Handle user as nested object (e.g. for Logout entries)
+  if (entry.user && typeof entry.user === "object" && "id" in entry.user) {
+    const u = entry.user as { id: number; first_name?: string; last_name?: string };
+    const name = [u.first_name, u.last_name].filter(Boolean).join(" ");
+    return name || `Benutzer #${u.id}`;
+  }
+
   if (entry.changes?.display && typeof entry.changes.display === "string") {
     return entry.changes.display;
   }
