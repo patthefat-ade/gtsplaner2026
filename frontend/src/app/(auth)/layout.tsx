@@ -18,7 +18,7 @@ function useMounted() {
  * Auth layout – 40/60 splitscreen layout for login and password reset pages.
  * Left side (40%): Auth form on yellow gradient background with Hilfswerk logo.
  * Right side (60%): Animated cartoon children illustration.
- * On mobile: Only the form is shown with yellow gradient.
+ * On mobile: Full width form with footer visible.
  */
 export default function AuthLayout({
   children,
@@ -34,7 +34,7 @@ export default function AuthLayout({
     <div className="flex min-h-screen w-full">
       {/* Left side – Login Form (40%) with yellow gradient */}
       <div
-        className="relative flex w-full flex-col items-center justify-center px-4 py-8 lg:w-[40%] lg:px-8"
+        className="relative flex w-full flex-col lg:w-[40%]"
         style={{
           background: isDark
             ? "linear-gradient(135deg, #1a1700 0%, #2d2400 30%, #3d3200 60%, #1a1700 100%)"
@@ -52,13 +52,16 @@ export default function AuthLayout({
           }}
         />
 
-        <div className="relative z-10 w-full max-w-md">{children}</div>
+        {/* Main content area – grows to fill available space */}
+        <div className="relative z-10 flex flex-1 items-center justify-center px-4 py-8 lg:px-8">
+          <div className="w-full max-w-md">{children}</div>
+        </div>
 
-        {/* Footer with legal links */}
-        <div className="absolute bottom-0 left-0 right-0 z-10">
+        {/* Footer – always at bottom, not overlapping content */}
+        <div className="relative z-10 shrink-0 pb-2">
           <LoginFooter />
           <p
-            className={`text-center text-xs tracking-wide pb-2 ${
+            className={`text-center text-xs tracking-wide pb-1 ${
               isDark ? "text-yellow-600/60" : "text-yellow-800/40"
             }`}
           >

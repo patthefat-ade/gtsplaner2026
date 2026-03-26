@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import ReactMarkdown from "react-markdown";
 import { X } from "lucide-react";
 
@@ -11,7 +12,7 @@ interface LegalModalProps {
   content: string;
 }
 
-export function LegalModal({ isOpen, onClose, title, content }: LegalModalProps) {
+function LegalModalContent({ isOpen, onClose, title, content }: LegalModalProps) {
   const modalRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -32,7 +33,8 @@ export function LegalModal({ isOpen, onClose, title, content }: LegalModalProps)
 
   return (
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+      className="fixed inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+      style={{ zIndex: 99999 }}
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
@@ -66,12 +68,25 @@ export function LegalModal({ isOpen, onClose, title, content }: LegalModalProps)
         <div className="px-6 py-4 border-t border-zinc-200 dark:border-zinc-700">
           <button
             onClick={onClose}
-            className="w-full py-2.5 px-4 bg-yellow-500 hover:bg-yellow-600 text-white font-medium rounded-lg transition-colors"
+            className="w-full py-2.5 px-4 bg-zinc-900 hover:bg-zinc-800 dark:bg-white dark:hover:bg-zinc-100 text-white dark:text-zinc-900 font-medium rounded-lg transition-colors"
           >
             Schließen
           </button>
         </div>
       </div>
     </div>
+  );
+}
+
+/**
+ * LegalModal uses React Portal to render at document.body level,
+ * ensuring it always appears above all other content including
+ * the right-side children illustration.
+ */
+export function LegalModal(props: LegalModalProps) {
+  if (typeof window === "undefined") return null;
+  return createPortal(
+    <LegalModalContent {...props} />,
+    document.body
   );
 }
