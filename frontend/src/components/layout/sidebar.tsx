@@ -19,6 +19,7 @@ import {
   BarChart3,
   Building2,
   CheckSquare,
+  MapPin,
   type LucideIcon,
 } from "lucide-react";
 import {
@@ -89,8 +90,14 @@ const navigation: NavSection[] = [
     ],
   },
   {
-    title: "Gruppen",
+    title: "Standorte & Gruppen",
     items: [
+      {
+        title: "Standorte",
+        href: "/admin/locations",
+        icon: MapPin,
+        permission: "view_locations",
+      },
       {
         title: "Gruppen",
         href: "/groups/list",

@@ -63,9 +63,28 @@ export interface Organization {
   updated_at: string;
 }
 
+export interface LocationUserCompact {
+  id: number;
+  first_name: string;
+  last_name: string;
+  email: string;
+  role: UserRole;
+}
+
+export interface LocationGroupCompact {
+  id: number;
+  name: string;
+  leader_name: string | null;
+  leader_id: number | null;
+  student_count: number;
+  member_count: number;
+  is_active: boolean;
+}
+
 export interface Location {
   id: number;
   organization: number;
+  organization_name?: string;
   name: string;
   description: string;
   email: string;
@@ -73,10 +92,38 @@ export interface Location {
   street: string;
   city: string;
   postal_code: string;
-  manager: number | null;
+  manager: LocationUserCompact | null;
+  groups?: LocationGroupCompact[];
+  group_count?: number;
+  student_count?: number;
+  educator_count?: number;
   is_active: boolean;
   created_at: string;
-  updated_at: string;
+  updated_at?: string;
+}
+
+export interface LocationCreate {
+  name: string;
+  description?: string;
+  organization: number;
+  manager?: number | null;
+  street?: string;
+  city?: string;
+  postal_code?: string;
+  email?: string;
+  phone?: string;
+}
+
+export interface LocationStats {
+  location_id: number;
+  location_name: string;
+  total_groups: number;
+  active_groups: number;
+  total_students: number;
+  active_students: number;
+  total_educators: number;
+  location_managers: number;
+  educators: number;
 }
 
 // ─── Finance ─────────────────────────────────────────────────────────────────

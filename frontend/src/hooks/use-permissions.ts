@@ -32,6 +32,9 @@ export type PermissionCodename =
   | "view_own_timeentries"
   | "manage_timeentries"
   | "approve_leave"
+  // Locations
+  | "view_locations"
+  | "manage_locations"
   // Admin
   | "manage_users"
   | "manage_settings"
@@ -64,6 +67,8 @@ const roleHierarchy: Record<UserRole, number> = {
  * authenticated users (e.g., /groups/list, /timetracking/leave-requests).
  */
 const routePermissions: { path: string; permission: PermissionCodename }[] = [
+  // Location routes
+  { path: "/admin/locations", permission: "view_locations" },
   // Admin routes
   { path: "/admin/organizations", permission: "manage_organizations" },
   { path: "/admin/users", permission: "manage_users" },
@@ -89,6 +94,7 @@ const routePermissions: { path: string; permission: PermissionCodename }[] = [
  * Maps resource names to the required permission codename.
  */
 const createPermissions: Record<string, PermissionCodename> = {
+  location: "manage_locations",
   group: "manage_groups",
   category: "manage_categories",
   student: "manage_students",
@@ -135,6 +141,7 @@ export function getRequiredRoleForPath(pathname: string): UserRole | null {
     manage_groups: "location_manager",
     manage_students: "location_manager",
     manage_categories: "location_manager",
+    manage_locations: "location_manager",
     manage_transactions: "location_manager",
     approve_transactions: "location_manager",
     view_reports: "location_manager",
@@ -143,6 +150,7 @@ export function getRequiredRoleForPath(pathname: string): UserRole | null {
     view_dashboard: "educator",
     view_own_groups: "educator",
     view_students: "educator",
+    view_locations: "educator",
     view_own_transactions: "educator",
     create_transactions: "educator",
     view_own_timeentries: "educator",

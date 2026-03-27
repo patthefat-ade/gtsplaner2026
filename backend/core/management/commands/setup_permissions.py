@@ -44,6 +44,9 @@ CUSTOM_PERMISSIONS = [
     ("view_audit_log", "Audit-Log einsehen"),
     ("manage_settings", "Systemeinstellungen verwalten"),
     ("manage_organizations", "Organisationen verwalten"),
+    # Locations
+    ("view_locations", "Standorte anzeigen"),
+    ("manage_locations", "Standorte verwalten"),
     # Multi-Tenant
     ("cross_tenant_access", "Mandantenuebergreifender Zugriff"),
 ]
@@ -57,6 +60,8 @@ GROUP_PERMISSIONS = {
         # Groups: can view own groups and students (read-only)
         "view_own_groups",
         "view_students",
+        # Locations: can view own location (read-only)
+        "view_locations",
         # Finance: can view and create own transactions
         "view_own_transactions",
         "create_transactions",
@@ -72,6 +77,9 @@ GROUP_PERMISSIONS = {
         "manage_groups",
         "view_students",
         "manage_students",
+        # Locations: can view and manage own location
+        "view_locations",
+        "manage_locations",
         # Finance: full management
         "view_own_transactions",
         "create_transactions",
@@ -92,6 +100,9 @@ GROUP_PERMISSIONS = {
         "manage_groups",
         "view_students",
         "manage_students",
+        # Locations: full management
+        "view_locations",
+        "manage_locations",
         # Finance: full management
         "view_own_transactions",
         "create_transactions",
@@ -118,6 +129,9 @@ GROUP_PERMISSIONS = {
         "manage_groups",
         "view_students",
         "manage_students",
+        # Locations: full management
+        "view_locations",
+        "manage_locations",
         # Finance: full management
         "view_own_transactions",
         "create_transactions",

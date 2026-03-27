@@ -2,11 +2,12 @@
 Management command to create a realistic multi-tenant test environment.
 
 Creates the Hilfswerk Oesterreich hierarchy:
-  - Main tenant: Hilfswerk Oesterreich
-  - 9 Sub-tenants: one per Bundesland (Kaernten, Wien, NÖ, Tirol, etc.)
-  - Each sub-tenant has one school (Location) with a LocationManager and Educator
-  - Kaernten: VS Annabichl with Anita Anic (LocationManager), Amalia Bogdan (Educator)
-  - Gruene Gruppe with 26 Schueler:innen from various classes
+  - Main tenant: Hilfswerk Oesterreich (Hauptstandort Wien)
+  - 9 Sub-tenants: one per Bundesland (Kaernten, Wien, NOe, Tirol, etc.)
+  - Kaernten: 3 Schulstandorte (VS Annabichl, VS Woelfnitz, VS St. Ruprecht)
+  - Wien: 2 Schulstandorte (VS Donaustadt, VS Favoriten)
+  - Other Bundeslaender: 1 Schulstandort each
+  - Each Schulstandort has a LocationManager, an Educator, a Group, and Students
   - Django Permission Groups assigned to all users
 
 Designed to be fully idempotent – safe to run multiple times without
@@ -34,6 +35,7 @@ class Command(BaseCommand):
     PASSWORD = "Test123!"
 
     # ── Bundesland-Konfiguration ──────────────────────────────────────────
+    # Each Bundesland can have multiple schools (locations).
 
     BUNDESLAENDER = [
         {
@@ -43,26 +45,125 @@ class Command(BaseCommand):
             "street": "8.-Mai-Strasse 47",
             "phone": "+43 463 55 800",
             "email": "office@kaernten.hilfswerk.at",
-            "school": {
-                "name": "VS Annabichl",
-                "city": "Klagenfurt",
-                "postal_code": "9020",
-                "street": "Annabichler Strasse 74",
-                "email": "vs.annabichl@klagenfurt.at",
-                "phone": "+43 463 537 5630",
-            },
-            "manager": {
-                "username": "anita.anic",
-                "email": "anita.anic@hilfswerk.at",
-                "first_name": "Anita",
-                "last_name": "Anic",
-            },
-            "educator": {
-                "username": "amalia.bogdan",
-                "email": "amalia.bogdan@hilfswerk.at",
-                "first_name": "Amalia",
-                "last_name": "Bogdan",
-            },
+            "schools": [
+                {
+                    "name": "VS Annabichl",
+                    "city": "Klagenfurt",
+                    "postal_code": "9020",
+                    "street": "Annabichler Strasse 74",
+                    "email": "vs.annabichl@klagenfurt.at",
+                    "phone": "+43 463 537 5630",
+                    "manager": {
+                        "username": "anita.anic",
+                        "email": "anita.anic@hilfswerk.at",
+                        "first_name": "Anita",
+                        "last_name": "Anic",
+                    },
+                    "educator": {
+                        "username": "amalia.bogdan",
+                        "email": "amalia.bogdan@hilfswerk.at",
+                        "first_name": "Amalia",
+                        "last_name": "Bogdan",
+                    },
+                    "group_name": "Gruene Gruppe",
+                    "students": [
+                        {"first_name": "Lena", "last_name": "Koller", "class": "1a"},
+                        {"first_name": "Maximilian", "last_name": "Steiner", "class": "1a"},
+                        {"first_name": "Sophie", "last_name": "Huber", "class": "1b"},
+                        {"first_name": "Felix", "last_name": "Wagner", "class": "1b"},
+                        {"first_name": "Emma", "last_name": "Berger", "class": "2a"},
+                        {"first_name": "Paul", "last_name": "Bauer", "class": "2a"},
+                        {"first_name": "Mia", "last_name": "Pichler", "class": "2a"},
+                        {"first_name": "Jonas", "last_name": "Moser", "class": "2b"},
+                        {"first_name": "Hannah", "last_name": "Gruber", "class": "2b"},
+                        {"first_name": "David", "last_name": "Hofer", "class": "3a"},
+                        {"first_name": "Anna", "last_name": "Leitner", "class": "3a"},
+                        {"first_name": "Lukas", "last_name": "Eder", "class": "3a"},
+                        {"first_name": "Laura", "last_name": "Fischer", "class": "3b"},
+                        {"first_name": "Elias", "last_name": "Schwarz", "class": "3b"},
+                        {"first_name": "Sarah", "last_name": "Winkler", "class": "3b"},
+                        {"first_name": "Noah", "last_name": "Reiter", "class": "4a"},
+                        {"first_name": "Leonie", "last_name": "Mayr", "class": "4a"},
+                        {"first_name": "Ben", "last_name": "Brunner", "class": "4a"},
+                        {"first_name": "Marie", "last_name": "Wimmer", "class": "4b"},
+                        {"first_name": "Alexander", "last_name": "Egger", "class": "4b"},
+                        {"first_name": "Valentina", "last_name": "Haas", "class": "1a"},
+                        {"first_name": "Tobias", "last_name": "Fuchs", "class": "1b"},
+                        {"first_name": "Emilia", "last_name": "Wolf", "class": "2a"},
+                        {"first_name": "Moritz", "last_name": "Lang", "class": "2b"},
+                        {"first_name": "Amelie", "last_name": "Wallner", "class": "3a"},
+                        {"first_name": "Jakob", "last_name": "Aigner", "class": "4b"},
+                    ],
+                },
+                {
+                    "name": "VS Woelfnitz",
+                    "city": "Klagenfurt",
+                    "postal_code": "9020",
+                    "street": "Woelfnitzstrasse 1",
+                    "email": "vs.woelfnitz@klagenfurt.at",
+                    "phone": "+43 463 281 45",
+                    "manager": {
+                        "username": "sabine.schuster",
+                        "email": "sabine.schuster@hilfswerk.at",
+                        "first_name": "Sabine",
+                        "last_name": "Schuster",
+                    },
+                    "educator": {
+                        "username": "thomas.trost",
+                        "email": "thomas.trost@hilfswerk.at",
+                        "first_name": "Thomas",
+                        "last_name": "Trost",
+                    },
+                    "group_name": "Blaue Gruppe",
+                    "students": [
+                        {"first_name": "Lisa", "last_name": "Koenig", "class": "1a"},
+                        {"first_name": "Simon", "last_name": "Roth", "class": "1a"},
+                        {"first_name": "Clara", "last_name": "Seidl", "class": "2a"},
+                        {"first_name": "Fabian", "last_name": "Auer", "class": "2a"},
+                        {"first_name": "Nora", "last_name": "Stadler", "class": "3a"},
+                        {"first_name": "Philipp", "last_name": "Holzer", "class": "3a"},
+                        {"first_name": "Lara", "last_name": "Binder", "class": "4a"},
+                        {"first_name": "Florian", "last_name": "Karner", "class": "4a"},
+                        {"first_name": "Johanna", "last_name": "Pfeifer", "class": "1b"},
+                        {"first_name": "Daniel", "last_name": "Strasser", "class": "2b"},
+                        {"first_name": "Eva", "last_name": "Zeller", "class": "3b"},
+                        {"first_name": "Michael", "last_name": "Brandt", "class": "4b"},
+                    ],
+                },
+                {
+                    "name": "VS St. Ruprecht",
+                    "city": "Klagenfurt",
+                    "postal_code": "9020",
+                    "street": "Kneippgasse 30",
+                    "email": "vs.struprecht@klagenfurt.at",
+                    "phone": "+43 463 310 60",
+                    "manager": {
+                        "username": "ursula.urban",
+                        "email": "ursula.urban@hilfswerk.at",
+                        "first_name": "Ursula",
+                        "last_name": "Urban",
+                    },
+                    "educator": {
+                        "username": "vera.vogel",
+                        "email": "vera.vogel@hilfswerk.at",
+                        "first_name": "Vera",
+                        "last_name": "Vogel",
+                    },
+                    "group_name": "Rote Gruppe",
+                    "students": [
+                        {"first_name": "Marlene", "last_name": "Ortner", "class": "1a"},
+                        {"first_name": "Sebastian", "last_name": "Frey", "class": "1a"},
+                        {"first_name": "Helena", "last_name": "Novak", "class": "2a"},
+                        {"first_name": "Raphael", "last_name": "Kainz", "class": "2a"},
+                        {"first_name": "Theresa", "last_name": "Unger", "class": "3a"},
+                        {"first_name": "Lorenz", "last_name": "Payer", "class": "3a"},
+                        {"first_name": "Antonia", "last_name": "Lackner", "class": "4a"},
+                        {"first_name": "Matthias", "last_name": "Kopp", "class": "4a"},
+                        {"first_name": "Ida", "last_name": "Schreiber", "class": "1b"},
+                        {"first_name": "Leonard", "last_name": "Lechner", "class": "2b"},
+                    ],
+                },
+            ],
         },
         {
             "name": "Hilfswerk Wien",
@@ -71,26 +172,76 @@ class Command(BaseCommand):
             "street": "Schottenfeldgasse 29",
             "phone": "+43 1 512 36 61",
             "email": "office@wien.hilfswerk.at",
-            "school": {
-                "name": "VS Donaustadt",
-                "city": "Wien",
-                "postal_code": "1220",
-                "street": "Schuettpelzgasse 1",
-                "email": "vs.donaustadt@wien.gv.at",
-                "phone": "+43 1 203 22 41",
-            },
-            "manager": {
-                "username": "brigitte.berger",
-                "email": "brigitte.berger@hilfswerk.at",
-                "first_name": "Brigitte",
-                "last_name": "Berger",
-            },
-            "educator": {
-                "username": "clara.czermak",
-                "email": "clara.czermak@hilfswerk.at",
-                "first_name": "Clara",
-                "last_name": "Czermak",
-            },
+            "schools": [
+                {
+                    "name": "VS Donaustadt",
+                    "city": "Wien",
+                    "postal_code": "1220",
+                    "street": "Schuettpelzgasse 1",
+                    "email": "vs.donaustadt@wien.gv.at",
+                    "phone": "+43 1 203 22 41",
+                    "manager": {
+                        "username": "brigitte.berger",
+                        "email": "brigitte.berger@hilfswerk.at",
+                        "first_name": "Brigitte",
+                        "last_name": "Berger",
+                    },
+                    "educator": {
+                        "username": "clara.czermak",
+                        "email": "clara.czermak@hilfswerk.at",
+                        "first_name": "Clara",
+                        "last_name": "Czermak",
+                    },
+                    "group_name": "Gelbe Gruppe",
+                    "students": [
+                        {"first_name": "Luisa", "last_name": "Hartmann", "class": "1a"},
+                        {"first_name": "Tim", "last_name": "Richter", "class": "1a"},
+                        {"first_name": "Mila", "last_name": "Lehner", "class": "2a"},
+                        {"first_name": "Oscar", "last_name": "Schmid", "class": "2a"},
+                        {"first_name": "Ella", "last_name": "Kraus", "class": "3a"},
+                        {"first_name": "Leo", "last_name": "Baumann", "class": "3a"},
+                        {"first_name": "Sophia", "last_name": "Vogt", "class": "4a"},
+                        {"first_name": "Finn", "last_name": "Sommer", "class": "4a"},
+                        {"first_name": "Lina", "last_name": "Winter", "class": "1b"},
+                        {"first_name": "Erik", "last_name": "Schober", "class": "2b"},
+                        {"first_name": "Alina", "last_name": "Hahn", "class": "3b"},
+                        {"first_name": "Julian", "last_name": "Keller", "class": "4b"},
+                        {"first_name": "Zoe", "last_name": "Neumann", "class": "1a"},
+                        {"first_name": "Nico", "last_name": "Dietrich", "class": "2a"},
+                    ],
+                },
+                {
+                    "name": "VS Favoriten",
+                    "city": "Wien",
+                    "postal_code": "1100",
+                    "street": "Quellenstrasse 52",
+                    "email": "vs.favoriten@wien.gv.at",
+                    "phone": "+43 1 604 52 60",
+                    "manager": {
+                        "username": "walter.weiss",
+                        "email": "walter.weiss@hilfswerk.at",
+                        "first_name": "Walter",
+                        "last_name": "Weiss",
+                    },
+                    "educator": {
+                        "username": "xenia.xavier",
+                        "email": "xenia.xavier@hilfswerk.at",
+                        "first_name": "Xenia",
+                        "last_name": "Xavier",
+                    },
+                    "group_name": "Orange Gruppe",
+                    "students": [
+                        {"first_name": "Hanna", "last_name": "Berger", "class": "1a"},
+                        {"first_name": "Niklas", "last_name": "Huber", "class": "1a"},
+                        {"first_name": "Selina", "last_name": "Steiner", "class": "2a"},
+                        {"first_name": "Dominik", "last_name": "Wagner", "class": "2a"},
+                        {"first_name": "Chiara", "last_name": "Bauer", "class": "3a"},
+                        {"first_name": "Kevin", "last_name": "Pichler", "class": "3a"},
+                        {"first_name": "Vanessa", "last_name": "Moser", "class": "4a"},
+                        {"first_name": "Patrick", "last_name": "Gruber", "class": "4a"},
+                    ],
+                },
+            ],
         },
         {
             "name": "Hilfswerk Niederoesterreich",
@@ -99,26 +250,37 @@ class Command(BaseCommand):
             "street": "Ferstlergasse 4",
             "phone": "+43 2742 249",
             "email": "office@noe.hilfswerk.at",
-            "school": {
-                "name": "VS St. Poelten Mitte",
-                "city": "St. Poelten",
-                "postal_code": "3100",
-                "street": "Grenzgasse 18",
-                "email": "vs.stpoelten-mitte@noeschule.at",
-                "phone": "+43 2742 352 140",
-            },
-            "manager": {
-                "username": "doris.decker",
-                "email": "doris.decker@hilfswerk.at",
-                "first_name": "Doris",
-                "last_name": "Decker",
-            },
-            "educator": {
-                "username": "elena.ernst",
-                "email": "elena.ernst@hilfswerk.at",
-                "first_name": "Elena",
-                "last_name": "Ernst",
-            },
+            "schools": [
+                {
+                    "name": "VS St. Poelten Mitte",
+                    "city": "St. Poelten",
+                    "postal_code": "3100",
+                    "street": "Grenzgasse 18",
+                    "email": "vs.stpoelten-mitte@noeschule.at",
+                    "phone": "+43 2742 352 140",
+                    "manager": {
+                        "username": "doris.decker",
+                        "email": "doris.decker@hilfswerk.at",
+                        "first_name": "Doris",
+                        "last_name": "Decker",
+                    },
+                    "educator": {
+                        "username": "elena.ernst",
+                        "email": "elena.ernst@hilfswerk.at",
+                        "first_name": "Elena",
+                        "last_name": "Ernst",
+                    },
+                    "group_name": "Lila Gruppe",
+                    "students": [
+                        {"first_name": "Katharina", "last_name": "Berger", "class": "1a"},
+                        {"first_name": "Stefan", "last_name": "Huber", "class": "2a"},
+                        {"first_name": "Magdalena", "last_name": "Steiner", "class": "3a"},
+                        {"first_name": "Andreas", "last_name": "Wagner", "class": "4a"},
+                        {"first_name": "Verena", "last_name": "Bauer", "class": "1b"},
+                        {"first_name": "Christoph", "last_name": "Pichler", "class": "2b"},
+                    ],
+                },
+            ],
         },
         {
             "name": "Hilfswerk Tirol",
@@ -127,26 +289,37 @@ class Command(BaseCommand):
             "street": "Suedtiroler Platz 14-16",
             "phone": "+43 512 597 900",
             "email": "office@tirol.hilfswerk.at",
-            "school": {
-                "name": "VS Innsbruck West",
-                "city": "Innsbruck",
-                "postal_code": "6020",
-                "street": "Technikerstrasse 44",
-                "email": "vs.innsbruck-west@tsn.at",
-                "phone": "+43 512 584 263",
-            },
-            "manager": {
-                "username": "franziska.fink",
-                "email": "franziska.fink@hilfswerk.at",
-                "first_name": "Franziska",
-                "last_name": "Fink",
-            },
-            "educator": {
-                "username": "greta.gruber",
-                "email": "greta.gruber@hilfswerk.at",
-                "first_name": "Greta",
-                "last_name": "Gruber",
-            },
+            "schools": [
+                {
+                    "name": "VS Innsbruck West",
+                    "city": "Innsbruck",
+                    "postal_code": "6020",
+                    "street": "Technikerstrasse 44",
+                    "email": "vs.innsbruck-west@tsn.at",
+                    "phone": "+43 512 584 263",
+                    "manager": {
+                        "username": "franziska.fink",
+                        "email": "franziska.fink@hilfswerk.at",
+                        "first_name": "Franziska",
+                        "last_name": "Fink",
+                    },
+                    "educator": {
+                        "username": "greta.gruber",
+                        "email": "greta.gruber@hilfswerk.at",
+                        "first_name": "Greta",
+                        "last_name": "Gruber",
+                    },
+                    "group_name": "Silber Gruppe",
+                    "students": [
+                        {"first_name": "Marlene", "last_name": "Berger", "class": "1a"},
+                        {"first_name": "Florian", "last_name": "Huber", "class": "2a"},
+                        {"first_name": "Theresa", "last_name": "Steiner", "class": "3a"},
+                        {"first_name": "Markus", "last_name": "Wagner", "class": "4a"},
+                        {"first_name": "Isabella", "last_name": "Bauer", "class": "1b"},
+                        {"first_name": "Bernhard", "last_name": "Pichler", "class": "2b"},
+                    ],
+                },
+            ],
         },
         {
             "name": "Hilfswerk Burgenland",
@@ -155,26 +328,37 @@ class Command(BaseCommand):
             "street": "Ignaz-Till-Strasse 9",
             "phone": "+43 2682 651 50",
             "email": "office@bgld.hilfswerk.at",
-            "school": {
-                "name": "VS Eisenstadt",
-                "city": "Eisenstadt",
-                "postal_code": "7000",
-                "street": "Kalvarienbergplatz 8",
-                "email": "vs.eisenstadt@bildungsserver.com",
-                "phone": "+43 2682 622 57",
-            },
-            "manager": {
-                "username": "hanna.hofer",
-                "email": "hanna.hofer@hilfswerk.at",
-                "first_name": "Hanna",
-                "last_name": "Hofer",
-            },
-            "educator": {
-                "username": "irene.illing",
-                "email": "irene.illing@hilfswerk.at",
-                "first_name": "Irene",
-                "last_name": "Illing",
-            },
+            "schools": [
+                {
+                    "name": "VS Eisenstadt",
+                    "city": "Eisenstadt",
+                    "postal_code": "7000",
+                    "street": "Kalvarienbergplatz 8",
+                    "email": "vs.eisenstadt@bildungsserver.com",
+                    "phone": "+43 2682 622 57",
+                    "manager": {
+                        "username": "hanna.hofer",
+                        "email": "hanna.hofer@hilfswerk.at",
+                        "first_name": "Hanna",
+                        "last_name": "Hofer",
+                    },
+                    "educator": {
+                        "username": "irene.illing",
+                        "email": "irene.illing@hilfswerk.at",
+                        "first_name": "Irene",
+                        "last_name": "Illing",
+                    },
+                    "group_name": "Tuerkis Gruppe",
+                    "students": [
+                        {"first_name": "Rosalie", "last_name": "Berger", "class": "1a"},
+                        {"first_name": "Gregor", "last_name": "Huber", "class": "2a"},
+                        {"first_name": "Celine", "last_name": "Steiner", "class": "3a"},
+                        {"first_name": "Lukas", "last_name": "Wagner", "class": "4a"},
+                        {"first_name": "Amelie", "last_name": "Bauer", "class": "1b"},
+                        {"first_name": "Tobias", "last_name": "Pichler", "class": "2b"},
+                    ],
+                },
+            ],
         },
         {
             "name": "Hilfswerk Steiermark",
@@ -183,26 +367,37 @@ class Command(BaseCommand):
             "street": "Grabenstrasse 90",
             "phone": "+43 316 813 182",
             "email": "office@stmk.hilfswerk.at",
-            "school": {
-                "name": "VS Graz Sued",
-                "city": "Graz",
-                "postal_code": "8020",
-                "street": "Triester Strasse 20",
-                "email": "vs.graz-sued@stmk.gv.at",
-                "phone": "+43 316 872 7830",
-            },
-            "manager": {
-                "username": "julia.jandl",
-                "email": "julia.jandl@hilfswerk.at",
-                "first_name": "Julia",
-                "last_name": "Jandl",
-            },
-            "educator": {
-                "username": "katharina.kern",
-                "email": "katharina.kern@hilfswerk.at",
-                "first_name": "Katharina",
-                "last_name": "Kern",
-            },
+            "schools": [
+                {
+                    "name": "VS Graz Sued",
+                    "city": "Graz",
+                    "postal_code": "8020",
+                    "street": "Triester Strasse 20",
+                    "email": "vs.graz-sued@stmk.gv.at",
+                    "phone": "+43 316 872 7830",
+                    "manager": {
+                        "username": "julia.jandl",
+                        "email": "julia.jandl@hilfswerk.at",
+                        "first_name": "Julia",
+                        "last_name": "Jandl",
+                    },
+                    "educator": {
+                        "username": "katharina.kern",
+                        "email": "katharina.kern@hilfswerk.at",
+                        "first_name": "Katharina",
+                        "last_name": "Kern",
+                    },
+                    "group_name": "Weisse Gruppe",
+                    "students": [
+                        {"first_name": "Miriam", "last_name": "Berger", "class": "1a"},
+                        {"first_name": "Elias", "last_name": "Huber", "class": "2a"},
+                        {"first_name": "Paulina", "last_name": "Steiner", "class": "3a"},
+                        {"first_name": "Valentin", "last_name": "Wagner", "class": "4a"},
+                        {"first_name": "Leni", "last_name": "Bauer", "class": "1b"},
+                        {"first_name": "Samuel", "last_name": "Pichler", "class": "2b"},
+                    ],
+                },
+            ],
         },
         {
             "name": "Hilfswerk Oberoesterreich",
@@ -211,26 +406,37 @@ class Command(BaseCommand):
             "street": "Dametzstrasse 6",
             "phone": "+43 732 775 511",
             "email": "office@ooe.hilfswerk.at",
-            "school": {
-                "name": "VS Linz Mitte",
-                "city": "Linz",
-                "postal_code": "4020",
-                "street": "Hamerlingstrasse 3",
-                "email": "vs.linz-mitte@ooe.gv.at",
-                "phone": "+43 732 770 444",
-            },
-            "manager": {
-                "username": "laura.lang",
-                "email": "laura.lang@hilfswerk.at",
-                "first_name": "Laura",
-                "last_name": "Lang",
-            },
-            "educator": {
-                "username": "maria.maier",
-                "email": "maria.maier@hilfswerk.at",
-                "first_name": "Maria",
-                "last_name": "Maier",
-            },
+            "schools": [
+                {
+                    "name": "VS Linz Mitte",
+                    "city": "Linz",
+                    "postal_code": "4020",
+                    "street": "Hamerlingstrasse 3",
+                    "email": "vs.linz-mitte@ooe.gv.at",
+                    "phone": "+43 732 770 444",
+                    "manager": {
+                        "username": "laura.lang",
+                        "email": "laura.lang@hilfswerk.at",
+                        "first_name": "Laura",
+                        "last_name": "Lang",
+                    },
+                    "educator": {
+                        "username": "maria.maier",
+                        "email": "maria.maier@hilfswerk.at",
+                        "first_name": "Maria",
+                        "last_name": "Maier",
+                    },
+                    "group_name": "Braune Gruppe",
+                    "students": [
+                        {"first_name": "Jasmin", "last_name": "Berger", "class": "1a"},
+                        {"first_name": "Maximilian", "last_name": "Huber", "class": "2a"},
+                        {"first_name": "Sophia", "last_name": "Steiner", "class": "3a"},
+                        {"first_name": "David", "last_name": "Wagner", "class": "4a"},
+                        {"first_name": "Emily", "last_name": "Bauer", "class": "1b"},
+                        {"first_name": "Fabian", "last_name": "Pichler", "class": "2b"},
+                    ],
+                },
+            ],
         },
         {
             "name": "Hilfswerk Salzburg",
@@ -239,26 +445,37 @@ class Command(BaseCommand):
             "street": "Auerspergstrasse 4",
             "phone": "+43 662 434 702",
             "email": "office@sbg.hilfswerk.at",
-            "school": {
-                "name": "VS Salzburg Stadt",
-                "city": "Salzburg",
-                "postal_code": "5020",
-                "street": "Faistauergasse 18",
-                "email": "vs.salzburg-stadt@salzburg.gv.at",
-                "phone": "+43 662 843 135",
-            },
-            "manager": {
-                "username": "nina.neuner",
-                "email": "nina.neuner@hilfswerk.at",
-                "first_name": "Nina",
-                "last_name": "Neuner",
-            },
-            "educator": {
-                "username": "olivia.ortner",
-                "email": "olivia.ortner@hilfswerk.at",
-                "first_name": "Olivia",
-                "last_name": "Ortner",
-            },
+            "schools": [
+                {
+                    "name": "VS Salzburg Stadt",
+                    "city": "Salzburg",
+                    "postal_code": "5020",
+                    "street": "Faistauergasse 18",
+                    "email": "vs.salzburg-stadt@salzburg.gv.at",
+                    "phone": "+43 662 843 135",
+                    "manager": {
+                        "username": "nina.neuner",
+                        "email": "nina.neuner@hilfswerk.at",
+                        "first_name": "Nina",
+                        "last_name": "Neuner",
+                    },
+                    "educator": {
+                        "username": "olivia.ortner",
+                        "email": "olivia.ortner@hilfswerk.at",
+                        "first_name": "Olivia",
+                        "last_name": "Ortner",
+                    },
+                    "group_name": "Rosa Gruppe",
+                    "students": [
+                        {"first_name": "Lara", "last_name": "Berger", "class": "1a"},
+                        {"first_name": "Felix", "last_name": "Huber", "class": "2a"},
+                        {"first_name": "Mia", "last_name": "Steiner", "class": "3a"},
+                        {"first_name": "Jonas", "last_name": "Wagner", "class": "4a"},
+                        {"first_name": "Emma", "last_name": "Bauer", "class": "1b"},
+                        {"first_name": "Paul", "last_name": "Pichler", "class": "2b"},
+                    ],
+                },
+            ],
         },
         {
             "name": "Hilfswerk Vorarlberg",
@@ -267,81 +484,55 @@ class Command(BaseCommand):
             "street": "Rathausstrasse 2",
             "phone": "+43 5574 488 00",
             "email": "office@vlbg.hilfswerk.at",
-            "school": {
-                "name": "VS Bregenz",
-                "city": "Bregenz",
-                "postal_code": "6900",
-                "street": "Belruptstrasse 37",
-                "email": "vs.bregenz@vobs.at",
-                "phone": "+43 5574 410 18",
-            },
-            "manager": {
-                "username": "petra.pichler",
-                "email": "petra.pichler@hilfswerk.at",
-                "first_name": "Petra",
-                "last_name": "Pichler",
-            },
-            "educator": {
-                "username": "rosa.riedl",
-                "email": "rosa.riedl@hilfswerk.at",
-                "first_name": "Rosa",
-                "last_name": "Riedl",
-            },
+            "schools": [
+                {
+                    "name": "VS Bregenz",
+                    "city": "Bregenz",
+                    "postal_code": "6900",
+                    "street": "Belruptstrasse 37",
+                    "email": "vs.bregenz@vobs.at",
+                    "phone": "+43 5574 410 18",
+                    "manager": {
+                        "username": "petra.pichler",
+                        "email": "petra.pichler@hilfswerk.at",
+                        "first_name": "Petra",
+                        "last_name": "Pichler",
+                    },
+                    "educator": {
+                        "username": "rosa.riedl",
+                        "email": "rosa.riedl@hilfswerk.at",
+                        "first_name": "Rosa",
+                        "last_name": "Riedl",
+                    },
+                    "group_name": "Goldene Gruppe",
+                    "students": [
+                        {"first_name": "Anna", "last_name": "Berger", "class": "1a"},
+                        {"first_name": "Simon", "last_name": "Huber", "class": "2a"},
+                        {"first_name": "Lena", "last_name": "Steiner", "class": "3a"},
+                        {"first_name": "Noah", "last_name": "Wagner", "class": "4a"},
+                        {"first_name": "Sophie", "last_name": "Bauer", "class": "1b"},
+                        {"first_name": "Ben", "last_name": "Pichler", "class": "2b"},
+                    ],
+                },
+            ],
         },
     ]
 
-    # ── 26 Schueler:innen fuer Gruene Gruppe (VS Annabichl) ──────────────
-
-    STUDENTS = [
-        {"first_name": "Lena", "last_name": "Koller", "class": "1a"},
-        {"first_name": "Maximilian", "last_name": "Steiner", "class": "1a"},
-        {"first_name": "Sophie", "last_name": "Huber", "class": "1b"},
-        {"first_name": "Felix", "last_name": "Wagner", "class": "1b"},
-        {"first_name": "Emma", "last_name": "Berger", "class": "2a"},
-        {"first_name": "Paul", "last_name": "Bauer", "class": "2a"},
-        {"first_name": "Mia", "last_name": "Pichler", "class": "2a"},
-        {"first_name": "Jonas", "last_name": "Moser", "class": "2b"},
-        {"first_name": "Hannah", "last_name": "Gruber", "class": "2b"},
-        {"first_name": "David", "last_name": "Hofer", "class": "3a"},
-        {"first_name": "Anna", "last_name": "Leitner", "class": "3a"},
-        {"first_name": "Lukas", "last_name": "Eder", "class": "3a"},
-        {"first_name": "Laura", "last_name": "Fischer", "class": "3b"},
-        {"first_name": "Elias", "last_name": "Schwarz", "class": "3b"},
-        {"first_name": "Sarah", "last_name": "Winkler", "class": "3b"},
-        {"first_name": "Noah", "last_name": "Reiter", "class": "4a"},
-        {"first_name": "Leonie", "last_name": "Mayr", "class": "4a"},
-        {"first_name": "Ben", "last_name": "Brunner", "class": "4a"},
-        {"first_name": "Marie", "last_name": "Wimmer", "class": "4b"},
-        {"first_name": "Alexander", "last_name": "Egger", "class": "4b"},
-        {"first_name": "Valentina", "last_name": "Haas", "class": "1a"},
-        {"first_name": "Tobias", "last_name": "Fuchs", "class": "1b"},
-        {"first_name": "Emilia", "last_name": "Wolf", "class": "2a"},
-        {"first_name": "Moritz", "last_name": "Lang", "class": "2b"},
-        {"first_name": "Amelie", "last_name": "Wallner", "class": "3a"},
-        {"first_name": "Jakob", "last_name": "Aigner", "class": "4b"},
-    ]
-
-    # All test usernames managed by this command
-    ALL_TEST_USERNAMES = [
-        "superadmin", "admin",
-        # Legacy usernames from previous sprints
-        "locationmanager", "educator",
-        # New Hilfswerk usernames
-        "anita.anic", "amalia.bogdan",
-        "brigitte.berger", "clara.czermak",
-        "doris.decker", "elena.ernst",
-        "franziska.fink", "greta.gruber",
-        "hanna.hofer", "irene.illing",
-        "julia.jandl", "katharina.kern",
-        "laura.lang", "maria.maier",
-        "nina.neuner", "olivia.ortner",
-        "petra.pichler", "rosa.riedl",
-    ]
+    def _collect_all_usernames(self):
+        """Dynamically collect all test usernames from config."""
+        usernames = ["superadmin", "admin", "locationmanager", "educator"]
+        for bl in self.BUNDESLAENDER:
+            for school in bl["schools"]:
+                usernames.append(school["manager"]["username"])
+                usernames.append(school["educator"]["username"])
+        return usernames
 
     def handle(self, *args, **options):
         self.stdout.write("\n" + "=" * 80)
         self.stdout.write("GTS Planer – Hilfswerk Oesterreich Testumgebung")
         self.stdout.write("=" * 80)
+
+        self.ALL_TEST_USERNAMES = self._collect_all_usernames()
 
         # 0. Cleanup old test data to avoid FK conflicts
         self._cleanup_old_data()
@@ -352,17 +543,17 @@ class Command(BaseCommand):
         # 2. Create Main Tenant
         main_org = self._create_main_tenant()
 
-        # 3. Create Sub-Tenants (9 Bundeslaender)
+        # 3. Create Sub-Tenants (9 Bundeslaender) with all Schools
         bundesland_data = self._create_bundeslaender(main_org)
 
         # 4. Create SuperAdmin and Admin
-        self._create_system_users(main_org, bundesland_data)
+        self._create_system_users(main_org)
 
-        # 5. Create LocationManagers and Educators per Bundesland
-        self._create_bundesland_users(bundesland_data)
+        # 5. Create LocationManagers and Educators per School
+        self._create_school_users(bundesland_data)
 
-        # 6. Create School Year, Group, and Students for Kaernten
-        self._create_kaernten_data(bundesland_data)
+        # 6. Create School Year, Groups, and Students for all Schools
+        self._create_school_data(bundesland_data)
 
         # 7. Update SystemSettings
         self._update_system_settings()
@@ -379,15 +570,12 @@ class Command(BaseCommand):
         """Remove old test data to avoid FK constraint violations."""
         self.stdout.write("\n  [0/7] Alte Testdaten bereinigen...")
 
-        # Remove location FK from old test users to avoid FK violations
         old_users = User.objects.filter(username__in=self.ALL_TEST_USERNAMES)
         count = old_users.count()
         if count > 0:
-            # Unset location to avoid FK issues when locations are recreated
             old_users.update(location=None)
             self.stdout.write(f"        {count} Benutzer: location auf NULL gesetzt.")
 
-        # Delete old locations that are not linked to any Hilfswerk organization
         old_locations = Location.objects.exclude(
             organization__name__startswith="Hilfswerk"
         )
@@ -396,7 +584,6 @@ class Command(BaseCommand):
             old_locations.delete()
             self.stdout.write(f"        {loc_count} alte Standorte geloescht.")
 
-        # Delete legacy test users (locationmanager, educator)
         legacy_users = User.objects.filter(
             username__in=["locationmanager", "educator"]
         )
@@ -448,15 +635,14 @@ class Command(BaseCommand):
         self.stdout.write(f"        {main_org.name} ({status})")
         return main_org
 
-    # ── Step 3: Sub-Tenants (Bundeslaender) ───────────────────────────────
+    # ── Step 3: Sub-Tenants (Bundeslaender) with Schools ──────────────────
 
     def _create_bundeslaender(self, main_org):
-        """Create 9 Bundesland sub-tenants with locations."""
+        """Create 9 Bundesland sub-tenants with n schools each."""
         self.stdout.write("\n  [3/7] Bundeslaender und Schulen erstellen...")
 
         result = {}
         for bl in self.BUNDESLAENDER:
-            # Sub-Tenant (Bundesland) – use update_or_create for idempotency
             sub_org, created = Organization.objects.update_or_create(
                 name=bl["name"],
                 defaults={
@@ -474,51 +660,46 @@ class Command(BaseCommand):
                 },
             )
 
-            # Location (Schule) – use update_or_create for idempotency
-            school = bl["school"]
-            location, loc_created = Location.objects.update_or_create(
-                name=school["name"],
-                organization=sub_org,
-                defaults={
-                    "description": f"GTS Betreuung {school['name']}",
-                    "email": school["email"],
-                    "phone": school["phone"],
-                    "street": school["street"],
-                    "city": school["city"],
-                    "postal_code": school["postal_code"],
-                    "is_active": True,
-                    "is_deleted": False,
-                },
-            )
+            locations = []
+            for school_cfg in bl["schools"]:
+                location, loc_created = Location.objects.update_or_create(
+                    name=school_cfg["name"],
+                    organization=sub_org,
+                    defaults={
+                        "description": f"GTS Betreuung {school_cfg['name']}",
+                        "email": school_cfg["email"],
+                        "phone": school_cfg["phone"],
+                        "street": school_cfg["street"],
+                        "city": school_cfg["city"],
+                        "postal_code": school_cfg["postal_code"],
+                        "is_active": True,
+                        "is_deleted": False,
+                    },
+                )
+                locations.append({
+                    "location": location,
+                    "config": school_cfg,
+                    "created": loc_created,
+                })
 
-            status_org = "NEU" if created else "OK"
-            status_loc = "NEU" if loc_created else "OK"
-            self.stdout.write(
-                f"        {bl['name']:35s} ({status_org}) | "
-                f"{school['name']:25s} ({status_loc})"
-            )
+                status_loc = "NEU" if loc_created else "OK"
+                self.stdout.write(
+                    f"        {bl['name']:35s} | {school_cfg['name']:25s} ({status_loc})"
+                )
 
             result[bl["name"]] = {
                 "org": sub_org,
-                "location": location,
-                "config": bl,
+                "locations": locations,
             }
 
         return result
 
     # ── Step 4: System Users (SuperAdmin, Admin) ──────────────────────────
 
-    def _create_system_users(self, main_org, bundesland_data):
-        """Create SuperAdmin and Admin users.
-
-        Both are assigned to a Hauptstandort location under the main
-        tenant (Hilfswerk Oesterreich) so that the TenantMiddleware
-        correctly resolves their organization to the main tenant and
-        grants cross-tenant access (Admin sees all sub-tenants).
-        """
+    def _create_system_users(self, main_org):
+        """Create SuperAdmin and Admin users at Hauptstandort Wien."""
         self.stdout.write("\n  [4/7] System-Benutzer erstellen...")
 
-        # Create a Hauptstandort location under the main tenant
         hauptstandort, hs_created = Location.objects.update_or_create(
             name="Hauptstandort Wien",
             organization=main_org,
@@ -566,134 +747,129 @@ class Command(BaseCommand):
         for user_data in system_users:
             self._create_user(user_data)
 
-    # ── Step 5: Bundesland Users ──────────────────────────────────────────
+    # ── Step 5: School Users (LocationManager + Educator per School) ──────
 
-    def _create_bundesland_users(self, bundesland_data):
-        """Create LocationManager and Educator for each Bundesland."""
+    def _create_school_users(self, bundesland_data):
+        """Create LocationManager and Educator for each school."""
         self.stdout.write("\n  [5/7] Standortleitungen und Paedagog:innen erstellen...")
 
         for bl_name, data in bundesland_data.items():
-            config = data["config"]
-            location = data["location"]
+            for loc_data in data["locations"]:
+                location = loc_data["location"]
+                config = loc_data["config"]
 
-            # LocationManager
-            mgr_data = {
-                **config["manager"],
-                "role": User.Role.LOCATION_MANAGER,
-                "is_staff": False,
-                "is_superuser": False,
-                "location": location,
-                "group_name": "LocationManager",
-            }
-            manager_user = self._create_user(mgr_data)
+                # LocationManager
+                mgr_data = {
+                    **config["manager"],
+                    "role": User.Role.LOCATION_MANAGER,
+                    "is_staff": False,
+                    "is_superuser": False,
+                    "location": location,
+                    "group_name": "LocationManager",
+                }
+                manager_user = self._create_user(mgr_data)
 
-            # Always set as location manager (idempotent)
-            if manager_user:
-                location.manager = manager_user
-                location.save(update_fields=["manager"])
+                if manager_user:
+                    location.manager = manager_user
+                    location.save(update_fields=["manager"])
 
-            # Educator
-            edu_data = {
-                **config["educator"],
-                "role": User.Role.EDUCATOR,
-                "is_staff": False,
-                "is_superuser": False,
-                "location": location,
-                "group_name": "Educator",
-            }
-            self._create_user(edu_data)
+                # Educator
+                edu_data = {
+                    **config["educator"],
+                    "role": User.Role.EDUCATOR,
+                    "is_staff": False,
+                    "is_superuser": False,
+                    "location": location,
+                    "group_name": "Educator",
+                }
+                self._create_user(edu_data)
 
-    # ── Step 6: Kaernten-spezifische Daten ────────────────────────────────
+    # ── Step 6: School Data (SchoolYear, Groups, Students) ────────────────
 
-    def _create_kaernten_data(self, bundesland_data):
-        """Create SchoolYear, Group, GroupMember, and Students for Kaernten."""
-        self.stdout.write("\n  [6/7] Kaernten: Schuljahr, Gruppe und Schueler:innen...")
+    def _create_school_data(self, bundesland_data):
+        """Create SchoolYear, Group, GroupMember, and Students for each school."""
+        self.stdout.write("\n  [6/7] Schuljahre, Gruppen und Schueler:innen erstellen...")
 
-        kaernten = bundesland_data["Hilfswerk Kaernten"]
-        location = kaernten["location"]
-        org = kaernten["org"]
+        total_students = 0
 
-        # School Year 2025/2026 – use update_or_create
-        school_year, sy_created = SchoolYear.objects.update_or_create(
-            location=location,
-            name="2025/2026",
-            defaults={
-                "organization": org,
-                "start_date": datetime.date(2025, 9, 1),
-                "end_date": datetime.date(2026, 7, 4),
-                "is_active": True,
-            },
-        )
-        self.stdout.write(
-            f"        Schuljahr: {school_year.name} "
-            f"({'NEU' if sy_created else 'AKTUALISIERT'})"
-        )
+        for bl_name, data in bundesland_data.items():
+            org = data["org"]
 
-        # Gruene Gruppe – use update_or_create to fix leader and organization
-        try:
-            educator = User.objects.get(username="amalia.bogdan")
-        except User.DoesNotExist:
-            educator = None
+            for loc_data in data["locations"]:
+                location = loc_data["location"]
+                config = loc_data["config"]
 
-        group, g_created = Group.objects.update_or_create(
-            location=location,
-            school_year=school_year,
-            name="Gruene Gruppe",
-            defaults={
-                "organization": org,
-                "description": "Nachmittagsbetreuung fuer Schueler:innen der Klassen 1a-4b",
-                "leader": educator,
-                "balance": 0,
-            },
-        )
-        self.stdout.write(
-            f"        Gruppe: {group.name} ({'NEU' if g_created else 'AKTUALISIERT'})"
-        )
+                # School Year 2025/2026
+                school_year, sy_created = SchoolYear.objects.update_or_create(
+                    location=location,
+                    name="2025/2026",
+                    defaults={
+                        "organization": org,
+                        "start_date": datetime.date(2025, 9, 1),
+                        "end_date": datetime.date(2026, 7, 4),
+                        "is_active": True,
+                    },
+                )
 
-        # Assign Amalia Bogdan as GroupMember – use update_or_create
-        if educator:
-            _, gm_created = GroupMember.objects.update_or_create(
-                group=group,
-                user=educator,
-                defaults={
-                    "organization": org,
-                    "role": GroupMember.MemberRole.EDUCATOR,
-                    "is_active": True,
-                },
-            )
-            self.stdout.write(
-                f"        Gruppenmitglied: {educator.get_full_name()} "
-                f"({'NEU' if gm_created else 'AKTUALISIERT'})"
-            )
+                # Group
+                try:
+                    educator = User.objects.get(username=config["educator"]["username"])
+                except User.DoesNotExist:
+                    educator = None
 
-        # Students: Delete ALL existing students for this group first,
-        # then recreate exactly 26 to avoid duplicates.
-        existing_count = Student.objects.filter(group=group).count()
-        if existing_count > 0:
-            Student.objects.filter(group=group).delete()
-            self.stdout.write(
-                f"        {existing_count} alte Schueler:innen geloescht (Neuanlage)."
-            )
+                group_name = config.get("group_name", f"Gruppe {location.name}")
+                group, g_created = Group.objects.update_or_create(
+                    location=location,
+                    school_year=school_year,
+                    name=group_name,
+                    defaults={
+                        "organization": org,
+                        "description": f"Nachmittagsbetreuung {location.name}",
+                        "leader": educator,
+                        "balance": 0,
+                    },
+                )
 
-        student_count_new = 0
-        for s in self.STUDENTS:
-            Student.objects.create(
-                group=group,
-                organization=org,
-                first_name=s["first_name"],
-                last_name=s["last_name"],
-                date_of_birth=datetime.date(
-                    2018 if s["class"].startswith("1") else
-                    2017 if s["class"].startswith("2") else
-                    2016 if s["class"].startswith("3") else 2015,
-                    3, 15,
-                ),
-            )
-            student_count_new += 1
+                # GroupMember (Educator)
+                if educator:
+                    GroupMember.objects.update_or_create(
+                        group=group,
+                        user=educator,
+                        defaults={
+                            "organization": org,
+                            "role": GroupMember.MemberRole.EDUCATOR,
+                            "is_active": True,
+                        },
+                    )
 
-        self.stdout.write(
-            f"        Schueler:innen: {student_count_new} erstellt (Gesamt: {len(self.STUDENTS)})"
-        )
+                # Students: Delete existing and recreate
+                students_cfg = config.get("students", [])
+                existing_count = Student.objects.filter(group=group).count()
+                if existing_count > 0:
+                    Student.objects.filter(group=group).delete()
+
+                for s in students_cfg:
+                    Student.objects.create(
+                        group=group,
+                        organization=org,
+                        first_name=s["first_name"],
+                        last_name=s["last_name"],
+                        date_of_birth=datetime.date(
+                            2018 if s["class"].startswith("1") else
+                            2017 if s["class"].startswith("2") else
+                            2016 if s["class"].startswith("3") else 2015,
+                            3, 15,
+                        ),
+                    )
+
+                total_students += len(students_cfg)
+
+                self.stdout.write(
+                    f"        {location.name:25s} | {group_name:20s} | "
+                    f"{len(students_cfg)} Schueler:innen"
+                )
+
+        self.stdout.write(f"\n        Gesamt: {total_students} Schueler:innen erstellt.")
 
     # ── Step 7: System Settings ───────────────────────────────────────────
 
@@ -726,7 +902,6 @@ class Command(BaseCommand):
         username = data["username"]
         email = data["email"]
 
-        # Always use update_or_create for full idempotency
         user, created = User.objects.update_or_create(
             username=username,
             defaults={
@@ -737,14 +912,12 @@ class Command(BaseCommand):
             },
         )
 
-        # Always set password and location
         user.set_password(self.PASSWORD)
         user.location = location
         user.save(update_fields=["password", "location"])
 
         action = "ERSTELLT" if created else "AKTUALISIERT"
 
-        # Assign to Django Permission Group
         try:
             auth_group = AuthGroup.objects.get(name=group_name)
             user.groups.clear()
