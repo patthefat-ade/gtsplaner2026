@@ -52,20 +52,24 @@ interface DashboardStats {
   recent_time_entries: Array<{
     id: number;
     date: string;
-    hours: number;
-    description: string;
+    duration_minutes: number;
+    notes: string;
+    start_time: string;
+    end_time: string;
     user__first_name: string;
     user__last_name: string;
+    group__name: string;
   }>;
   recent_transactions: Array<{
     id: number;
-    date: string;
+    transaction_date: string;
     amount: string;
     description: string;
     transaction_type: string;
     status: string;
     created_by__first_name: string;
     created_by__last_name: string;
+    group__name: string;
   }>;
   recent_leave_requests: Array<{
     id: number;
@@ -563,20 +567,26 @@ function RecentTimeEntries({ stats, loading }: { stats?: DashboardStats; loading
             <TableHeader>
               <TableRow>
                 <TableHead>Datum</TableHead>
-                <TableHead>Stunden</TableHead>
-                <TableHead className="hidden sm:table-cell">Beschreibung</TableHead>
+                <TableHead>Gruppe</TableHead>
+                <TableHead>Dauer</TableHead>
+                <TableHead className="hidden sm:table-cell">Notizen</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {stats.recent_time_entries.map((entry) => (
-                <TableRow key={entry.id}>
-                  <TableCell>{formatDate(entry.date)}</TableCell>
-                  <TableCell>{entry.hours}h</TableCell>
-                  <TableCell className="hidden max-w-[200px] truncate sm:table-cell">
-                    {entry.description || "–"}
-                  </TableCell>
-                </TableRow>
-              ))}
+              {stats.recent_time_entries.map((entry) => {
+                const hours = Math.floor(entry.duration_minutes / 60);
+                const mins = entry.duration_minutes % 60;
+                return (
+                  <TableRow key={entry.id}>
+                    <TableCell>{formatDate(entry.date)}</TableCell>
+                    <TableCell className="text-sm">{entry.group__name}</TableCell>
+                    <TableCell>{hours} Std. {mins > 0 ? `${mins} Min.` : ""}</TableCell>
+                    <TableCell className="hidden max-w-[200px] truncate sm:table-cell">
+                      {entry.notes || "–"}
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
         ) : (

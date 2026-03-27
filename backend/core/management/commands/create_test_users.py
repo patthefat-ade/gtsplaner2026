@@ -1592,7 +1592,6 @@ class Command(BaseCommand):
                         defaults={
                             "organization": org,
                             "title": f"Wochenplan KW {cal_week}",
-                            "calendar_week": cal_week,
                             "status": plan_status,
                             "created_by": educator,
                             "is_template": False,

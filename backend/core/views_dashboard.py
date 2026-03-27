@@ -131,15 +131,18 @@ class DashboardStatsView(APIView):
                 time_entries_qs.filter(
                     date__gte=seven_days_ago.date()
                 ).order_by("-date")[:5].values(
-                    "id", "date", "hours", "description",
-                    "user__first_name", "user__last_name"
+                    "id", "date", "duration_minutes", "notes",
+                    "start_time", "end_time",
+                    "user__first_name", "user__last_name",
+                    "group__name"
                 )
             ),
             "recent_transactions": list(
-                transactions_qs.order_by("-date")[:5].values(
-                    "id", "date", "amount", "description",
+                transactions_qs.order_by("-transaction_date")[:5].values(
+                    "id", "transaction_date", "amount", "description",
                     "transaction_type", "status",
-                    "created_by__first_name", "created_by__last_name"
+                    "created_by__first_name", "created_by__last_name",
+                    "group__name"
                 )
             ),
             "recent_leave_requests": list(
