@@ -274,7 +274,7 @@ class LocationViewSet(viewsets.ModelViewSet):
         return LocationListSerializer
 
     def get_permissions(self):
-        if self.action in ["list", "retrieve"]:
+        if self.action in ["list", "retrieve", "groups", "stats", "educators"]:
             return [permissions.IsAuthenticated(), IsEducator()]
         if self.action in ["update", "partial_update"]:
             # LocationManager can update own location, Admin+ can update any
