@@ -1,6 +1,9 @@
 /**
- * TypeScript type definitions for the Kassenbuch App v2 data models.
- * These types mirror the Django models and API serializers.
+ * TypeScript type definitions for the GTS Planer data models.
+ * These types mirror the Django REST Framework serializers.
+ *
+ * IMPORTANT: Keep in sync with backend serializers.
+ * Last synced: Sprint 34 (2026-03-27)
  */
 
 // ─── Enums ───────────────────────────────────────────────────────────────────
@@ -59,6 +62,7 @@ export interface Organization {
   logo: string | null;
   is_active: boolean;
   children_count?: number;
+  location_count?: number;
   created_at: string;
   updated_at: string;
 }
@@ -133,7 +137,12 @@ export interface TransactionCategory {
   name: string;
   description: string;
   category_type: CategoryType;
-  location: number;
+  /** Color hex code for UI display */
+  color?: string;
+  /** Icon identifier */
+  icon?: string;
+  /** Whether this is a system-defined category */
+  is_system_category?: boolean;
   is_active: boolean;
   created_at: string;
 }
@@ -171,11 +180,13 @@ export interface TransactionCreate {
 
 export interface Receipt {
   id: number;
-  transaction: number;
-  file: string;
+  /** URL to the receipt file (from backend file_url field) */
+  file_url: string;
   file_name: string;
   file_size: number;
   file_type: string;
+  /** Description of the receipt */
+  description?: string;
   uploaded_by: UserCompact | null;
   created_at: string;
 }
@@ -201,6 +212,8 @@ export interface TimeEntry {
   end_time: string;
   break_minutes: number;
   duration_minutes: number;
+  /** Duration in hours (calculated by backend) */
+  duration_hours?: number;
   notes: string;
   created_at: string;
   updated_at: string;
@@ -219,7 +232,12 @@ export interface LeaveType {
   id: number;
   name: string;
   description: string;
-  location: number;
+  /** Whether leave of this type requires manager approval */
+  requires_approval?: boolean;
+  /** Maximum days per year for this leave type */
+  max_days_per_year?: number | null;
+  /** Whether this is a system-defined leave type */
+  is_system_type?: boolean;
   is_active: boolean;
   created_at: string;
 }
@@ -255,6 +273,8 @@ export interface SchoolYear {
   id: number;
   name: string;
   location: number;
+  /** Location name (from backend location_name field) */
+  location_name?: string;
   start_date: string;
   end_date: string;
   is_active: boolean;
@@ -266,8 +286,13 @@ export interface Semester {
   id: number;
   school_year: number;
   name: string;
+  /** Display name (e.g. "1. Semester") */
+  name_display?: string;
   start_date: string;
   end_date: string;
+  /** Whether this semester is currently active */
+  is_active?: boolean;
+  created_at?: string;
 }
 
 export interface Group {
@@ -459,11 +484,53 @@ export interface ApiError {
 // ─── Dashboard Stats ─────────────────────────────────────────────────────────
 
 export interface DashboardStats {
-  total_groups: number;
-  total_transactions: number;
-  pending_approvals: number;
-  total_balance: string;
-  recent_transactions: Transaction[];
-  recent_time_entries: TimeEntry[];
-  pending_leave_requests: LeaveRequest[];
+  role: string;
+  locations_count: number;
+  groups_count: number;
+  students_count: number;
+  transactions_count: number;
+  time_entries_count: number;
+  weeklyplans_count: number;
+  educators_count: number;
+  pending_leave_requests: number;
+  pending_transactions: number;
+  total_income: number;
+  total_expense: number;
+  recent_time_entries: DashboardRecentTimeEntry[];
+  recent_transactions: DashboardRecentTransaction[];
+  recent_leave_requests: DashboardRecentLeaveRequest[];
+}
+
+export interface DashboardRecentTimeEntry {
+  id: number;
+  date: string;
+  duration_minutes: number;
+  notes: string | null;
+  start_time: string;
+  end_time: string;
+  user__first_name: string;
+  user__last_name: string;
+  group__name: string;
+}
+
+export interface DashboardRecentTransaction {
+  id: number;
+  transaction_date: string;
+  amount: string;
+  description: string;
+  transaction_type: TransactionType;
+  status: TransactionStatus;
+  created_by__first_name: string;
+  created_by__last_name: string;
+  group__name: string;
+}
+
+export interface DashboardRecentLeaveRequest {
+  id: number;
+  start_date: string;
+  end_date: string;
+  status: LeaveRequestStatus;
+  user__first_name: string;
+  user__last_name: string;
+  leave_type__name: string;
 }

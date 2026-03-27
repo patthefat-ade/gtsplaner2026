@@ -15,9 +15,13 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from django.contrib.auth import get_user_model
+
 from core.middleware import ensure_tenant_context
 from core.models import Location, Organization
 from core.permissions import GROUP_SUPER_ADMIN, GROUP_ADMIN, GROUP_LOCATION_MANAGER, get_user_group_name
+
+User = get_user_model()
 from finance.models import Transaction, TransactionCategory
 from groups.models import Group, Student
 from timetracking.models import TimeEntry, LeaveRequest
@@ -49,7 +53,9 @@ class DashboardStatsView(APIView):
             time_entries_qs = TimeEntry.objects.all()
             leave_requests_qs = LeaveRequest.objects.all()
             weeklyplans_qs = WeeklyPlan.objects.all()
-            educators_count = Location.objects.values("educators").distinct().count()
+            educators_count = User.objects.filter(
+                role=User.Role.EDUCATOR, is_active=True
+            ).count()
         elif group_name == GROUP_ADMIN:
             # Admin: own org + sub-orgs
             tenant_ids = request.tenant_ids
@@ -60,7 +66,11 @@ class DashboardStatsView(APIView):
             time_entries_qs = TimeEntry.objects.filter(organization_id__in=tenant_ids)
             leave_requests_qs = LeaveRequest.objects.filter(organization_id__in=tenant_ids)
             weeklyplans_qs = WeeklyPlan.objects.filter(organization_id__in=tenant_ids)
-            educators_count = 0  # Will be calculated below
+            educators_count = User.objects.filter(
+                role=User.Role.EDUCATOR,
+                is_active=True,
+                location__organization_id__in=tenant_ids,
+            ).count()
         elif group_name == GROUP_LOCATION_MANAGER:
             # LocationManager: own location(s)
             user_location = getattr(user, "location", None)
@@ -109,6 +119,7 @@ class DashboardStatsView(APIView):
             "transactions_count": transactions_qs.count(),
             "time_entries_count": time_entries_qs.count(),
             "weeklyplans_count": weeklyplans_qs.count(),
+            "educators_count": educators_count,
             "pending_leave_requests": leave_requests_qs.filter(
                 status="pending"
             ).count(),

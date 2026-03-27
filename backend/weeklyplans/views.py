@@ -71,7 +71,7 @@ class WeeklyPlanViewSet(TenantViewSetMixin, viewsets.ModelViewSet):
     - Admin/SuperAdmin: full access within tenant
     """
 
-    queryset = WeeklyPlan.objects.all()
+    queryset = WeeklyPlan.objects.filter(is_deleted=False)
     filterset_class = WeeklyPlanFilter
     search_fields = ["title", "template_name", "group__name"]
     ordering_fields = ["week_start_date", "created_at", "title"]
@@ -106,6 +106,11 @@ class WeeklyPlanViewSet(TenantViewSetMixin, viewsets.ModelViewSet):
         if self.action in ["list", "retrieve", "templates", "pdf"]:
             return [permissions.IsAuthenticated(), IsEducator()]
         return [permissions.IsAuthenticated(), IsEducator()]
+
+    def perform_destroy(self, instance):
+        """Soft-delete: mark as deleted instead of removing from DB."""
+        instance.is_deleted = True
+        instance.save(update_fields=["is_deleted", "updated_at"])
 
     # ----- Custom Actions -----
 

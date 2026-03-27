@@ -263,6 +263,11 @@ class WorkingHoursLimit(TenantModel):
         verbose_name="Pausenbestaetigung erforderlich",
     )
     is_active = models.BooleanField(default=True, verbose_name="Aktiv")
+    is_deleted = models.BooleanField(
+        default=False,
+        verbose_name="Gelöscht",
+        help_text="Soft-Delete: Markiert den Eintrag als gelöscht.",
+    )
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Erstellt am")
     updated_at = models.DateTimeField(auto_now=True, verbose_name="Aktualisiert am")
 

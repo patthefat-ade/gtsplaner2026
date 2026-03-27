@@ -76,8 +76,9 @@ def ensure_tenant_context(request):
         request.tenant_ids = organization.get_all_organization_ids(
             include_self=True
         )
-        # If the organization is a main tenant, it's cross-tenant
-        request.is_cross_tenant = organization.is_main_tenant
+        # Admin is NEVER cross-tenant – they always filter by tenant_ids.
+        # Only SuperAdmin has unrestricted cross-tenant access.
+        request.is_cross_tenant = False
 
     elif organization:
         # Educator / LocationManager: only own organization

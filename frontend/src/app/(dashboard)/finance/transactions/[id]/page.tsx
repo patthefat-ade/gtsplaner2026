@@ -356,7 +356,7 @@ export default function TransactionDetailPage() {
                   </div>
                   <Button variant="ghost" size="icon" asChild>
                     <a
-                      href={receipt.file}
+                      href={receipt.file_url}
                       target="_blank"
                       rel="noopener noreferrer"
                     >

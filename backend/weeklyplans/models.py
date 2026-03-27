@@ -72,6 +72,11 @@ class WeeklyPlan(TenantModel):
         related_name="created_weekly_plans",
         verbose_name="Erstellt von",
     )
+    is_deleted = models.BooleanField(
+        default=False,
+        verbose_name="Gelöscht",
+        help_text="Soft-Delete: Markiert den Plan als gelöscht, ohne ihn aus der DB zu entfernen.",
+    )
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Erstellt am")
     updated_at = models.DateTimeField(auto_now=True, verbose_name="Aktualisiert am")
 

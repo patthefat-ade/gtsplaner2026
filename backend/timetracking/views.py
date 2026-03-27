@@ -314,7 +314,7 @@ class WorkingHoursLimitViewSet(TenantViewSetMixin, viewsets.ModelViewSet):
     - LocationManager+: full CRUD
     """
 
-    queryset = WorkingHoursLimit.objects.all()
+    queryset = WorkingHoursLimit.objects.filter(is_deleted=False)
     serializer_class = WorkingHoursLimitSerializer
     ordering = ["location__name"]
 
@@ -331,3 +331,9 @@ class WorkingHoursLimitViewSet(TenantViewSetMixin, viewsets.ModelViewSet):
             permissions.IsAuthenticated(),
             require_permission("manage_settings")(),
         ]
+
+    def perform_destroy(self, instance):
+        """Soft-delete: mark as deleted instead of removing from DB."""
+        instance.is_deleted = True
+        instance.is_active = False
+        instance.save(update_fields=["is_deleted", "is_active", "updated_at"])
