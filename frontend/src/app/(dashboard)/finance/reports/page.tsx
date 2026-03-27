@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { PageHeader } from "@/components/common/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
@@ -11,6 +12,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useTransactions } from "@/hooks/use-finance";
+import { usePermissions } from "@/hooks/use-permissions";
+import { api } from "@/lib/api";
 import { formatCurrency } from "@/lib/format";
 import { TRANSACTION_TYPE_LABELS } from "@/lib/constants";
 import {
@@ -36,6 +39,7 @@ import {
   ArrowDownRight,
   Wallet,
   Loader2,
+  Download,
 } from "lucide-react";
 
 /** Chart color palette (dark-mode friendly) */
@@ -96,6 +100,31 @@ function CustomTooltip({
 export default function FinanceReportsPage() {
   const currentYear = new Date().getFullYear();
   const [year, setYear] = useState(currentYear);
+  const [exporting, setExporting] = useState(false);
+  const { hasPermission } = usePermissions();
+  const canExport = hasPermission("manage_transactions");
+
+  const handleExportCSV = async () => {
+    setExporting(true);
+    try {
+      const response = await api.get("/finance/transactions/export-csv/", {
+        responseType: "blob",
+      });
+      const blob = new Blob([response.data], { type: "text/csv;charset=utf-8;" });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `transaktionen_${year}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("CSV-Export fehlgeschlagen:", error);
+    } finally {
+      setExporting(false);
+    }
+  };
 
   // Fetch all transactions (paginated, up to 1000)
   const { data, isLoading } = useTransactions({
@@ -177,21 +206,37 @@ export default function FinanceReportsPage() {
           title="Finanzberichte"
           description="Übersicht über Einnahmen, Ausgaben und Kontostände."
         />
-        <Select
-          value={String(year)}
-          onValueChange={(v) => setYear(Number(v))}
-        >
-          <SelectTrigger className="w-[120px]">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {yearOptions.map((y) => (
-              <SelectItem key={y} value={String(y)}>
-                {y}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <div className="flex items-center gap-3">
+          {canExport && (
+            <Button
+              variant="outline"
+              onClick={handleExportCSV}
+              disabled={exporting}
+            >
+              {exporting ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Download className="mr-2 h-4 w-4" />
+              )}
+              CSV-Export
+            </Button>
+          )}
+          <Select
+            value={String(year)}
+            onValueChange={(v) => setYear(Number(v))}
+          >
+            <SelectTrigger className="w-[120px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {yearOptions.map((y) => (
+                <SelectItem key={y} value={String(y)}>
+                  {y}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       {/* KPI Cards */}

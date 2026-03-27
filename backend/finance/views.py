@@ -8,9 +8,12 @@ All ViewSets use TenantViewSetMixin for automatic organization-based
 data isolation and permission-based access control.
 """
 
+import csv
+import io
 from decimal import Decimal
 
 from django.db.models import Q, Sum
+from django.http import HttpResponse
 from django.utils import timezone
 from django_filters import rest_framework as django_filters
 from rest_framework import permissions, status, viewsets
@@ -370,6 +373,71 @@ class TransactionViewSet(TenantViewSetMixin, viewsets.ModelViewSet):
         }
         serializer = GroupBalanceSerializer(data)
         return Response(serializer.data)
+
+    @action(
+        detail=False,
+        methods=["get"],
+        url_path="export-csv",
+        permission_classes=[permissions.IsAuthenticated, IsLocationManagerOrAbove],
+    )
+    def export_csv(self, request):
+        """Export transactions as CSV file with tenant-filtered data."""
+        ensure_tenant_context(request)
+        qs = self.get_queryset().select_related(
+            "group", "group__location", "category", "created_by"
+        ).order_by("-transaction_date")
+
+        # Apply same filters as list
+        filterset = TransactionFilter(request.query_params, queryset=qs)
+        if filterset.is_valid():
+            qs = filterset.qs
+
+        response = HttpResponse(content_type="text/csv; charset=utf-8")
+        response["Content-Disposition"] = 'attachment; filename="transaktionen.csv"'
+        # BOM for Excel UTF-8 compatibility
+        response.write("\ufeff")
+
+        writer = csv.writer(response, delimiter=";")
+        writer.writerow([
+            "ID",
+            "Datum",
+            "Beschreibung",
+            "Typ",
+            "Betrag",
+            "Kategorie",
+            "Gruppe",
+            "Standort",
+            "Status",
+            "Erstellt von",
+            "Erstellt am",
+        ])
+
+        type_labels = {
+            "income": "Einnahme",
+            "expense": "Ausgabe",
+        }
+        status_labels = {
+            "pending": "Ausstehend",
+            "approved": "Genehmigt",
+            "rejected": "Abgelehnt",
+        }
+
+        for tx in qs:
+            writer.writerow([
+                tx.id,
+                tx.transaction_date.strftime("%d.%m.%Y") if tx.transaction_date else "",
+                tx.description or "",
+                type_labels.get(tx.transaction_type, tx.transaction_type),
+                str(tx.amount).replace(".", ","),
+                tx.category.name if tx.category else "",
+                tx.group.name if tx.group else "",
+                tx.group.location.name if tx.group and tx.group.location else "",
+                status_labels.get(tx.status, tx.status),
+                f"{tx.created_by.first_name} {tx.created_by.last_name}" if tx.created_by else "",
+                tx.created_at.strftime("%d.%m.%Y %H:%M") if tx.created_at else "",
+            ])
+
+        return response
 
 
 # ---------------------------------------------------------------------------

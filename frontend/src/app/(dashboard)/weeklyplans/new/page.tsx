@@ -4,12 +4,21 @@ import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useCreateWeeklyPlan } from "@/hooks/use-weeklyplans";
+import { useGroups } from "@/hooks/use-groups";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowLeft, Save } from "lucide-react";
 
 export default function NewWeeklyPlanPage() {
@@ -18,6 +27,9 @@ export default function NewWeeklyPlanPage() {
   const isTemplate = searchParams.get("template") === "true";
 
   const createMutation = useCreateWeeklyPlan();
+  const { data: groupsData, isLoading: loadingGroups } = useGroups({
+    page_size: 200,
+  });
 
   // Form state
   const [title, setTitle] = useState("");
@@ -90,17 +102,37 @@ export default function NewWeeklyPlanPage() {
             </div>
 
             <div>
-              <Label htmlFor="group">Gruppen-ID *</Label>
-              <Input
-                id="group"
-                type="number"
-                value={groupId}
-                onChange={(e) => setGroupId(e.target.value)}
-                placeholder="Gruppen-ID eingeben"
-                required
-              />
+              <Label htmlFor="group">Gruppe *</Label>
+              {loadingGroups ? (
+                <Skeleton className="h-10 w-full" />
+              ) : (
+                <Select value={groupId} onValueChange={setGroupId}>
+                  <SelectTrigger id="group">
+                    <SelectValue placeholder="Gruppe auswählen..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {groupsData?.results && groupsData.results.length > 0 ? (
+                      groupsData.results.map((group) => (
+                        <SelectItem key={group.id} value={String(group.id)}>
+                          {group.name}
+                          {group.location_name && (
+                            <span className="ml-2 text-muted-foreground">
+                              ({group.location_name})
+                            </span>
+                          )}
+                        </SelectItem>
+                      ))
+                    ) : (
+                      <SelectItem value="none" disabled>
+                        Keine Gruppen verfügbar
+                      </SelectItem>
+                    )}
+                  </SelectContent>
+                </Select>
+              )}
               <p className="mt-1 text-xs text-muted-foreground">
-                Die Gruppen-ID finden Sie in der Gruppenübersicht
+                Wählen Sie die Gruppe, für die der Wochenplan erstellt werden
+                soll
               </p>
             </div>
 
@@ -155,7 +187,10 @@ export default function NewWeeklyPlanPage() {
           <Button variant="outline" asChild>
             <Link href="/weeklyplans">Abbrechen</Link>
           </Button>
-          <Button type="submit" disabled={createMutation.isPending || !title || !groupId}>
+          <Button
+            type="submit"
+            disabled={createMutation.isPending || !title || !groupId}
+          >
             <Save className="mr-2 h-4 w-4" />
             {createMutation.isPending
               ? "Erstellen..."

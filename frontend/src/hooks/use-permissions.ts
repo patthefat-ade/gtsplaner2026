@@ -74,7 +74,7 @@ const routePermissions: { path: string; permission: PermissionCodename }[] = [
   { path: "/weeklyplans", permission: "view_weeklyplans" },
   // Location routes
   { path: "/admin/locations", permission: "view_locations" },
-  // Admin routes
+  // Admin routes (Admin+ only)
   { path: "/admin/organizations", permission: "manage_organizations" },
   { path: "/admin/users", permission: "manage_users" },
   { path: "/admin/audit-log", permission: "view_audit_log" },
@@ -88,9 +88,12 @@ const routePermissions: { path: string; permission: PermissionCodename }[] = [
   // Group management routes
   { path: "/groups/students", permission: "view_students" },
   { path: "/groups/new", permission: "manage_groups" },
+  { path: "/groups/list", permission: "view_own_groups" },
+  { path: "/groups", permission: "view_own_groups" },
 
   // Timetracking routes
   { path: "/timetracking/entries", permission: "view_own_timeentries" },
+  { path: "/timetracking/leave-requests", permission: "view_own_timeentries" },
   { path: "/timetracking/approval", permission: "approve_leave" },
 ];
 

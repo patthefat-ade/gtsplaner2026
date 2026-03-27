@@ -18,6 +18,8 @@ from drf_spectacular.views import (
 )
 from rest_framework.permissions import IsAdminUser
 
+from core.views_dashboard import DashboardStatsView
+
 
 def health_check(request):
     """Simple health check endpoint for DigitalOcean App Platform."""
@@ -94,6 +96,7 @@ urlpatterns = [
     path("api/v1/groups/", include("groups.urls")),
     path("api/v1/weeklyplans/", include("weeklyplans.urls")),
     path("api/v1/locations/", include("core.urls.location_urls")),
+    path("api/v1/dashboard/stats/", DashboardStatsView.as_view(), name="dashboard-stats"),
     path("api/v1/admin/", include("admin_panel.urls")),
     path("api/v1/system/", include("system.urls")),
     path("api/v1/export/", include("system.urls_export")),
