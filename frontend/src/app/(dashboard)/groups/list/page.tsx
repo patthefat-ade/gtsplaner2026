@@ -201,7 +201,9 @@ export default function GroupsListPage() {
                       </Link>
                     </TableCell>
                     <TableCell>
-                      {group.group_leader_name || "Nicht zugewiesen"}
+                      {group.leader
+                        ? `${group.leader.first_name} ${group.leader.last_name}`
+                        : "Nicht zugewiesen"}
                     </TableCell>
                     <TableCell className="text-right font-semibold">
                       <span

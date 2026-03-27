@@ -2,6 +2,8 @@
 User management API views (admin only).
 
 Provides CRUD operations for managing users within the organization.
+Uses request.tenant_ids from TenantMiddleware for proper multi-tenant
+data isolation.
 """
 
 from django_filters import rest_framework as django_filters
@@ -50,10 +52,11 @@ class UserViewSet(viewsets.ModelViewSet):
     """
     CRUD for user management (Admin/SuperAdmin only).
 
-    - List all users with filtering by role, location, active status
-    - Create new users with password
-    - Update user details
-    - Soft-delete (deactivate) users
+    Uses request.tenant_ids from TenantMiddleware for proper multi-tenant
+    data isolation:
+    - SuperAdmin: sees all users (is_cross_tenant=True)
+    - Admin: sees users in own organization + all sub-organizations
+    - Other roles: no access (empty queryset)
     """
 
     filterset_class = UserFilter
@@ -65,13 +68,18 @@ class UserViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         user = self.request.user
         qs = User.objects.select_related("location").filter(is_active=True)
-        if user.role == "super_admin":
+
+        # SuperAdmin: cross-tenant access, sees all users
+        if getattr(self.request, "is_cross_tenant", False):
             return qs
-        if user.role == "admin":
-            # Admins can see users in their organization
-            if user.location and user.location.organization:
-                return qs.filter(location__organization=user.location.organization)
-            return qs
+
+        # Admin: use tenant_ids from TenantMiddleware
+        # This includes the admin's own organization + all sub-organizations
+        tenant_ids = getattr(self.request, "tenant_ids", [])
+        if user.role == "admin" and tenant_ids:
+            return qs.filter(location__organization_id__in=tenant_ids)
+
+        # Fallback: no access
         return qs.none()
 
     def get_serializer_class(self):

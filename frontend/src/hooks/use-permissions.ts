@@ -6,23 +6,38 @@ import type { UserRole } from "@/types/models";
 /**
  * Permission codenames as returned by the backend API.
  *
- * These correspond to the Django permissions defined in
- * core.management.commands.setup_permissions.
+ * These correspond exactly to the Django permissions defined in
+ * core.management.commands.setup_permissions.CUSTOM_PERMISSIONS.
+ *
+ * IMPORTANT: When adding new permissions, also update setup_permissions.py
+ * and the GROUP_PERMISSIONS mapping there.
  */
 export type PermissionCodename =
+  // Dashboard
   | "view_dashboard"
+  // Groups
+  | "view_own_groups"
   | "manage_groups"
+  // Students
+  | "view_students"
   | "manage_students"
-  | "manage_categories"
+  // Finance
+  | "view_own_transactions"
   | "create_transactions"
+  | "manage_transactions"
   | "approve_transactions"
+  | "manage_categories"
   | "view_reports"
+  // Timetracking
+  | "view_own_timeentries"
   | "manage_timeentries"
   | "approve_leave"
+  // Admin
   | "manage_users"
   | "manage_settings"
   | "view_audit_log"
   | "manage_organizations"
+  // Multi-Tenant
   | "cross_tenant_access";
 
 /**
@@ -44,6 +59,9 @@ const roleHierarchy: Record<UserRole, number> = {
  * instant client-side route guarding (no API round-trip).
  *
  * Order matters: more specific paths should come first.
+ *
+ * NOTE: Paths without a permission entry are accessible to all
+ * authenticated users (e.g., /groups/list, /timetracking/leave-requests).
  */
 const routePermissions: { path: string; permission: PermissionCodename }[] = [
   // Admin routes
@@ -55,12 +73,14 @@ const routePermissions: { path: string; permission: PermissionCodename }[] = [
   // Finance routes
   { path: "/finance/reports", permission: "view_reports" },
   { path: "/finance/categories", permission: "manage_categories" },
+  { path: "/finance/transactions", permission: "view_own_transactions" },
 
   // Group management routes
-  { path: "/groups/students", permission: "manage_students" },
+  { path: "/groups/students", permission: "view_students" },
   { path: "/groups/new", permission: "manage_groups" },
 
-  // Timetracking approval
+  // Timetracking routes
+  { path: "/timetracking/entries", permission: "view_own_timeentries" },
   { path: "/timetracking/approval", permission: "approve_leave" },
 ];
 
@@ -104,20 +124,29 @@ export function getRequiredRoleForPath(pathname: string): UserRole | null {
 
   // Map permission to minimum role (fallback for when permissions aren't loaded yet)
   const permToMinRole: Partial<Record<PermissionCodename, UserRole>> = {
-    manage_organizations: "super_admin",
+    // SuperAdmin only
     cross_tenant_access: "super_admin",
+    // Admin+
+    manage_organizations: "admin",
     manage_users: "admin",
     manage_settings: "admin",
     view_audit_log: "admin",
+    // LocationManager+
     manage_groups: "location_manager",
     manage_students: "location_manager",
     manage_categories: "location_manager",
+    manage_transactions: "location_manager",
     approve_transactions: "location_manager",
     view_reports: "location_manager",
     approve_leave: "location_manager",
-    manage_timeentries: "educator",
-    create_transactions: "educator",
+    // Educator+
     view_dashboard: "educator",
+    view_own_groups: "educator",
+    view_students: "educator",
+    view_own_transactions: "educator",
+    create_transactions: "educator",
+    view_own_timeentries: "educator",
+    manage_timeentries: "educator",
   };
 
   return permToMinRole[perm] ?? null;

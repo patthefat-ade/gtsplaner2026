@@ -283,7 +283,9 @@ export default function GroupDetailPage({
                     {members.map((m) => (
                       <TableRow key={m.id}>
                         <TableCell className="font-medium">
-                          {m.user_name || `Benutzer #${m.user}`}
+                          {m.first_name && m.last_name
+                            ? `${m.first_name} ${m.last_name}`
+                            : m.user_name || `Benutzer #${m.user_id}`}
                         </TableCell>
                         <TableCell>
                           <StatusBadge status={m.role} />
@@ -406,7 +408,9 @@ export default function GroupDetailPage({
                     Gruppenleitung
                   </p>
                   <p className="mt-1 text-sm">
-                    {group.group_leader_name || "Nicht zugewiesen"}
+                    {group.leader
+                      ? `${group.leader.first_name} ${group.leader.last_name}`
+                      : "Nicht zugewiesen"}
                   </p>
                 </div>
                 <div>

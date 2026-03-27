@@ -42,6 +42,15 @@ interface NavSection {
   items: NavItem[];
 }
 
+/**
+ * Navigation configuration.
+ *
+ * Permission codenames MUST match the Django backend permissions defined in
+ * core.management.commands.setup_permissions.CUSTOM_PERMISSIONS.
+ *
+ * Items without a `permission` field are visible to all authenticated users.
+ * Items with a `permission` field are only visible if the user has that permission.
+ */
 const navigation: NavSection[] = [
   {
     title: "Allgemein",
@@ -50,6 +59,7 @@ const navigation: NavSection[] = [
         title: "Dashboard",
         href: "/",
         icon: LayoutDashboard,
+        // Dashboard is visible to all authenticated users (view_dashboard)
         permission: "view_dashboard",
       },
     ],
@@ -61,7 +71,8 @@ const navigation: NavSection[] = [
         title: "Transaktionen",
         href: "/finance/transactions",
         icon: Wallet,
-        permission: "create_transactions",
+        // All roles can see transactions (view_own_transactions)
+        permission: "view_own_transactions",
       },
       {
         title: "Kategorien",
@@ -84,12 +95,15 @@ const navigation: NavSection[] = [
         title: "Gruppen",
         href: "/groups/list",
         icon: Users,
+        // Visible to all authenticated users (view_own_groups)
+        permission: "view_own_groups",
       },
       {
         title: "Schüler:innen",
         href: "/groups/students",
         icon: GraduationCap,
-        permission: "manage_students",
+        // Educators can view, LocationManager+ can manage
+        permission: "view_students",
       },
     ],
   },
@@ -100,12 +114,14 @@ const navigation: NavSection[] = [
         title: "Zeiteinträge",
         href: "/timetracking/entries",
         icon: Clock,
-        permission: "manage_timeentries",
+        // All roles can see their own time entries
+        permission: "view_own_timeentries",
       },
       {
         title: "Abwesenheiten",
         href: "/timetracking/leave-requests",
         icon: CalendarOff,
+        // Visible to all authenticated users
       },
       {
         title: "Genehmigungen",

@@ -231,13 +231,22 @@ export interface Group {
   location_name?: string;
   school_year: number;
   school_year_name?: string;
-  group_leader: number | null;
+  /** Leader as nested object from GroupListSerializer / GroupDetailSerializer */
+  leader?: UserCompact | null;
+  /** @deprecated Use leader.id instead */
+  group_leader?: number | null;
+  /** @deprecated Use leader.first_name + leader.last_name instead */
   group_leader_name?: string;
   balance: string;
-  max_children: number | null;
+  currency?: string;
+  max_children?: number | null;
   is_active: boolean;
   member_count?: number;
   student_count?: number;
+  /** Members array (only in detail view) */
+  members?: GroupMember[];
+  /** Students array (only in detail view) */
+  students?: Student[];
   created_at: string;
   updated_at: string;
 }
@@ -252,11 +261,24 @@ export interface GroupCreate {
 
 export interface GroupMember {
   id: number;
-  user: number | UserCompact;
+  /** User ID from the backend GroupMemberSerializer */
+  user_id: number;
+  /** User's first name */
+  first_name: string;
+  /** User's last name */
+  last_name: string;
+  /** User's system role */
+  user_role?: UserRole;
+  /** @deprecated Use user_id instead */
+  user?: number | UserCompact;
+  /** @deprecated Use first_name + last_name instead */
   user_name?: string;
-  group: number;
+  group?: number;
+  /** Role within the group (educator, assistant, substitute) */
   role: GroupMemberRole;
+  is_active?: boolean;
   joined_at: string;
+  left_at?: string | null;
 }
 
 export interface Student {

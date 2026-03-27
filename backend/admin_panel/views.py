@@ -182,19 +182,32 @@ class OrganizationSerializer(serializers.ModelSerializer):
 )
 class OrganizationViewSet(viewsets.ModelViewSet):
     """
-    CRUD for organizations (SuperAdmin only).
+    CRUD for organizations.
+
+    - Admin: read-only access (list, retrieve) filtered by tenant
+    - SuperAdmin: full CRUD access across all organizations
     """
 
     serializer_class = OrganizationSerializer
-    permission_classes = [permissions.IsAuthenticated, IsSuperAdmin]
     search_fields = ["name", "city", "country"]
     ordering_fields = ["name", "created_at"]
     ordering = ["name"]
 
+    def get_permissions(self):
+        if self.action in ["list", "retrieve"]:
+            return [permissions.IsAuthenticated(), IsAdminOrAbove()]
+        return [permissions.IsAuthenticated(), IsSuperAdmin()]
+
     def get_queryset(self):
-        return Organization.objects.prefetch_related("locations").filter(
+        qs = Organization.objects.prefetch_related("locations").filter(
             is_deleted=False
         )
+        # Admin: filter by tenant_ids (own org + sub-orgs)
+        if not getattr(self.request, "is_cross_tenant", False):
+            tenant_ids = getattr(self.request, "tenant_ids", [])
+            if tenant_ids:
+                qs = qs.filter(id__in=tenant_ids)
+        return qs
 
     def perform_destroy(self, instance: Organization) -> None:
         """Soft-delete: mark as deleted instead of removing from DB."""

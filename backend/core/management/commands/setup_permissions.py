@@ -16,18 +16,24 @@ from django.core.management.base import BaseCommand
 from core.models import User
 
 
-# Permission definitions: (codename, name, description)
+# Permission definitions: (codename, name)
+# These codenames are referenced by both the backend (views) and frontend
+# (use-permissions.ts, sidebar.tsx, route-guard.tsx).
 CUSTOM_PERMISSIONS = [
+    # Dashboard
+    ("view_dashboard", "Dashboard anzeigen"),
     # Groups
     ("view_own_groups", "Eigene Gruppen anzeigen"),
     ("manage_groups", "Gruppen erstellen und bearbeiten"),
     # Finance
     ("view_own_transactions", "Eigene Transaktionen anzeigen"),
+    ("create_transactions", "Transaktionen erstellen"),
     ("manage_transactions", "Alle Transaktionen verwalten"),
     ("approve_transactions", "Transaktionen genehmigen"),
     ("manage_categories", "Kategorien verwalten"),
     ("view_reports", "Berichte einsehen"),
     # Students
+    ("view_students", "Schueler anzeigen"),
     ("manage_students", "Schueler verwalten"),
     # Timetracking
     ("view_own_timeentries", "Eigene Zeiteintraege anzeigen"),
@@ -37,61 +43,98 @@ CUSTOM_PERMISSIONS = [
     ("manage_users", "Benutzer verwalten"),
     ("view_audit_log", "Audit-Log einsehen"),
     ("manage_settings", "Systemeinstellungen verwalten"),
+    ("manage_organizations", "Organisationen verwalten"),
     # Multi-Tenant
     ("cross_tenant_access", "Mandantenuebergreifender Zugriff"),
 ]
 
 # Group -> Permission mapping
+# Each role inherits all permissions of the roles below it, plus its own.
 GROUP_PERMISSIONS = {
     "Educator": [
+        # Dashboard
+        "view_dashboard",
+        # Groups: can view own groups and students (read-only)
         "view_own_groups",
+        "view_students",
+        # Finance: can view and create own transactions
         "view_own_transactions",
+        "create_transactions",
+        # Timetracking: can view and create own time entries
         "view_own_timeentries",
+        "manage_timeentries",
     ],
     "LocationManager": [
+        # Dashboard
+        "view_dashboard",
+        # Groups: full management
         "view_own_groups",
         "manage_groups",
+        "view_students",
+        "manage_students",
+        # Finance: full management
         "view_own_transactions",
+        "create_transactions",
         "manage_transactions",
         "approve_transactions",
         "manage_categories",
         "view_reports",
-        "manage_students",
+        # Timetracking: full management
         "view_own_timeentries",
         "manage_timeentries",
         "approve_leave",
     ],
     "Admin": [
+        # Dashboard
+        "view_dashboard",
+        # Groups: full management
         "view_own_groups",
         "manage_groups",
+        "view_students",
+        "manage_students",
+        # Finance: full management
         "view_own_transactions",
+        "create_transactions",
         "manage_transactions",
         "approve_transactions",
         "manage_categories",
         "view_reports",
-        "manage_students",
+        # Timetracking: full management
         "view_own_timeentries",
         "manage_timeentries",
         "approve_leave",
+        # Admin: user and settings management
         "manage_users",
         "view_audit_log",
         "manage_settings",
+        # Organizations: read access (write is SuperAdmin only)
+        "manage_organizations",
     ],
     "SuperAdmin": [
+        # Dashboard
+        "view_dashboard",
+        # Groups: full management
         "view_own_groups",
         "manage_groups",
+        "view_students",
+        "manage_students",
+        # Finance: full management
         "view_own_transactions",
+        "create_transactions",
         "manage_transactions",
         "approve_transactions",
         "manage_categories",
         "view_reports",
-        "manage_students",
+        # Timetracking: full management
         "view_own_timeentries",
         "manage_timeentries",
         "approve_leave",
+        # Admin: full management
         "manage_users",
         "view_audit_log",
         "manage_settings",
+        "manage_organizations",
+        # Multi-Tenant: cross-tenant access
         "cross_tenant_access",
     ],
 }

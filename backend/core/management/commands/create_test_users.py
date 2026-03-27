@@ -9,6 +9,9 @@ Creates the Hilfswerk Oesterreich hierarchy:
   - Gruene Gruppe with 26 Schueler:innen from various classes
   - Django Permission Groups assigned to all users
 
+Designed to be fully idempotent – safe to run multiple times without
+creating duplicates or leaving stale data.
+
 Usage:
     python manage.py create_test_users
 """
@@ -50,13 +53,13 @@ class Command(BaseCommand):
             },
             "manager": {
                 "username": "anita.anic",
-                "email": "anita.anic@gtsplaner.app",
+                "email": "anita.anic@hilfswerk.at",
                 "first_name": "Anita",
                 "last_name": "Anic",
             },
             "educator": {
                 "username": "amalia.bogdan",
-                "email": "amalia.bogdan@gtsplaner.app",
+                "email": "amalia.bogdan@hilfswerk.at",
                 "first_name": "Amalia",
                 "last_name": "Bogdan",
             },
@@ -78,13 +81,13 @@ class Command(BaseCommand):
             },
             "manager": {
                 "username": "brigitte.berger",
-                "email": "brigitte.berger@gtsplaner.app",
+                "email": "brigitte.berger@hilfswerk.at",
                 "first_name": "Brigitte",
                 "last_name": "Berger",
             },
             "educator": {
                 "username": "clara.czermak",
-                "email": "clara.czermak@gtsplaner.app",
+                "email": "clara.czermak@hilfswerk.at",
                 "first_name": "Clara",
                 "last_name": "Czermak",
             },
@@ -106,13 +109,13 @@ class Command(BaseCommand):
             },
             "manager": {
                 "username": "doris.decker",
-                "email": "doris.decker@gtsplaner.app",
+                "email": "doris.decker@hilfswerk.at",
                 "first_name": "Doris",
                 "last_name": "Decker",
             },
             "educator": {
                 "username": "elena.ernst",
-                "email": "elena.ernst@gtsplaner.app",
+                "email": "elena.ernst@hilfswerk.at",
                 "first_name": "Elena",
                 "last_name": "Ernst",
             },
@@ -134,13 +137,13 @@ class Command(BaseCommand):
             },
             "manager": {
                 "username": "franziska.fink",
-                "email": "franziska.fink@gtsplaner.app",
+                "email": "franziska.fink@hilfswerk.at",
                 "first_name": "Franziska",
                 "last_name": "Fink",
             },
             "educator": {
                 "username": "greta.gruber",
-                "email": "greta.gruber@gtsplaner.app",
+                "email": "greta.gruber@hilfswerk.at",
                 "first_name": "Greta",
                 "last_name": "Gruber",
             },
@@ -162,13 +165,13 @@ class Command(BaseCommand):
             },
             "manager": {
                 "username": "hanna.hofer",
-                "email": "hanna.hofer@gtsplaner.app",
+                "email": "hanna.hofer@hilfswerk.at",
                 "first_name": "Hanna",
                 "last_name": "Hofer",
             },
             "educator": {
                 "username": "irene.illing",
-                "email": "irene.illing@gtsplaner.app",
+                "email": "irene.illing@hilfswerk.at",
                 "first_name": "Irene",
                 "last_name": "Illing",
             },
@@ -190,13 +193,13 @@ class Command(BaseCommand):
             },
             "manager": {
                 "username": "julia.jandl",
-                "email": "julia.jandl@gtsplaner.app",
+                "email": "julia.jandl@hilfswerk.at",
                 "first_name": "Julia",
                 "last_name": "Jandl",
             },
             "educator": {
                 "username": "katharina.kern",
-                "email": "katharina.kern@gtsplaner.app",
+                "email": "katharina.kern@hilfswerk.at",
                 "first_name": "Katharina",
                 "last_name": "Kern",
             },
@@ -218,13 +221,13 @@ class Command(BaseCommand):
             },
             "manager": {
                 "username": "laura.lang",
-                "email": "laura.lang@gtsplaner.app",
+                "email": "laura.lang@hilfswerk.at",
                 "first_name": "Laura",
                 "last_name": "Lang",
             },
             "educator": {
                 "username": "maria.maier",
-                "email": "maria.maier@gtsplaner.app",
+                "email": "maria.maier@hilfswerk.at",
                 "first_name": "Maria",
                 "last_name": "Maier",
             },
@@ -246,13 +249,13 @@ class Command(BaseCommand):
             },
             "manager": {
                 "username": "nina.neuner",
-                "email": "nina.neuner@gtsplaner.app",
+                "email": "nina.neuner@hilfswerk.at",
                 "first_name": "Nina",
                 "last_name": "Neuner",
             },
             "educator": {
                 "username": "olivia.ortner",
-                "email": "olivia.ortner@gtsplaner.app",
+                "email": "olivia.ortner@hilfswerk.at",
                 "first_name": "Olivia",
                 "last_name": "Ortner",
             },
@@ -274,13 +277,13 @@ class Command(BaseCommand):
             },
             "manager": {
                 "username": "petra.pichler",
-                "email": "petra.pichler@gtsplaner.app",
+                "email": "petra.pichler@hilfswerk.at",
                 "first_name": "Petra",
                 "last_name": "Pichler",
             },
             "educator": {
                 "username": "rosa.riedl",
-                "email": "rosa.riedl@gtsplaner.app",
+                "email": "rosa.riedl@hilfswerk.at",
                 "first_name": "Rosa",
                 "last_name": "Riedl",
             },
@@ -361,6 +364,9 @@ class Command(BaseCommand):
         # 6. Create School Year, Group, and Students for Kaernten
         self._create_kaernten_data(bundesland_data)
 
+        # 7. Update SystemSettings
+        self._update_system_settings()
+
         self.stdout.write("\n" + "=" * 80)
         self.stdout.write(
             self.style.SUCCESS("Testumgebung erfolgreich erstellt/aktualisiert.")
@@ -371,7 +377,7 @@ class Command(BaseCommand):
 
     def _cleanup_old_data(self):
         """Remove old test data to avoid FK constraint violations."""
-        self.stdout.write("\n  [0/6] Alte Testdaten bereinigen...")
+        self.stdout.write("\n  [0/7] Alte Testdaten bereinigen...")
 
         # Remove location FK from old test users to avoid FK violations
         old_users = User.objects.filter(username__in=self.ALL_TEST_USERNAMES)
@@ -408,9 +414,9 @@ class Command(BaseCommand):
         """Ensure Django Permission Groups exist."""
         from django.core.management import call_command
 
-        self.stdout.write("\n  [1/6] Permission Groups einrichten...")
+        self.stdout.write("\n  [1/7] Permission Groups einrichten...")
         try:
-            call_command("setup_permissions", verbosity=0)
+            call_command("setup_permissions", "--reset", "--migrate-users", verbosity=0)
             self.stdout.write("        Erstellt/aktualisiert.")
         except Exception as e:
             self.stdout.write(self.style.WARNING(f"        Uebersprungen: {e}"))
@@ -419,9 +425,9 @@ class Command(BaseCommand):
 
     def _create_main_tenant(self):
         """Create Hilfswerk Oesterreich as main tenant."""
-        self.stdout.write("\n  [2/6] Hauptmandant erstellen...")
+        self.stdout.write("\n  [2/7] Hauptmandant erstellen...")
 
-        main_org, created = Organization.objects.get_or_create(
+        main_org, created = Organization.objects.update_or_create(
             name="Hilfswerk Oesterreich",
             defaults={
                 "description": "Hilfswerk Oesterreich – Dachverband",
@@ -433,14 +439,12 @@ class Command(BaseCommand):
                 "city": "Wien",
                 "postal_code": "1010",
                 "country": "Oesterreich",
+                "is_active": True,
+                "is_deleted": False,
             },
         )
-        if not created:
-            main_org.org_type = Organization.OrgType.MAIN
-            main_org.parent = None
-            main_org.save(update_fields=["org_type", "parent"])
 
-        status = "NEU" if created else "VORHANDEN"
+        status = "NEU" if created else "AKTUALISIERT"
         self.stdout.write(f"        {main_org.name} ({status})")
         return main_org
 
@@ -448,12 +452,12 @@ class Command(BaseCommand):
 
     def _create_bundeslaender(self, main_org):
         """Create 9 Bundesland sub-tenants with locations."""
-        self.stdout.write("\n  [3/6] Bundeslaender und Schulen erstellen...")
+        self.stdout.write("\n  [3/7] Bundeslaender und Schulen erstellen...")
 
         result = {}
         for bl in self.BUNDESLAENDER:
-            # Sub-Tenant (Bundesland)
-            sub_org, created = Organization.objects.get_or_create(
+            # Sub-Tenant (Bundesland) – use update_or_create for idempotency
+            sub_org, created = Organization.objects.update_or_create(
                 name=bl["name"],
                 defaults={
                     "description": f"{bl['name']} – Landesverband",
@@ -465,16 +469,14 @@ class Command(BaseCommand):
                     "city": bl["city"],
                     "postal_code": bl["postal_code"],
                     "country": "Oesterreich",
+                    "is_active": True,
+                    "is_deleted": False,
                 },
             )
-            if not created:
-                sub_org.org_type = Organization.OrgType.SUB
-                sub_org.parent = main_org
-                sub_org.save(update_fields=["org_type", "parent"])
 
-            # Location (Schule)
+            # Location (Schule) – use update_or_create for idempotency
             school = bl["school"]
-            location, loc_created = Location.objects.get_or_create(
+            location, loc_created = Location.objects.update_or_create(
                 name=school["name"],
                 organization=sub_org,
                 defaults={
@@ -484,6 +486,8 @@ class Command(BaseCommand):
                     "street": school["street"],
                     "city": school["city"],
                     "postal_code": school["postal_code"],
+                    "is_active": True,
+                    "is_deleted": False,
                 },
             )
 
@@ -505,32 +509,56 @@ class Command(BaseCommand):
     # ── Step 4: System Users (SuperAdmin, Admin) ──────────────────────────
 
     def _create_system_users(self, main_org, bundesland_data):
-        """Create SuperAdmin and Admin users."""
-        self.stdout.write("\n  [4/6] System-Benutzer erstellen...")
+        """Create SuperAdmin and Admin users.
 
-        kaernten_location = bundesland_data["Hilfswerk Kaernten"]["location"]
+        Both are assigned to a Hauptstandort location under the main
+        tenant (Hilfswerk Oesterreich) so that the TenantMiddleware
+        correctly resolves their organization to the main tenant and
+        grants cross-tenant access (Admin sees all sub-tenants).
+        """
+        self.stdout.write("\n  [4/7] System-Benutzer erstellen...")
+
+        # Create a Hauptstandort location under the main tenant
+        hauptstandort, hs_created = Location.objects.update_or_create(
+            name="Hauptstandort Wien",
+            organization=main_org,
+            defaults={
+                "description": "Zentrale des Hilfswerk Oesterreich",
+                "email": "office@hilfswerk.at",
+                "phone": "+43 1 40 57 500",
+                "street": "Grashofgasse 4",
+                "city": "Wien",
+                "postal_code": "1010",
+                "is_active": True,
+                "is_deleted": False,
+            },
+        )
+        self.stdout.write(
+            f"        Hauptstandort: {hauptstandort.name} "
+            f"({'NEU' if hs_created else 'AKTUALISIERT'})"
+        )
 
         system_users = [
             {
                 "username": "superadmin",
-                "email": "superadmin@gtsplaner.app",
+                "email": "superadmin@hilfswerk.at",
                 "first_name": "Sarah",
                 "last_name": "Superadmin",
                 "role": User.Role.SUPER_ADMIN,
                 "is_staff": True,
                 "is_superuser": True,
-                "location": kaernten_location,
+                "location": hauptstandort,
                 "group_name": "SuperAdmin",
             },
             {
                 "username": "admin",
-                "email": "admin@gtsplaner.app",
+                "email": "admin@hilfswerk.at",
                 "first_name": "Anna",
                 "last_name": "Administratorin",
                 "role": User.Role.ADMIN,
                 "is_staff": True,
                 "is_superuser": False,
-                "location": kaernten_location,
+                "location": hauptstandort,
                 "group_name": "Admin",
             },
         ]
@@ -542,7 +570,7 @@ class Command(BaseCommand):
 
     def _create_bundesland_users(self, bundesland_data):
         """Create LocationManager and Educator for each Bundesland."""
-        self.stdout.write("\n  [5/6] Standortleitungen und Paedagog:innen erstellen...")
+        self.stdout.write("\n  [5/7] Standortleitungen und Paedagog:innen erstellen...")
 
         for bl_name, data in bundesland_data.items():
             config = data["config"]
@@ -559,8 +587,8 @@ class Command(BaseCommand):
             }
             manager_user = self._create_user(mgr_data)
 
-            # Set as location manager
-            if manager_user and not location.manager:
+            # Always set as location manager (idempotent)
+            if manager_user:
                 location.manager = manager_user
                 location.save(update_fields=["manager"])
 
@@ -579,14 +607,14 @@ class Command(BaseCommand):
 
     def _create_kaernten_data(self, bundesland_data):
         """Create SchoolYear, Group, GroupMember, and Students for Kaernten."""
-        self.stdout.write("\n  [6/6] Kaernten: Schuljahr, Gruppe und Schueler:innen...")
+        self.stdout.write("\n  [6/7] Kaernten: Schuljahr, Gruppe und Schueler:innen...")
 
         kaernten = bundesland_data["Hilfswerk Kaernten"]
         location = kaernten["location"]
         org = kaernten["org"]
 
-        # School Year 2025/2026
-        school_year, sy_created = SchoolYear.objects.get_or_create(
+        # School Year 2025/2026 – use update_or_create
+        school_year, sy_created = SchoolYear.objects.update_or_create(
             location=location,
             name="2025/2026",
             defaults={
@@ -598,16 +626,16 @@ class Command(BaseCommand):
         )
         self.stdout.write(
             f"        Schuljahr: {school_year.name} "
-            f"({'NEU' if sy_created else 'VORHANDEN'})"
+            f"({'NEU' if sy_created else 'AKTUALISIERT'})"
         )
 
-        # Gruene Gruppe
+        # Gruene Gruppe – use update_or_create to fix leader and organization
         try:
             educator = User.objects.get(username="amalia.bogdan")
         except User.DoesNotExist:
             educator = None
 
-        group, g_created = Group.objects.get_or_create(
+        group, g_created = Group.objects.update_or_create(
             location=location,
             school_year=school_year,
             name="Gruene Gruppe",
@@ -619,51 +647,74 @@ class Command(BaseCommand):
             },
         )
         self.stdout.write(
-            f"        Gruppe: {group.name} ({'NEU' if g_created else 'VORHANDEN'})"
+            f"        Gruppe: {group.name} ({'NEU' if g_created else 'AKTUALISIERT'})"
         )
 
-        # Assign Amalia Bogdan as GroupMember
+        # Assign Amalia Bogdan as GroupMember – use update_or_create
         if educator:
-            _, gm_created = GroupMember.objects.get_or_create(
+            _, gm_created = GroupMember.objects.update_or_create(
                 group=group,
                 user=educator,
                 defaults={
                     "organization": org,
                     "role": GroupMember.MemberRole.EDUCATOR,
+                    "is_active": True,
                 },
             )
             self.stdout.write(
                 f"        Gruppenmitglied: {educator.get_full_name()} "
-                f"({'NEU' if gm_created else 'VORHANDEN'})"
+                f"({'NEU' if gm_created else 'AKTUALISIERT'})"
             )
 
-        # 26 Students
+        # Students: Delete ALL existing students for this group first,
+        # then recreate exactly 26 to avoid duplicates.
+        existing_count = Student.objects.filter(group=group).count()
+        if existing_count > 0:
+            Student.objects.filter(group=group).delete()
+            self.stdout.write(
+                f"        {existing_count} alte Schueler:innen geloescht (Neuanlage)."
+            )
+
         student_count_new = 0
-        student_count_existing = 0
         for s in self.STUDENTS:
-            _, s_created = Student.objects.get_or_create(
+            Student.objects.create(
                 group=group,
+                organization=org,
                 first_name=s["first_name"],
                 last_name=s["last_name"],
-                defaults={
-                    "organization": org,
-                    "date_of_birth": datetime.date(
-                        2018 if s["class"].startswith("1") else
-                        2017 if s["class"].startswith("2") else
-                        2016 if s["class"].startswith("3") else 2015,
-                        3, 15,
-                    ),
-                },
+                date_of_birth=datetime.date(
+                    2018 if s["class"].startswith("1") else
+                    2017 if s["class"].startswith("2") else
+                    2016 if s["class"].startswith("3") else 2015,
+                    3, 15,
+                ),
             )
-            if s_created:
-                student_count_new += 1
-            else:
-                student_count_existing += 1
+            student_count_new += 1
 
         self.stdout.write(
-            f"        Schueler:innen: {student_count_new} neu, "
-            f"{student_count_existing} vorhanden (Gesamt: {len(self.STUDENTS)})"
+            f"        Schueler:innen: {student_count_new} erstellt (Gesamt: {len(self.STUDENTS)})"
         )
+
+    # ── Step 7: System Settings ───────────────────────────────────────────
+
+    def _update_system_settings(self):
+        """Ensure system settings have correct values."""
+        self.stdout.write("\n  [7/7] Systemeinstellungen aktualisieren...")
+
+        from system.models import SystemSetting
+
+        settings_to_update = {
+            "organization_name": "Hilfswerk Oesterreich",
+            "organization_email": "office@hilfswerk.at",
+        }
+
+        for key, value in settings_to_update.items():
+            setting, created = SystemSetting.objects.update_or_create(
+                key=key,
+                defaults={"value": value},
+            )
+            status = "NEU" if created else "AKTUALISIERT"
+            self.stdout.write(f"        {key} = {value} ({status})")
 
     # ── Helper: Create User ───────────────────────────────────────────────
 
@@ -675,29 +726,23 @@ class Command(BaseCommand):
         username = data["username"]
         email = data["email"]
 
-        user, created = User.objects.get_or_create(
+        # Always use update_or_create for full idempotency
+        user, created = User.objects.update_or_create(
             username=username,
             defaults={
                 **data,
                 "is_superuser": is_superuser,
+                "is_active": True,
+                "has_accepted_terms": True,
             },
         )
 
-        if created:
-            user.set_password(self.PASSWORD)
-            user.location = location
-            user.has_accepted_terms = True
-            user.save()
-            action = "ERSTELLT"
-        else:
-            for key, value in data.items():
-                setattr(user, key, value)
-            user.is_superuser = is_superuser
-            user.location = location
-            user.set_password(self.PASSWORD)
-            user.has_accepted_terms = True
-            user.save()
-            action = "AKTUALISIERT"
+        # Always set password and location
+        user.set_password(self.PASSWORD)
+        user.location = location
+        user.save(update_fields=["password", "location"])
+
+        action = "ERSTELLT" if created else "AKTUALISIERT"
 
         # Assign to Django Permission Group
         try:
