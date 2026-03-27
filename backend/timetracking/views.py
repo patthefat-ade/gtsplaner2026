@@ -78,6 +78,7 @@ class TimeEntryViewSet(TenantViewSetMixin, viewsets.ModelViewSet):
     - Tenant isolation via TenantViewSetMixin
     """
 
+    queryset = TimeEntry.objects.all()
     filterset_class = TimeEntryFilter
     search_fields = ["notes"]
     ordering_fields = ["date", "start_time", "duration_minutes", "created_at"]
@@ -127,6 +128,7 @@ class LeaveTypeViewSet(TenantViewSetMixin, viewsets.ModelViewSet):
     - LocationManager+: full CRUD for their location
     """
 
+    queryset = LeaveType.objects.all()
     serializer_class = LeaveTypeSerializer
     search_fields = ["name", "description"]
     ordering_fields = ["name", "created_at"]
@@ -173,6 +175,7 @@ class LeaveRequestViewSet(TenantViewSetMixin, viewsets.ModelViewSet):
     - LocationManager+: approve/reject, view all in their tenant
     """
 
+    queryset = LeaveRequest.objects.all()
     filterset_class = LeaveRequestFilter
     search_fields = ["reason", "approval_notes"]
     ordering_fields = ["start_date", "end_date", "total_days", "created_at", "status"]
@@ -311,6 +314,7 @@ class WorkingHoursLimitViewSet(TenantViewSetMixin, viewsets.ModelViewSet):
     - LocationManager+: full CRUD
     """
 
+    queryset = WorkingHoursLimit.objects.all()
     serializer_class = WorkingHoursLimitSerializer
     ordering = ["location__name"]
 

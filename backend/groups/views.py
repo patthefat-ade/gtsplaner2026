@@ -88,6 +88,7 @@ class SchoolYearViewSet(TenantViewSetMixin, viewsets.ModelViewSet):
     - Tenant isolation via TenantViewSetMixin
     """
 
+    queryset = SchoolYear.objects.all()
     filterset_class = SchoolYearFilter
     search_fields = ["name"]
     ordering_fields = ["name", "start_date", "created_at"]
@@ -135,6 +136,7 @@ class SemesterViewSet(TenantViewSetMixin, viewsets.ModelViewSet):
     - LocationManager+: full CRUD
     """
 
+    queryset = Semester.objects.all()
     serializer_class = SemesterSerializer
     search_fields = ["name"]
     ordering_fields = ["start_date", "name"]
@@ -171,6 +173,7 @@ class GroupViewSet(TenantViewSetMixin, viewsets.ModelViewSet):
     - Tenant isolation via TenantViewSetMixin
     """
 
+    queryset = Group.objects.all()
     filterset_class = GroupFilter
     search_fields = ["name", "description"]
     ordering_fields = ["name", "balance", "created_at"]
@@ -282,6 +285,7 @@ class GroupMemberViewSet(TenantViewSetMixin, viewsets.ModelViewSet):
     - LocationManager+: full CRUD
     """
 
+    queryset = GroupMember.objects.all()
     search_fields = ["user__first_name", "user__last_name"]
     ordering_fields = ["joined_at", "role"]
     ordering = ["-joined_at"]
@@ -326,6 +330,7 @@ class StudentViewSet(TenantViewSetMixin, viewsets.ModelViewSet):
     - Tenant isolation via TenantViewSetMixin
     """
 
+    queryset = Student.objects.all()
     filterset_class = StudentFilter
     # Note: first_name, last_name, email are encrypted and cannot be
     # searched or ordered via SQL queries.

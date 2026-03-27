@@ -97,6 +97,7 @@ class TransactionCategoryViewSet(TenantViewSetMixin, viewsets.ModelViewSet):
     - Tenant isolation via TenantViewSetMixin
     """
 
+    queryset = TransactionCategory.objects.all()
     filterset_class = TransactionCategoryFilter
     search_fields = ["name", "description"]
     ordering_fields = ["name", "category_type", "created_at"]
@@ -107,10 +108,6 @@ class TransactionCategoryViewSet(TenantViewSetMixin, viewsets.ModelViewSet):
             return TransactionCategory.objects.none()
         qs = super().get_queryset()
         return qs.filter(is_deleted=False)
-
-    def get_base_queryset(self):
-        """Provide base queryset for TenantViewSetMixin."""
-        return TransactionCategory.objects.all()
 
     def get_serializer_class(self):
         if self.action in ["create", "update", "partial_update"]:
@@ -156,6 +153,7 @@ class TransactionViewSet(TenantViewSetMixin, viewsets.ModelViewSet):
     - Tenant isolation via TenantViewSetMixin
     """
 
+    queryset = Transaction.objects.all()
     filterset_class = TransactionFilter
     search_fields = ["description", "internal_notes", "approval_notes"]
     ordering_fields = [
@@ -383,6 +381,7 @@ class ReceiptViewSet(TenantViewSetMixin, viewsets.GenericViewSet):
     Receipts are primarily managed through the Transaction receipts action.
     """
 
+    queryset = Receipt.objects.all()
     serializer_class = ReceiptSerializer
     permission_classes = [permissions.IsAuthenticated, IsEducator]
 
