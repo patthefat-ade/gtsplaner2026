@@ -35,4 +35,5 @@ RUN mkdir -p /app/staticfiles /app/media /app/logs
 EXPOSE 8000
 
 # Default command
-CMD ["sh", "-c", "python manage.py migrate --noinput && python manage.py collectstatic --noinput && gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 3"]
+# Startup script: migrate, setup permissions, seed data, then start server
+CMD ["sh", "-c", "python manage.py migrate --noinput && python manage.py collectstatic --noinput && python manage.py setup_permissions && python manage.py create_test_users && gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 3"]
