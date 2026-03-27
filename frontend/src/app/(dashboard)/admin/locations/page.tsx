@@ -218,8 +218,9 @@ function LocationFormDialog({
 /* ───── Locations Page ───── */
 export default function LocationsPage() {
   const toast = useToast();
-  const { hasPermission } = usePermissions();
+  const { hasPermission, hasRole } = usePermissions();
   const canManage = hasPermission("manage_locations");
+  const canCreate = hasRole("admin");
 
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
@@ -298,7 +299,7 @@ export default function LocationsPage() {
         title="Standorte"
         description="Übersicht aller GTS-Schulstandorte mit Gruppen und Pädagog:innen."
       >
-        {canManage && (
+        {canCreate && (
           <Button onClick={handleCreate}>
             <Plus className="mr-2 h-4 w-4" />
             Neuer Standort
@@ -406,11 +407,13 @@ export default function LocationsPage() {
                             </Link>
                           </DropdownMenuItem>
                           {canManage && (
+                            <DropdownMenuItem onClick={() => handleEdit(loc)}>
+                              <Pencil className="mr-2 h-4 w-4" />
+                              Bearbeiten
+                            </DropdownMenuItem>
+                          )}
+                          {canCreate && (
                             <>
-                              <DropdownMenuItem onClick={() => handleEdit(loc)}>
-                                <Pencil className="mr-2 h-4 w-4" />
-                                Bearbeiten
-                              </DropdownMenuItem>
                               <DropdownMenuSeparator />
                               <DropdownMenuItem
                                 onClick={() => {
@@ -453,8 +456,8 @@ export default function LocationsPage() {
               ? "Keine Standorte für diese Suche gefunden."
               : "Es wurden noch keine Standorte angelegt."
           }
-          actionLabel={canManage ? "Neuer Standort" : undefined}
-          onAction={canManage ? handleCreate : undefined}
+          actionLabel={canCreate ? "Neuer Standort" : undefined}
+          onAction={canCreate ? handleCreate : undefined}
         />
       )}
 
