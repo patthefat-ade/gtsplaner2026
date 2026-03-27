@@ -5,6 +5,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useCreateWeeklyPlan } from "@/hooks/use-weeklyplans";
 import { useGroups } from "@/hooks/use-groups";
+import { useToast } from "@/components/ui/toast";
+import { Breadcrumbs } from "@/components/common/breadcrumbs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -26,6 +28,7 @@ export default function NewWeeklyPlanPage() {
   const searchParams = useSearchParams();
   const isTemplate = searchParams.get("template") === "true";
 
+  const toast = useToast();
   const createMutation = useCreateWeeklyPlan();
   const { data: groupsData, isLoading: loadingGroups } = useGroups({
     page_size: 200,
@@ -48,22 +51,28 @@ export default function NewWeeklyPlanPage() {
     e.preventDefault();
     if (!groupId || !title) return;
 
-    const result = await createMutation.mutateAsync({
-      group: Number(groupId),
-      week_start_date: weekStartDate,
-      title,
-      notes: notes || undefined,
-      status: "draft",
-      is_template: asTemplate,
-      template_name: asTemplate ? templateName || title : undefined,
-    });
+    try {
+      const result = await createMutation.mutateAsync({
+        group: Number(groupId),
+        week_start_date: weekStartDate,
+        title,
+        notes: notes || undefined,
+        status: "draft",
+        is_template: asTemplate,
+        template_name: asTemplate ? templateName || title : undefined,
+      });
 
-    // Navigate to the new plan's editor
-    router.push(`/weeklyplans/${result.id}?edit=true`);
+      toast.success(asTemplate ? "Vorlage erfolgreich erstellt" : "Wochenplan erfolgreich erstellt");
+      // Navigate to the new plan's editor
+      router.push(`/weeklyplans/${result.id}?edit=true`);
+    } catch {
+      toast.error("Fehler", "Wochenplan konnte nicht erstellt werden.");
+    }
   };
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
+      <Breadcrumbs />
       {/* Header */}
       <div className="flex items-center gap-4">
         <Button variant="ghost" size="icon" asChild>

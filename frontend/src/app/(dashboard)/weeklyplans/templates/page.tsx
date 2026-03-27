@@ -8,6 +8,9 @@ import {
   useCreateFromTemplate,
 } from "@/hooks/use-weeklyplans";
 import { usePermissions } from "@/hooks/use-permissions";
+import { useToast } from "@/components/ui/toast";
+import { PageHeader } from "@/components/common/page-header";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -52,6 +55,7 @@ export default function WeeklyPlanTemplatesPage() {
   const canManage = hasPermission("manage_weeklyplans");
 
   const { data: templates, isLoading } = useWeeklyPlanTemplates();
+  const toast = useToast();
   const deleteMutation = useDeleteWeeklyPlan();
   const createFromTemplate = useCreateFromTemplate();
 
@@ -72,22 +76,32 @@ export default function WeeklyPlanTemplatesPage() {
 
   const handleDelete = async () => {
     if (!deleteTarget) return;
-    await deleteMutation.mutateAsync(deleteTarget.id);
+    try {
+      await deleteMutation.mutateAsync(deleteTarget.id);
+      toast.success("Vorlage erfolgreich gelöscht");
+    } catch {
+      toast.error("Fehler", "Vorlage konnte nicht gelöscht werden.");
+    }
     setDeleteTarget(null);
   };
 
   const handleCreateFromTemplate = async () => {
     if (!selectedTemplate) return;
-    await createFromTemplate.mutateAsync({
-      templateId: selectedTemplate.id,
-      data: {
-        group: selectedTemplate.group,
-        week_start_date: newPlanDate,
-        title: newPlanTitle || `Wochenplan aus Vorlage`,
-      },
-    });
-    setCreateDialog(false);
-    setSelectedTemplate(null);
+    try {
+      await createFromTemplate.mutateAsync({
+        templateId: selectedTemplate.id,
+        data: {
+          group: selectedTemplate.group,
+          week_start_date: newPlanDate,
+          title: newPlanTitle || `Wochenplan aus Vorlage`,
+        },
+      });
+      toast.success("Wochenplan aus Vorlage erstellt");
+      setCreateDialog(false);
+      setSelectedTemplate(null);
+    } catch {
+      toast.error("Fehler", "Wochenplan konnte nicht erstellt werden.");
+    }
   };
 
   const openCreateDialog = (template: WeeklyPlan) => {
@@ -99,13 +113,10 @@ export default function WeeklyPlanTemplatesPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Vorlagen</h1>
-          <p className="text-muted-foreground">
-            Wiederverwendbare Wochenplan-Vorlagen verwalten
-          </p>
-        </div>
+      <PageHeader
+        title="Vorlagen"
+        description="Wiederverwendbare Wochenplan-Vorlagen verwalten"
+      >
         {canManage && (
           <Button asChild>
             <Link href="/weeklyplans/new?template=true">
@@ -114,12 +125,26 @@ export default function WeeklyPlanTemplatesPage() {
             </Link>
           </Button>
         )}
-      </div>
+      </PageHeader>
 
       {/* Templates Grid */}
       {isLoading ? (
-        <div className="flex h-32 items-center justify-center">
-          <p className="text-muted-foreground">Vorlagen werden geladen...</p>
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <Card key={i}>
+              <CardHeader className="pb-3">
+                <Skeleton className="h-5 w-48" />
+                <Skeleton className="mt-2 h-4 w-32" />
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center gap-2">
+                  <Skeleton className="h-6 w-24" />
+                  <Skeleton className="h-6 w-16" />
+                </div>
+                <Skeleton className="mt-3 h-3 w-40" />
+              </CardContent>
+            </Card>
+          ))}
         </div>
       ) : !templates || templates.length === 0 ? (
         <Card>

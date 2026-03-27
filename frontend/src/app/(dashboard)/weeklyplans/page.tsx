@@ -4,6 +4,9 @@ import { useState, useMemo } from "react";
 import Link from "next/link";
 import { useWeeklyPlans, useDeleteWeeklyPlan, useExportPdf, useDuplicateWeeklyPlan } from "@/hooks/use-weeklyplans";
 import { usePermissions } from "@/hooks/use-permissions";
+import { useToast } from "@/components/ui/toast";
+import { PageHeader } from "@/components/common/page-header";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -68,6 +71,7 @@ export default function WeeklyPlansPage() {
     status: statusFilter !== "all" ? statusFilter : undefined,
     search: search || undefined,
   });
+  const toast = useToast();
   const deleteMutation = useDeleteWeeklyPlan();
   const exportPdf = useExportPdf();
   const duplicateMutation = useDuplicateWeeklyPlan();
@@ -90,20 +94,40 @@ export default function WeeklyPlansPage() {
 
   const handleDelete = async () => {
     if (!deleteTarget) return;
-    await deleteMutation.mutateAsync(deleteTarget.id);
+    try {
+      await deleteMutation.mutateAsync(deleteTarget.id);
+      toast.success("Wochenplan erfolgreich gelöscht");
+    } catch {
+      toast.error("Fehler", "Wochenplan konnte nicht gelöscht werden.");
+    }
     setDeleteTarget(null);
+  };
+
+  const handleDuplicate = async (planId: number) => {
+    try {
+      await duplicateMutation.mutateAsync(planId);
+      toast.success("Wochenplan erfolgreich dupliziert");
+    } catch {
+      toast.error("Fehler", "Wochenplan konnte nicht dupliziert werden.");
+    }
+  };
+
+  const handleExportPdf = async (planId: number) => {
+    try {
+      await exportPdf.mutateAsync(planId);
+      toast.success("PDF-Export gestartet");
+    } catch {
+      toast.error("Fehler", "PDF konnte nicht exportiert werden.");
+    }
   };
 
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Wochenpläne</h1>
-          <p className="text-muted-foreground">
-            Wochenpläne für Ihre Gruppen verwalten und einsehen
-          </p>
-        </div>
+      <PageHeader
+        title="Wochenpläne"
+        description="Wochenpläne für Ihre Gruppen verwalten und einsehen"
+      >
         {canManage && (
           <Button asChild>
             <Link href="/weeklyplans/new">
@@ -112,7 +136,7 @@ export default function WeeklyPlansPage() {
             </Link>
           </Button>
         )}
-      </div>
+      </PageHeader>
 
       {/* Filters */}
       <Card>
@@ -167,8 +191,18 @@ export default function WeeklyPlansPage() {
         </CardHeader>
         <CardContent>
           {isLoading ? (
-            <div className="flex h-32 items-center justify-center">
-              <p className="text-muted-foreground">Wochenpläne werden geladen...</p>
+            <div className="space-y-3 p-4">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <div key={i} className="flex gap-4">
+                  <Skeleton className="h-4 w-12" />
+                  <Skeleton className="h-4 flex-1" />
+                  <Skeleton className="h-4 w-24" />
+                  <Skeleton className="h-4 w-24" />
+                  <Skeleton className="h-4 w-16" />
+                  <Skeleton className="h-4 w-20" />
+                  <Skeleton className="h-4 w-8" />
+                </div>
+              ))}
             </div>
           ) : plans.length === 0 ? (
             <div className="flex h-32 flex-col items-center justify-center gap-2">
@@ -247,7 +281,7 @@ export default function WeeklyPlansPage() {
                             </DropdownMenuItem>
                           )}
                           <DropdownMenuItem
-                            onClick={() => exportPdf.mutate(plan.id)}
+                            onClick={() => handleExportPdf(plan.id)}
                             disabled={exportPdf.isPending}
                           >
                             <FileDown className="mr-2 h-4 w-4" />
@@ -256,7 +290,7 @@ export default function WeeklyPlansPage() {
                           {canManage && (
                             <>
                               <DropdownMenuItem
-                                onClick={() => duplicateMutation.mutate(plan.id)}
+                                onClick={() => handleDuplicate(plan.id)}
                                 disabled={duplicateMutation.isPending}
                               >
                                 <Copy className="mr-2 h-4 w-4" />

@@ -10,6 +10,9 @@ import {
   useDuplicateWeeklyPlan,
 } from "@/hooks/use-weeklyplans";
 import { usePermissions } from "@/hooks/use-permissions";
+import { useToast } from "@/components/ui/toast";
+import { Breadcrumbs } from "@/components/common/breadcrumbs";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -100,6 +103,7 @@ export default function WeeklyPlanDetailPage() {
   const { hasPermission } = usePermissions();
   const canManage = hasPermission("manage_weeklyplans");
 
+  const toast = useToast();
   const { data: plan, isLoading } = useWeeklyPlan(planId);
   const updateMutation = useUpdateWeeklyPlan();
   const exportPdf = useExportPdf();
@@ -198,31 +202,63 @@ export default function WeeklyPlanDetailPage() {
 
   const handleSave = async () => {
     if (!plan) return;
-    await updateMutation.mutateAsync({
-      id: plan.id,
-      data: {
-        title: editTitle,
-        notes: editNotes,
-        status: editStatus as "draft" | "published",
-        entries: editedEntries.map((e) => ({
-          day_of_week: e.day_of_week,
-          start_time: e.start_time,
-          end_time: e.end_time,
-          activity: e.activity,
-          description: e.description,
-          color: e.color,
-          category: e.category,
-          sort_order: e.sort_order,
-        })),
-      },
-    });
-    setIsEditing(false);
+    try {
+      await updateMutation.mutateAsync({
+        id: plan.id,
+        data: {
+          title: editTitle,
+          notes: editNotes,
+          status: editStatus as "draft" | "published",
+          entries: editedEntries.map((e) => ({
+            day_of_week: e.day_of_week,
+            start_time: e.start_time,
+            end_time: e.end_time,
+            activity: e.activity,
+            description: e.description,
+            color: e.color,
+            category: e.category,
+            sort_order: e.sort_order,
+          })),
+        },
+      });
+      toast.success("Wochenplan erfolgreich gespeichert");
+      setIsEditing(false);
+    } catch {
+      toast.error("Fehler", "Wochenplan konnte nicht gespeichert werden.");
+    }
+  };
+
+  const handleExportPdf = async () => {
+    try {
+      await exportPdf.mutateAsync(planId);
+      toast.success("PDF-Export gestartet");
+    } catch {
+      toast.error("Fehler", "PDF konnte nicht exportiert werden.");
+    }
+  };
+
+  const handleDuplicate = async () => {
+    try {
+      await duplicateMutation.mutateAsync(planId);
+      toast.success("Wochenplan erfolgreich dupliziert");
+    } catch {
+      toast.error("Fehler", "Wochenplan konnte nicht dupliziert werden.");
+    }
   };
 
   if (isLoading) {
     return (
-      <div className="flex h-64 items-center justify-center">
-        <p className="text-muted-foreground">Wochenplan wird geladen...</p>
+      <div className="space-y-6">
+        <Breadcrumbs />
+        <div className="space-y-4">
+          <Skeleton className="h-8 w-64" />
+          <Skeleton className="h-4 w-48" />
+          <div className="grid grid-cols-6 gap-2">
+            {Array.from({ length: 30 }).map((_, i) => (
+              <Skeleton key={i} className="h-16" />
+            ))}
+          </div>
+        </div>
       </div>
     );
   }
@@ -243,6 +279,7 @@ export default function WeeklyPlanDetailPage() {
 
   return (
     <div className="space-y-6">
+      <Breadcrumbs />
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
@@ -309,7 +346,7 @@ export default function WeeklyPlanDetailPage() {
             <>
               <Button
                 variant="outline"
-                onClick={() => exportPdf.mutate(plan.id)}
+                onClick={handleExportPdf}
                 disabled={exportPdf.isPending}
               >
                 <FileDown className="mr-2 h-4 w-4" />
@@ -317,7 +354,7 @@ export default function WeeklyPlanDetailPage() {
               </Button>
               <Button
                 variant="outline"
-                onClick={() => duplicateMutation.mutate(plan.id)}
+                onClick={handleDuplicate}
                 disabled={duplicateMutation.isPending}
               >
                 <Copy className="mr-2 h-4 w-4" />
@@ -371,7 +408,7 @@ export default function WeeklyPlanDetailPage() {
             )}
           </CardTitle>
         </CardHeader>
-        <CardContent className="overflow-x-auto">
+        <CardContent>
           {timeSlots.length === 0 ? (
             <div className="flex h-32 flex-col items-center justify-center gap-2">
               <p className="text-muted-foreground">Noch keine Einträge vorhanden</p>
@@ -383,6 +420,9 @@ export default function WeeklyPlanDetailPage() {
               )}
             </div>
           ) : (
+            <>
+            {/* Desktop: Full grid table */}
+            <div className="hidden overflow-x-auto md:block">
             <table className="w-full border-collapse">
               <thead>
                 <tr>
@@ -491,6 +531,91 @@ export default function WeeklyPlanDetailPage() {
                 })}
               </tbody>
             </table>
+            </div>
+
+            {/* Mobile: Stacked day cards */}
+            <div className="space-y-4 md:hidden">
+              {days.map((day) => {
+                const dayEntries = entries
+                  .filter((e) => e.day_of_week === day)
+                  .sort((a, b) => a.start_time.localeCompare(b.start_time));
+                return (
+                  <div key={day} className="rounded-lg border border-border">
+                    <div className="flex items-center justify-between border-b border-border bg-muted/50 px-3 py-2">
+                      <span className="text-sm font-semibold">{DAY_NAMES[day]}</span>
+                      {isEditing && (
+                        <button
+                          className="text-xs text-primary hover:underline"
+                          onClick={() => openNewEntry(day)}
+                        >
+                          + Hinzufügen
+                        </button>
+                      )}
+                    </div>
+                    {dayEntries.length === 0 ? (
+                      <div className="px-3 py-4 text-center text-xs text-muted-foreground">
+                        Keine Einträge
+                      </div>
+                    ) : (
+                      <div className="divide-y divide-border">
+                        {dayEntries.map((entry, idx) => {
+                          const entryIndex = entries.findIndex(
+                            (e) =>
+                              e.day_of_week === entry.day_of_week &&
+                              e.start_time === entry.start_time &&
+                              e.end_time === entry.end_time
+                          );
+                          return (
+                            <div
+                              key={idx}
+                              className={`flex items-start gap-3 px-3 py-2 ${isEditing ? "cursor-pointer hover:bg-muted/30" : ""}`}
+                              style={{ borderLeft: `3px solid ${entry.color}` }}
+                              onClick={
+                                isEditing
+                                  ? () => openEditEntry(entry, entryIndex)
+                                  : undefined
+                              }
+                            >
+                              <div className="shrink-0 text-xs text-muted-foreground">
+                                {entry.start_time}
+                                <br />
+                                {entry.end_time}
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <div className="text-sm font-medium">{entry.activity}</div>
+                                {entry.description && (
+                                  <div className="text-xs text-muted-foreground">
+                                    {entry.description}
+                                  </div>
+                                )}
+                                <span
+                                  className="mt-1 inline-block rounded-full px-1.5 py-0.5 text-[10px] font-medium text-white"
+                                  style={{ backgroundColor: entry.color }}
+                                >
+                                  {getCategoryLabel(entry.category)}
+                                </span>
+                              </div>
+                              {isEditing && (
+                                <button
+                                  className="shrink-0 text-[10px] text-destructive hover:underline"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    deleteEntry(entryIndex);
+                                  }}
+                                >
+                                  Entfernen
+                                </button>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+            </>
           )}
         </CardContent>
       </Card>
