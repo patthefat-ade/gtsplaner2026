@@ -979,6 +979,15 @@ class Command(BaseCommand):
 
         from system.models import SystemSetting
 
+        # Get main organization for tenant-scoped settings
+        try:
+            main_org = Organization.objects.get(name="Hilfswerk Oesterreich")
+        except Organization.DoesNotExist:
+            self.stdout.write(
+                self.style.WARNING("        Hauptmandant nicht gefunden – uebersprungen.")
+            )
+            return
+
         settings_to_update = {
             "organization_name": "Hilfswerk Oesterreich",
             "organization_email": "office@hilfswerk.at",
@@ -987,6 +996,7 @@ class Command(BaseCommand):
         for key, value in settings_to_update.items():
             setting, created = SystemSetting.objects.update_or_create(
                 key=key,
+                organization=main_org,
                 defaults={"value": value},
             )
             status = "NEU" if created else "AKTUALISIERT"
@@ -1009,12 +1019,12 @@ class Command(BaseCommand):
                 "is_superuser": is_superuser,
                 "is_active": True,
                 "has_accepted_terms": True,
+                "location": location,
             },
         )
 
         user.set_password(self.PASSWORD)
-        user.location = location
-        user.save(update_fields=["password", "location"])
+        user.save()
 
         action = "ERSTELLT" if created else "AKTUALISIERT"
 
