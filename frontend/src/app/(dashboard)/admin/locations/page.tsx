@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import Link from "next/link";
 import {
   useLocations,
@@ -9,6 +9,7 @@ import {
   useUpdateLocation,
   useDeleteLocation,
 } from "@/hooks/use-locations";
+import { useOrganizations } from "@/hooks/use-admin";
 import { usePermissions } from "@/hooks/use-permissions";
 import { useDebounce } from "@/hooks/use-debounce";
 import { useToast } from "@/components/ui/toast";
@@ -18,10 +19,18 @@ import { Pagination } from "@/components/common/pagination";
 import { ConfirmDialog } from "@/components/common/confirm-dialog";
 import { QueryError } from "@/components/common/error-boundary";
 import { PageSkeleton } from "@/components/common/skeleton-loaders";
+import { LocationFormDialog } from "@/components/forms/location-form-dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -31,21 +40,12 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { DEFAULT_PAGE_SIZE } from "@/lib/constants";
 import type { Location, LocationCreate } from "@/types/models";
 import {
@@ -55,165 +55,12 @@ import {
   Pencil,
   Trash2,
   Search,
-  Mail,
-  Phone,
   Users,
   GraduationCap,
   Eye,
-  Loader2,
+  X,
+  Filter,
 } from "lucide-react";
-
-/* ───── Location Form Dialog ───── */
-function LocationFormDialog({
-  open,
-  onOpenChange,
-  location,
-  onSubmit,
-  isLoading,
-}: {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  location: Location | null;
-  onSubmit: (data: LocationCreate) => Promise<void>;
-  isLoading: boolean;
-}) {
-  const isEdit = !!location;
-  const [name, setName] = useState("");
-  const [description, setDescription] = useState("");
-  const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
-  const [street, setStreet] = useState("");
-  const [city, setCity] = useState("");
-  const [postalCode, setPostalCode] = useState("");
-
-  React.useEffect(() => {
-    if (open) {
-      setName(location?.name || "");
-      setDescription(location?.description || "");
-      setEmail(location?.email || "");
-      setPhone(location?.phone || "");
-      setStreet(location?.street || "");
-      setCity(location?.city || "");
-      setPostalCode(location?.postal_code || "");
-    }
-  }, [open, location]);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    await onSubmit({
-      name,
-      description,
-      email,
-      phone,
-      street,
-      city,
-      postal_code: postalCode,
-      organization: location?.organization || 0,
-    });
-  };
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px]">
-        <DialogHeader>
-          <DialogTitle>
-            {isEdit ? "Standort bearbeiten" : "Neuer Standort"}
-          </DialogTitle>
-        </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <Label htmlFor="loc-name">Name *</Label>
-            <Input
-              id="loc-name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="z.B. VS Annabichl"
-              required
-            />
-          </div>
-
-          <div>
-            <Label htmlFor="loc-desc">Beschreibung</Label>
-            <Textarea
-              id="loc-desc"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Beschreibung des Standorts"
-              rows={3}
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="loc-email">E-Mail</Label>
-              <Input
-                id="loc-email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="standort@hilfswerk.at"
-              />
-            </div>
-            <div>
-              <Label htmlFor="loc-phone">Telefon</Label>
-              <Input
-                id="loc-phone"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                placeholder="+43 ..."
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-3 gap-4">
-            <div className="col-span-2">
-              <Label htmlFor="loc-street">Straße</Label>
-              <Input
-                id="loc-street"
-                value={street}
-                onChange={(e) => setStreet(e.target.value)}
-                placeholder="Straße und Hausnummer"
-              />
-            </div>
-            <div>
-              <Label htmlFor="loc-postal">PLZ</Label>
-              <Input
-                id="loc-postal"
-                value={postalCode}
-                onChange={(e) => setPostalCode(e.target.value)}
-                placeholder="9020"
-              />
-            </div>
-          </div>
-
-          <div>
-            <Label htmlFor="loc-city">Stadt</Label>
-            <Input
-              id="loc-city"
-              value={city}
-              onChange={(e) => setCity(e.target.value)}
-              placeholder="Klagenfurt"
-            />
-          </div>
-
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-            >
-              Abbrechen
-            </Button>
-            <Button type="submit" disabled={isLoading || !name}>
-              {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {isEdit ? "Speichern" : "Erstellen"}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
-  );
-}
 
 /* ───── Locations Page ───── */
 export default function LocationsPage() {
@@ -227,18 +74,43 @@ export default function LocationsPage() {
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebounce(search, 300);
 
+  // Extended filters
+  const [filterOrg, setFilterOrg] = useState<string>("all");
+  const [filterStatus, setFilterStatus] = useState<string>("all");
+  const [filterCity, setFilterCity] = useState("");
+  const debouncedCity = useDebounce(filterCity, 300);
+  const [showFilters, setShowFilters] = useState(false);
+
   const [formOpen, setFormOpen] = useState(false);
   const [editLocation, setEditLocation] = useState<Location | null>(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<number | null>(null);
 
+  // Fetch organizations for filter dropdown
+  const { data: orgsData } = useOrganizations({ page_size: 100 });
+
   const params: Record<string, string | number> = { page, page_size: pageSize };
   if (debouncedSearch) params.search = debouncedSearch;
+  if (filterOrg !== "all") params.organization = filterOrg;
+  if (filterStatus !== "all") params.is_active = filterStatus;
+  if (debouncedCity) params.city = debouncedCity;
 
   const { data, isLoading, error, refetch } = useLocations(params);
   const createMutation = useCreateLocation();
   const updateMutation = useUpdateLocation();
   const deleteMutation = useDeleteLocation();
+
+  const organizations = orgsData?.results ?? [];
+
+  const hasActiveFilters =
+    filterOrg !== "all" || filterStatus !== "all" || filterCity !== "";
+
+  const clearFilters = () => {
+    setFilterOrg("all");
+    setFilterStatus("all");
+    setFilterCity("");
+    setPage(1);
+  };
 
   const handleCreate = () => {
     setEditLocation(null);
@@ -307,21 +179,112 @@ export default function LocationsPage() {
         )}
       </PageHeader>
 
-      {/* Search */}
+      {/* Search & Filters */}
       <Card>
-        <CardContent className="pt-6">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              placeholder="Standort suchen..."
-              value={search}
-              onChange={(e) => {
-                setSearch(e.target.value);
-                setPage(1);
-              }}
-              className="pl-9"
-            />
+        <CardContent className="pt-6 space-y-4">
+          {/* Search Row */}
+          <div className="flex gap-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder="Standort suchen..."
+                value={search}
+                onChange={(e) => {
+                  setSearch(e.target.value);
+                  setPage(1);
+                }}
+                className="pl-9"
+              />
+            </div>
+            <Button
+              variant={showFilters ? "secondary" : "outline"}
+              size="icon"
+              onClick={() => setShowFilters(!showFilters)}
+              className="shrink-0"
+            >
+              <Filter className="h-4 w-4" />
+            </Button>
+            {hasActiveFilters && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={clearFilters}
+                className="shrink-0 text-muted-foreground"
+              >
+                <X className="mr-1 h-3 w-3" />
+                Filter zurücksetzen
+              </Button>
+            )}
           </div>
+
+          {/* Extended Filters */}
+          {showFilters && (
+            <div className="grid gap-4 sm:grid-cols-3">
+              {/* Organization Filter */}
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium text-muted-foreground">
+                  Organisation
+                </label>
+                <Select
+                  value={filterOrg}
+                  onValueChange={(v) => {
+                    setFilterOrg(v);
+                    setPage(1);
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Alle Organisationen" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Alle Organisationen</SelectItem>
+                    {organizations.map((org) => (
+                      <SelectItem key={org.id} value={String(org.id)}>
+                        {org.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Status Filter */}
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium text-muted-foreground">
+                  Status
+                </label>
+                <Select
+                  value={filterStatus}
+                  onValueChange={(v) => {
+                    setFilterStatus(v);
+                    setPage(1);
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Alle Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Alle Status</SelectItem>
+                    <SelectItem value="true">Aktiv</SelectItem>
+                    <SelectItem value="false">Inaktiv</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* City Filter */}
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium text-muted-foreground">
+                  Stadt
+                </label>
+                <Input
+                  placeholder="Stadt filtern..."
+                  value={filterCity}
+                  onChange={(e) => {
+                    setFilterCity(e.target.value);
+                    setPage(1);
+                  }}
+                />
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -452,8 +415,8 @@ export default function LocationsPage() {
           icon={MapPin}
           title="Keine Standorte"
           description={
-            debouncedSearch
-              ? "Keine Standorte für diese Suche gefunden."
+            debouncedSearch || hasActiveFilters
+              ? "Keine Standorte für diese Suche/Filter gefunden."
               : "Es wurden noch keine Standorte angelegt."
           }
           actionLabel={canCreate ? "Neuer Standort" : undefined}

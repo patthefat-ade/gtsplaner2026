@@ -6,3 +6,4 @@ export { LeaveRequestForm } from "./leave-request-form";
 export { GroupForm } from "./group-form";
 export { StudentForm } from "./student-form";
 export { UserForm } from "./user-form";
+export { LocationFormDialog } from "./location-form-dialog";

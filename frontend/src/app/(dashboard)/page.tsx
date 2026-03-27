@@ -4,6 +4,8 @@ import { useAuth } from "@/hooks/use-auth";
 import { useTransactions } from "@/hooks/use-finance";
 import { useTimeEntries, useLeaveRequests } from "@/hooks/use-timetracking";
 import { useGroups } from "@/hooks/use-groups";
+import { useLocations } from "@/hooks/use-locations";
+import { usePermissions } from "@/hooks/use-permissions";
 import { PageHeader } from "@/components/common/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -26,6 +28,9 @@ import {
   TrendingUp,
   TrendingDown,
   ArrowRight,
+  MapPin,
+  GraduationCap,
+  UserCheck,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
@@ -96,9 +101,156 @@ function TableSkeleton({ rows = 5, cols = 4 }: { rows?: number; cols?: number })
   );
 }
 
+/* ───── Location Stats Widget ───── */
+function LocationStatsWidget() {
+  const { data: locations, isLoading } = useLocations({ page_size: 100 });
+
+  if (isLoading) {
+    return (
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle className="text-base">Standort-Übersicht</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <TableSkeleton rows={5} cols={5} />
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (!locations?.results || locations.results.length === 0) {
+    return null;
+  }
+
+  // Calculate totals
+  const totalLocations = locations.results.length;
+  const activeLocations = locations.results.filter((l) => l.is_active).length;
+  const totalGroups = locations.results.reduce(
+    (sum, l) => sum + (l.group_count ?? 0),
+    0
+  );
+  const totalStudents = locations.results.reduce(
+    (sum, l) => sum + (l.student_count ?? 0),
+    0
+  );
+  const totalEducators = locations.results.reduce(
+    (sum, l) => sum + (l.educator_count ?? 0),
+    0
+  );
+
+  return (
+    <>
+      {/* Summary Stats */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <StatCard
+          title="Standorte"
+          value={String(activeLocations)}
+          description={`von ${totalLocations} gesamt`}
+          icon={MapPin}
+        />
+        <StatCard
+          title="Gruppen gesamt"
+          value={String(totalGroups)}
+          description="Über alle Standorte"
+          icon={Users}
+        />
+        <StatCard
+          title="Schüler:innen gesamt"
+          value={String(totalStudents)}
+          description="Über alle Standorte"
+          icon={GraduationCap}
+        />
+        <StatCard
+          title="Pädagog:innen gesamt"
+          value={String(totalEducators)}
+          description="Über alle Standorte"
+          icon={UserCheck}
+        />
+      </div>
+
+      {/* Top Locations Table */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle className="text-base">Standort-Übersicht</CardTitle>
+          <Button variant="ghost" size="sm" asChild>
+            <Link href="/admin/locations">
+              Alle anzeigen
+              <ArrowRight className="ml-1 h-4 w-4" />
+            </Link>
+          </Button>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Standort</TableHead>
+                <TableHead className="hidden sm:table-cell">Organisation</TableHead>
+                <TableHead className="text-center">Gruppen</TableHead>
+                <TableHead className="text-center">Schüler:innen</TableHead>
+                <TableHead className="text-center hidden sm:table-cell">Pädagog:innen</TableHead>
+                <TableHead>Status</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {locations.results.slice(0, 8).map((loc) => (
+                <TableRow key={loc.id}>
+                  <TableCell className="font-medium">
+                    <Link
+                      href={`/admin/locations/${loc.id}`}
+                      className="flex items-center gap-2 hover:underline"
+                    >
+                      <MapPin className="h-3.5 w-3.5 text-muted-foreground" />
+                      <div>
+                        <div className="text-sm">{loc.name}</div>
+                        {loc.city && (
+                          <div className="text-xs text-muted-foreground">
+                            {loc.city}
+                          </div>
+                        )}
+                      </div>
+                    </Link>
+                  </TableCell>
+                  <TableCell className="hidden sm:table-cell text-sm">
+                    {loc.organization_name || "–"}
+                  </TableCell>
+                  <TableCell className="text-center">
+                    <div className="flex items-center justify-center gap-1">
+                      <Users className="h-3 w-3 text-muted-foreground" />
+                      {loc.group_count ?? 0}
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-center">
+                    <div className="flex items-center justify-center gap-1">
+                      <GraduationCap className="h-3 w-3 text-muted-foreground" />
+                      {loc.student_count ?? 0}
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-center hidden sm:table-cell">
+                    {loc.educator_count ?? 0}
+                  </TableCell>
+                  <TableCell>
+                    <Badge
+                      variant={loc.is_active ? "success" : "secondary"}
+                      className="text-xs"
+                    >
+                      {loc.is_active ? "Aktiv" : "Inaktiv"}
+                    </Badge>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+    </>
+  );
+}
+
 /* ───── Dashboard Page ───── */
 export default function DashboardPage() {
   const { user } = useAuth();
+  const { hasPermission } = usePermissions();
+  const canViewLocations = hasPermission("manage_locations") || hasPermission("view_locations");
 
   const { data: transactions, isLoading: loadingTx } = useTransactions({
     page_size: 5,
@@ -284,6 +436,9 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Location Stats Widget (Manager+ only) */}
+      {isManager && canViewLocations && <LocationStatsWidget />}
 
       {/* Pending Leave Requests (Manager only) */}
       {isManager && (
