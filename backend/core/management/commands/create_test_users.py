@@ -1486,98 +1486,131 @@ class Command(BaseCommand):
         total_plans = 0
         total_templates = 0
 
-        # First: Create 2 templates (not tied to a specific group)
-        for bl_info in bundesland_data:
-            org = bl_info["org"]
-            first_school = bl_info["schools"][0] if bl_info["schools"] else None
-            if not first_school:
+        # Iterate correctly over bundesland_data (which is a dict)
+        templates_created = False
+        for bl_name, data in bundesland_data.items():
+            org = data["org"]
+            locations = data["locations"]
+            if not locations:
                 continue
 
-            group = first_school.get("group_obj")
-            educator = first_school.get("educator_obj")
-            if not group or not educator:
-                continue
+            # For each location, find the group and educator from the DB
+            for loc_data in locations:
+                location = loc_data["location"]
+                config = loc_data["config"]
 
-            # Template 1: Standard-Wochenplan
-            tpl1, _ = WeeklyPlan.objects.update_or_create(
-                organization=org,
-                is_template=True,
-                template_name="Standard GTS Wochenplan",
-                defaults={
-                    "group": group,
-                    "title": "Standard GTS Wochenplan",
-                    "status": "published",
-                    "created_by": educator,
-                },
-            )
-            # Create entries for template
-            for day in range(5):  # Mo-Fr
-                for slot_idx, (start, end, slot_name) in enumerate(TIME_SLOTS):
-                    cat = SLOT_CATEGORIES[slot_idx]
-                    activities = ACTIVITIES[cat]
-                    activity, desc = rng.choice(activities)
-                    WeeklyPlanEntry.objects.update_or_create(
-                        weekly_plan=tpl1,
-                        day_of_week=day,
-                        start_time=start,
-                        end_time=end,
+                # Look up the group for this location
+                group = Group.objects.filter(
+                    location=location, organization=org
+                ).first()
+                if not group:
+                    continue
+
+                # Look up the educator (group leader)
+                educator = group.leader
+                if not educator:
+                    # Fallback: find educator from config
+                    edu_username = config.get("educator", {}).get("username")
+                    if edu_username:
+                        educator = User.objects.filter(username=edu_username).first()
+                if not educator:
+                    continue
+
+                # Create templates only once (for the first valid group)
+                if not templates_created:
+                    # Template 1: Standard-Wochenplan
+                    tpl1, _ = WeeklyPlan.objects.update_or_create(
+                        organization=org,
+                        is_template=True,
+                        template_name="Standard GTS Wochenplan",
                         defaults={
-                            "activity": activity,
-                            "description": desc,
-                            "color": COLORS[cat],
-                            "category": cat,
-                            "sort_order": slot_idx,
+                            "group": group,
+                            "title": "Standard GTS Wochenplan",
+                            "status": "published",
+                            "created_by": educator,
                         },
                     )
-            total_templates += 1
+                    for day in range(5):  # Mo-Fr
+                        for slot_idx, (start, end, slot_name) in enumerate(TIME_SLOTS):
+                            cat = SLOT_CATEGORIES[slot_idx]
+                            activities = ACTIVITIES[cat]
+                            activity, desc = rng.choice(activities)
+                            WeeklyPlanEntry.objects.update_or_create(
+                                weekly_plan=tpl1,
+                                day_of_week=day,
+                                start_time=start,
+                                end_time=end,
+                                defaults={
+                                    "activity": activity,
+                                    "description": desc,
+                                    "color": COLORS[cat],
+                                    "category": cat,
+                                    "sort_order": slot_idx,
+                                },
+                            )
+                    total_templates += 1
 
-            # Template 2: Kreativ-Schwerpunkt
-            tpl2, _ = WeeklyPlan.objects.update_or_create(
-                organization=org,
-                is_template=True,
-                template_name="Kreativ-Schwerpunkt Wochenplan",
-                defaults={
-                    "group": group,
-                    "title": "Kreativ-Schwerpunkt Wochenplan",
-                    "status": "published",
-                    "created_by": educator,
-                },
-            )
-            creative_slots = list(SLOT_CATEGORIES)
-            creative_slots[5] = "creative"   # 12:00-13:00
-            creative_slots[8] = "sports"     # 15:00-16:00
-            for day in range(5):
-                for slot_idx, (start, end, slot_name) in enumerate(TIME_SLOTS):
-                    cat = creative_slots[slot_idx]
-                    activities = ACTIVITIES[cat]
-                    activity, desc = rng.choice(activities)
-                    WeeklyPlanEntry.objects.update_or_create(
-                        weekly_plan=tpl2,
-                        day_of_week=day,
-                        start_time=start,
-                        end_time=end,
+                    # Template 2: Kreativ-Schwerpunkt
+                    tpl2, _ = WeeklyPlan.objects.update_or_create(
+                        organization=org,
+                        is_template=True,
+                        template_name="Kreativ-Schwerpunkt Wochenplan",
                         defaults={
-                            "activity": activity,
-                            "description": desc,
-                            "color": COLORS[cat],
-                            "category": cat,
-                            "sort_order": slot_idx,
+                            "group": group,
+                            "title": "Kreativ-Schwerpunkt Wochenplan",
+                            "status": "published",
+                            "created_by": educator,
                         },
                     )
-            total_templates += 1
-            break  # Only create templates for first Bundesland
+                    creative_slots = list(SLOT_CATEGORIES)
+                    creative_slots[5] = "creative"   # 12:00-13:00
+                    creative_slots[8] = "sports"     # 15:00-16:00
+                    for day in range(5):
+                        for slot_idx, (start, end, slot_name) in enumerate(TIME_SLOTS):
+                            cat = creative_slots[slot_idx]
+                            activities = ACTIVITIES[cat]
+                            activity, desc = rng.choice(activities)
+                            WeeklyPlanEntry.objects.update_or_create(
+                                weekly_plan=tpl2,
+                                day_of_week=day,
+                                start_time=start,
+                                end_time=end,
+                                defaults={
+                                    "activity": activity,
+                                    "description": desc,
+                                    "color": COLORS[cat],
+                                    "category": cat,
+                                    "sort_order": slot_idx,
+                                },
+                            )
+                    total_templates += 1
+                    templates_created = True
 
         # Second: Create actual weekly plans for all groups
         today = datetime.date.today()
         # Find the Monday of the current week
         current_monday = today - datetime.timedelta(days=today.weekday())
 
-        for bl_info in bundesland_data:
-            org = bl_info["org"]
-            for school in bl_info["schools"]:
-                group = school.get("group_obj")
-                educator = school.get("educator_obj")
-                if not group or not educator:
+        for bl_name, data in bundesland_data.items():
+            org = data["org"]
+            for loc_data in data["locations"]:
+                location = loc_data["location"]
+                config = loc_data["config"]
+
+                # Look up the group for this location
+                group = Group.objects.filter(
+                    location=location, organization=org
+                ).first()
+                if not group:
+                    continue
+
+                # Look up the educator (group leader)
+                educator = group.leader
+                if not educator:
+                    edu_username = config.get("educator", {}).get("username")
+                    if edu_username:
+                        educator = User.objects.filter(username=edu_username).first()
+                if not educator:
                     continue
 
                 # Create plans for the last 4 weeks + current week

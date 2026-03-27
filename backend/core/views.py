@@ -211,12 +211,19 @@ class PasswordResetRequestView(APIView):
             try:
                 send_password_reset_email.delay(user.pk, reset_link)
             except Exception:
-                # Celery/Redis not available – log but don't fail the request
+                # Celery/Redis not available – send synchronously as fallback
                 import logging
 
-                logging.getLogger(__name__).warning(
-                    "Could not queue password reset email (Celery/Redis unavailable)"
+                logger = logging.getLogger(__name__)
+                logger.warning(
+                    "Celery/Redis unavailable – sending password reset email synchronously"
                 )
+                try:
+                    send_password_reset_email(user.pk, reset_link)
+                except Exception as sync_exc:
+                    logger.error(
+                        f"Synchronous email send also failed: {sync_exc}"
+                    )
 
         return Response(
             {
