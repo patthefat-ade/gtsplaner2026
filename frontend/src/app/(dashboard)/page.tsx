@@ -476,7 +476,11 @@ export default function DashboardPage() {
                   {leaveRequests.results.map((lr) => (
                     <TableRow key={lr.id}>
                       <TableCell className="font-medium">
-                        {lr.user_name || `Benutzer #${lr.user}`}
+                        {lr.user_name
+                          ? lr.user_name
+                          : typeof lr.user === "object" && lr.user !== null
+                            ? `${lr.user.first_name} ${lr.user.last_name}`
+                            : `Benutzer #${lr.user}`}
                       </TableCell>
                       <TableCell>
                         {formatDate(lr.start_date)} –{" "}

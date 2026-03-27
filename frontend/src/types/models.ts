@@ -226,9 +226,9 @@ export interface LeaveType {
 
 export interface LeaveRequest {
   id: number;
-  user: number;
+  user: { id: number; first_name: string; last_name: string } | number;
   user_name?: string;
-  leave_type: number;
+  leave_type: { id: number; name: string } | number;
   leave_type_name?: string;
   start_date: string;
   end_date: string;

@@ -68,7 +68,9 @@ export function LeaveRequestForm({
   const form = useForm<LeaveRequestFormData>({
     resolver: zodResolver(leaveRequestSchema),
     defaultValues: {
-      leave_type: leaveRequest?.leave_type || 0,
+      leave_type: leaveRequest?.leave_type
+        ? (typeof leaveRequest.leave_type === "object" ? leaveRequest.leave_type.id : leaveRequest.leave_type)
+        : 0,
       start_date:
         leaveRequest?.start_date || new Date().toISOString().split("T")[0],
       end_date:
@@ -80,7 +82,9 @@ export function LeaveRequestForm({
   React.useEffect(() => {
     if (open) {
       form.reset({
-        leave_type: leaveRequest?.leave_type || 0,
+        leave_type: leaveRequest?.leave_type
+          ? (typeof leaveRequest.leave_type === "object" ? leaveRequest.leave_type.id : leaveRequest.leave_type)
+          : 0,
         start_date:
           leaveRequest?.start_date || new Date().toISOString().split("T")[0],
         end_date:

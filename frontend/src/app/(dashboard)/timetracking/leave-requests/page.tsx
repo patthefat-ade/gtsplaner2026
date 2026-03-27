@@ -243,11 +243,19 @@ export default function LeaveRequestsPage() {
                   <TableRow key={lr.id}>
                     {isManager && (
                       <TableCell className="font-medium">
-                        {lr.user_name || `#${lr.user}`}
+                        {lr.user_name
+                          ? lr.user_name
+                          : typeof lr.user === "object" && lr.user !== null
+                            ? `${lr.user.first_name} ${lr.user.last_name}`
+                            : `#${lr.user}`}
                       </TableCell>
                     )}
                     <TableCell>
-                      {lr.leave_type_name || `#${lr.leave_type}`}
+                      {lr.leave_type_name
+                        ? lr.leave_type_name
+                        : typeof lr.leave_type === "object" && lr.leave_type !== null
+                          ? lr.leave_type.name
+                          : `#${lr.leave_type}`}
                     </TableCell>
                     <TableCell>{formatDate(lr.start_date)}</TableCell>
                     <TableCell>{formatDate(lr.end_date)}</TableCell>
@@ -288,7 +296,7 @@ export default function LeaveRequestsPage() {
                               <DropdownMenuSeparator />
                             </>
                           )}
-                          {lr.status === "pending" && lr.user === user?.id && (
+                          {lr.status === "pending" && (typeof lr.user === "object" ? lr.user.id : lr.user) === user?.id && (
                             <DropdownMenuItem
                               onClick={() => {
                                 setCancelId(lr.id);

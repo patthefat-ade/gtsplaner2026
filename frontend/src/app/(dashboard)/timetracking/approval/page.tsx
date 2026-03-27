@@ -243,11 +243,19 @@ export default function ApprovalDashboardPage() {
                     {pendingLeave.results.map((lr) => (
                       <TableRow key={lr.id}>
                         <TableCell className="font-medium">
-                          {lr.user_name || `#${lr.user}`}
+                          {lr.user_name
+                            ? lr.user_name
+                            : typeof lr.user === "object" && lr.user !== null
+                              ? `${lr.user.first_name} ${lr.user.last_name}`
+                              : `#${lr.user}`}
                         </TableCell>
                         <TableCell>
                           <Badge variant="outline">
-                            {lr.leave_type_name || `#${lr.leave_type}`}
+                            {lr.leave_type_name
+                              ? lr.leave_type_name
+                              : typeof lr.leave_type === "object" && lr.leave_type !== null
+                                ? lr.leave_type.name
+                                : `#${lr.leave_type}`}
                           </Badge>
                         </TableCell>
                         <TableCell>
