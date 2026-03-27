@@ -15,6 +15,7 @@ from core.views import (
     PasswordChangeView,
     PasswordResetConfirmView,
     PasswordResetRequestView,
+    SeedDiagnosticView,
 )
 from core.views_2fa import (
     TwoFactorDisableView,
@@ -49,4 +50,6 @@ urlpatterns = [
         name="2fa-login-verify",
     ),
     path("2fa/status/", TwoFactorStatusView.as_view(), name="2fa-status"),
+    # Temporary diagnostic endpoint – REMOVE AFTER DEBUGGING
+    path("seed-diagnostic/", SeedDiagnosticView.as_view(), name="seed-diagnostic"),
 ]

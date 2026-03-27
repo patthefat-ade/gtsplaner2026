@@ -339,3 +339,43 @@ class PasswordChangeView(APIView):
             {"detail": "Passwort wurde erfolgreich geändert."},
             status=status.HTTP_200_OK,
         )
+
+
+class SeedDiagnosticView(APIView):
+    """
+    POST /api/v1/auth/seed-diagnostic/
+
+    Temporary diagnostic endpoint to run create_test_users and return output.
+    SuperAdmin only. REMOVE AFTER DEBUGGING.
+    """
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        from core.permissions import IsSuperAdmin
+
+        if not IsSuperAdmin().has_permission(request, self):
+            return Response(
+                {"detail": "Nur SuperAdmin."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        import io
+        from django.core.management import call_command
+
+        out = io.StringIO()
+        err = io.StringIO()
+        try:
+            call_command("create_test_users", stdout=out, stderr=err)
+            return Response({
+                "status": "success",
+                "stdout": out.getvalue(),
+                "stderr": err.getvalue(),
+            })
+        except Exception as e:
+            return Response({
+                "status": "error",
+                "error": str(e),
+                "stdout": out.getvalue(),
+                "stderr": err.getvalue(),
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
