@@ -4,6 +4,16 @@ Audit Signals for automatic logging of model changes.
 Captures create, update, and delete events for key models
 and logs them to the AuditLog.
 
+**Deduplication:** If the ``AuditLoggingMiddleware`` has already logged
+the current request, the signal handler skips its own entry to avoid
+duplicates.  This means API-triggered changes are logged by the
+middleware (with full request context), while admin/CLI/Celery changes
+are logged by the signal handler.
+
+**User resolution:** The current user is read from thread-local storage
+(set by ``CurrentUserMiddleware``).  If no user is available (e.g.
+management commands), ``user=None`` is stored.
+
 Organization is automatically resolved from the instance if available,
 allowing proper tenant-scoping of audit entries.
 """
@@ -14,7 +24,6 @@ from django.db.models.signals import post_delete, post_save
 from django.dispatch import receiver
 
 logger = logging.getLogger("kassenbuch.audit")
-
 
 # Models to track via signals (for admin and non-API changes)
 TRACKED_MODELS = [
@@ -59,11 +68,10 @@ def _resolve_organization(instance):
     # Direct organization FK (TenantModel subclasses)
     org = getattr(instance, "organization", None)
     if org is not None:
-        # If the instance IS an Organization, use it directly
         from core.models import Organization
+
         if isinstance(org, Organization):
             return org
-        # If org is an int (organization_id), try to resolve
         if isinstance(org, int):
             try:
                 return Organization.objects.get(pk=org)
@@ -72,6 +80,7 @@ def _resolve_organization(instance):
 
     # For Organization model itself
     from core.models import Organization
+
     if isinstance(instance, Organization):
         return instance
 
@@ -95,13 +104,23 @@ def audit_post_save(sender, instance, created, **kwargs):
     if sender.__name__ == "AuditLog":
         return
 
+    # ── Deduplication: skip if middleware already logged this request ──
+    from system.middleware import is_audit_logged_by_middleware
+
+    if is_audit_logged_by_middleware():
+        return
+
     try:
         from system.models import AuditLog
+        from system.thread_local import get_current_user
 
         action = "create" if created else "update"
         model_name = instance.__class__.__name__
         object_id = str(instance.pk) if instance.pk else ""
         organization = _resolve_organization(instance)
+
+        # Resolve user from thread-local (set by CurrentUserMiddleware)
+        user = get_current_user()
 
         # Build a summary of changes
         changes = {}
@@ -119,7 +138,7 @@ def audit_post_save(sender, instance, created, **kwargs):
             pass
 
         AuditLog.objects.create(
-            user=None,  # Signal-based changes may not have a user context
+            user=user,
             action=action,
             model_name=model_name,
             object_id=object_id,
@@ -139,12 +158,20 @@ def audit_post_delete(sender, instance, **kwargs):
     if sender.__name__ == "AuditLog":
         return
 
+    # ── Deduplication ──
+    from system.middleware import is_audit_logged_by_middleware
+
+    if is_audit_logged_by_middleware():
+        return
+
     try:
         from system.models import AuditLog
+        from system.thread_local import get_current_user
 
         model_name = instance.__class__.__name__
         object_id = str(instance.pk) if instance.pk else ""
         organization = _resolve_organization(instance)
+        user = get_current_user()
 
         changes = {
             "action": "Eintrag geloescht",
@@ -157,7 +184,7 @@ def audit_post_delete(sender, instance, **kwargs):
             pass
 
         AuditLog.objects.create(
-            user=None,
+            user=user,
             action="delete",
             model_name=model_name,
             object_id=object_id,

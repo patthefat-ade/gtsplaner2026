@@ -52,6 +52,10 @@ class TransactionFilter(django_filters.FilterSet):
 
     group_id = django_filters.NumberFilter(field_name="group_id")
     category_id = django_filters.NumberFilter(field_name="category_id")
+    location_id = django_filters.NumberFilter(
+        field_name="group__location_id",
+        label="Standort-ID",
+    )
     status = django_filters.ChoiceFilter(choices=Transaction.Status.choices)
     transaction_type = django_filters.ChoiceFilter(
         choices=Transaction.TransactionType.choices
@@ -68,6 +72,7 @@ class TransactionFilter(django_filters.FilterSet):
         fields = [
             "group_id",
             "category_id",
+            "location_id",
             "status",
             "transaction_type",
             "start_date",

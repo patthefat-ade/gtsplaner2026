@@ -22,6 +22,7 @@ import {
   MapPin,
   CalendarDays,
   BookTemplate,
+  ClipboardCheck,
   type LucideIcon,
 } from "lucide-react";
 import {
@@ -113,6 +114,13 @@ const navigation: NavSection[] = [
         icon: GraduationCap,
         // Educators can view, LocationManager+ can manage
         permission: "view_students",
+      },
+      {
+        title: "Anwesenheit",
+        href: "/groups/attendance",
+        icon: ClipboardCheck,
+        // Educators can record attendance for their groups
+        permission: "view_own_groups",
       },
     ],
   },

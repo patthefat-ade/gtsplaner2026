@@ -12,6 +12,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useTransactions } from "@/hooks/use-finance";
+import { useLocations } from "@/hooks/use-locations";
 import { usePermissions } from "@/hooks/use-permissions";
 import { api } from "@/lib/api";
 import { formatCurrency } from "@/lib/format";
@@ -100,15 +101,23 @@ function CustomTooltip({
 export default function FinanceReportsPage() {
   const currentYear = new Date().getFullYear();
   const [year, setYear] = useState(currentYear);
+  const [locationId, setLocationId] = useState<string>("all");
   const [exporting, setExporting] = useState(false);
   const { hasPermission } = usePermissions();
   const canExport = hasPermission("manage_transactions");
 
+  // Fetch locations for the filter dropdown
+  const { data: locationsData } = useLocations({ page_size: 100 });
+  const locations = locationsData?.results ?? [];
+
   const handleExportCSV = async () => {
     setExporting(true);
     try {
+      const params: Record<string, string | number> = {};
+      if (locationId !== "all") params.location_id = locationId;
       const response = await api.get("/finance/transactions/export-csv/", {
         responseType: "blob",
+        params,
       });
       const blob = new Blob([response.data], { type: "text/csv;charset=utf-8;" });
       const url = window.URL.createObjectURL(blob);
@@ -126,11 +135,14 @@ export default function FinanceReportsPage() {
     }
   };
 
-  // Fetch all transactions (paginated, up to 1000)
-  const { data, isLoading } = useTransactions({
+  // Fetch all transactions (paginated, up to 1000) with optional location filter
+  const txParams: Record<string, string | number> = {
     page_size: 1000,
     ordering: "transaction_date",
-  });
+  };
+  if (locationId !== "all") txParams.location_id = locationId;
+
+  const { data, isLoading } = useTransactions(txParams);
 
   const transactions = data?.results ?? [];
 
@@ -206,7 +218,7 @@ export default function FinanceReportsPage() {
           title="Finanzberichte"
           description="Übersicht über Einnahmen, Ausgaben und Kontostände."
         />
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-wrap">
           {canExport && (
             <Button
               variant="outline"
@@ -221,6 +233,26 @@ export default function FinanceReportsPage() {
               CSV-Export
             </Button>
           )}
+          {/* Standort-Filter */}
+          {locations.length > 1 && (
+            <Select
+              value={locationId}
+              onValueChange={(v) => setLocationId(v)}
+            >
+              <SelectTrigger className="w-[200px]">
+                <SelectValue placeholder="Standort" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Alle Standorte</SelectItem>
+                {locations.map((loc) => (
+                  <SelectItem key={loc.id} value={String(loc.id)}>
+                    {loc.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+          {/* Jahres-Filter */}
           <Select
             value={String(year)}
             onValueChange={(v) => setYear(Number(v))}

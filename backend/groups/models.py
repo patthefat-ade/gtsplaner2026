@@ -1,8 +1,8 @@
 """
 Groups models for the Kassenbuch App v2.
 
-Contains SchoolYear, Semester, Group, GroupMember, and Student models
-for managing the organizational structure of groups and children.
+Contains SchoolYear, Semester, Group, GroupMember, Student, and Attendance
+models for managing the organizational structure of groups and children.
 
 Student personal data is encrypted at rest using Fernet encryption
 to comply with GDPR/DSGVO requirements (data of minors).
@@ -338,3 +338,7 @@ class Student(TenantModel):
         if not self.organization_id and self.group_id:
             self.organization_id = self.group.organization_id
         super().save(*args, **kwargs)
+
+
+# Import Attendance model so it's discoverable by Django
+from groups.models_attendance import Attendance  # noqa: E402, F401

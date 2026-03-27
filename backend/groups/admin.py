@@ -250,3 +250,17 @@ class StudentAdmin(ModelAdmin):
     @admin.display(boolean=True, description="Anonymisiert")
     def is_anonymized_display(self, obj):
         return obj.anonymized_at is not None
+
+
+# Attendance Admin
+from .models_attendance import Attendance
+
+
+@admin.register(Attendance)
+class AttendanceAdmin(ModelAdmin):
+    list_display = ["student", "group", "date", "status", "recorded_by", "is_deleted"]
+    list_filter = ["status", "date", "is_deleted", "group"]
+    search_fields = ["student__first_name", "student__last_name", "notes"]
+    date_hierarchy = "date"
+    readonly_fields = ["created_at", "updated_at"]
+    list_per_page = 50

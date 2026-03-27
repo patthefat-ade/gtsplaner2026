@@ -429,6 +429,9 @@ function AdminDashboard({ stats, loading }: { stats?: DashboardStats; loading: b
         <RecentLeaveRequests stats={stats} loading={loading} />
         <RecentTransactions stats={stats} loading={loading} />
       </div>
+
+      {/* Recent Time Entries */}
+      <RecentTimeEntries stats={stats} loading={loading} />
     </div>
   );
 }
@@ -541,6 +544,9 @@ function SuperAdminDashboard({ stats, loading }: { stats?: DashboardStats; loadi
         <RecentLeaveRequests stats={stats} loading={loading} />
         <RecentTransactions stats={stats} loading={loading} />
       </div>
+
+      {/* Recent Time Entries */}
+      <RecentTimeEntries stats={stats} loading={loading} />
     </div>
   );
 }
@@ -548,6 +554,7 @@ function SuperAdminDashboard({ stats, loading }: { stats?: DashboardStats; loadi
 /* ───── Shared Widgets ───── */
 
 function RecentTimeEntries({ stats, loading }: { stats?: DashboardStats; loading: boolean }) {
+  const showUser = stats?.role === "super_admin" || stats?.role === "admin" || stats?.role === "location_manager";
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
@@ -561,12 +568,13 @@ function RecentTimeEntries({ stats, loading }: { stats?: DashboardStats; loading
       </CardHeader>
       <CardContent>
         {loading ? (
-          <TableSkeleton rows={5} cols={4} />
+          <TableSkeleton rows={5} cols={showUser ? 5 : 4} />
         ) : stats?.recent_time_entries && stats.recent_time_entries.length > 0 ? (
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Datum</TableHead>
+                {showUser && <TableHead>Mitarbeiter:in</TableHead>}
                 <TableHead>Gruppe</TableHead>
                 <TableHead>Dauer</TableHead>
                 <TableHead className="hidden sm:table-cell">Notizen</TableHead>
@@ -579,6 +587,11 @@ function RecentTimeEntries({ stats, loading }: { stats?: DashboardStats; loading
                 return (
                   <TableRow key={entry.id}>
                     <TableCell>{formatDate(entry.date)}</TableCell>
+                    {showUser && (
+                      <TableCell className="text-sm font-medium">
+                        {entry.user__first_name} {entry.user__last_name}
+                      </TableCell>
+                    )}
                     <TableCell className="text-sm">{entry.group__name}</TableCell>
                     <TableCell>{hours} Std. {mins > 0 ? `${mins} Min.` : ""}</TableCell>
                     <TableCell className="hidden max-w-[200px] truncate sm:table-cell">

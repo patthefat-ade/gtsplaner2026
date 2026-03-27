@@ -534,3 +534,22 @@ export interface DashboardRecentLeaveRequest {
   user__last_name: string;
   leave_type__name: string;
 }
+
+/* ───── Attendance ─────────────────────────────────────────────────────────── */
+
+export type AttendanceStatus = "present" | "absent" | "sick" | "excused";
+
+export interface Attendance {
+  id: number;
+  student: number;
+  group: number;
+  date: string;
+  status: AttendanceStatus;
+  status_display: string;
+  notes: string;
+  recorded_by: number | null;
+  recorded_by_name: string | null;
+  student_name: string;
+  created_at: string;
+  updated_at: string;
+}

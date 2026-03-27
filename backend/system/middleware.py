@@ -1,17 +1,72 @@
 """
 Audit Logging Middleware.
 
-Automatically logs all state-changing API requests (POST, PUT, PATCH, DELETE)
-to the AuditLog model for compliance and traceability.
+Provides two middleware classes:
+
+1. ``CurrentUserMiddleware`` – stores ``request.user`` in thread-local
+   storage so that Django signal handlers can attribute changes to the
+   correct user.
+
+2. ``AuditLoggingMiddleware`` – logs all state-changing API requests
+   (POST, PUT, PATCH, DELETE) to the ``AuditLog`` model for compliance
+   and traceability.  Sets a thread-local flag so that the signal-based
+   logger in ``system.signals`` can skip the same event and avoid
+   duplicate entries.
 """
 
 import json
 import logging
+import threading
 
 from django.utils.deprecation import MiddlewareMixin
 
+from system.thread_local import clear_current_user, set_current_user
+
 logger = logging.getLogger("kassenbuch.audit")
 
+# Thread-local flag used to prevent duplicate audit entries.
+# When the middleware creates an audit log for an API request the flag
+# is set to ``True`` so that the ``post_save`` / ``post_delete`` signal
+# handler can skip its own log entry for the same request cycle.
+_audit_context = threading.local()
+
+
+def is_audit_logged_by_middleware():
+    """Return ``True`` if the middleware already logged this request."""
+    return getattr(_audit_context, "logged", False)
+
+
+def set_audit_logged_by_middleware(value: bool):
+    """Set the middleware-logged flag for the current thread."""
+    _audit_context.logged = value
+
+
+# ───────────────────────────────────────────────────────────────────
+# CurrentUserMiddleware
+# ───────────────────────────────────────────────────────────────────
+
+class CurrentUserMiddleware(MiddlewareMixin):
+    """
+    Store the authenticated ``request.user`` in thread-local storage.
+
+    Must be placed **after** ``AuthenticationMiddleware`` in
+    ``settings.MIDDLEWARE`` so that ``request.user`` is already resolved.
+    """
+
+    def process_request(self, request):
+        if hasattr(request, "user") and request.user.is_authenticated:
+            set_current_user(request.user)
+        else:
+            set_current_user(None)
+
+    def process_response(self, request, response):
+        clear_current_user()
+        return response
+
+
+# ───────────────────────────────────────────────────────────────────
+# AuditLoggingMiddleware
+# ───────────────────────────────────────────────────────────────────
 
 class AuditLoggingMiddleware(MiddlewareMixin):
     """
@@ -22,7 +77,7 @@ class AuditLoggingMiddleware(MiddlewareMixin):
     - HTTP method and path
     - Model/resource affected (derived from URL path)
     - Action type (create, update, delete)
-    - Request data (sanitized - no passwords)
+    - Request data (sanitized – no passwords)
     - Response status code
     """
 
@@ -41,7 +96,18 @@ class AuditLoggingMiddleware(MiddlewareMixin):
     )
 
     # Sensitive fields to redact
-    SENSITIVE_FIELDS = {"password", "new_password", "old_password", "new_password_confirm", "token", "refresh"}
+    SENSITIVE_FIELDS = {
+        "password",
+        "new_password",
+        "old_password",
+        "new_password_confirm",
+        "token",
+        "refresh",
+    }
+
+    def process_request(self, request):
+        """Reset the deduplication flag at the start of each request."""
+        set_audit_logged_by_middleware(False)
 
     def process_response(self, request, response):
         """Log state-changing API requests after response is generated."""
@@ -68,19 +134,27 @@ class AuditLoggingMiddleware(MiddlewareMixin):
 
         try:
             self._create_audit_log(request, response)
+            # Set the flag so signal handlers skip their own entry
+            set_audit_logged_by_middleware(True)
         except Exception as e:
             logger.error(f"Failed to create audit log: {e}")
 
         return response
 
+    # ── helpers ────────────────────────────────────────────────────
+
     def _create_audit_log(self, request, response):
         """Create an AuditLog entry for the request."""
-        # Import here to avoid circular imports
         from system.models import AuditLog
 
         action = self._get_action(request.method)
         model_name, object_id = self._parse_resource(request.path)
         request_data = self._get_sanitized_data(request)
+
+        # Build a human-readable display string
+        display = self._build_display(request, response, model_name, action)
+        if display:
+            request_data["display"] = display
 
         # Resolve organization from user's location or tenant context
         organization = None
@@ -99,6 +173,22 @@ class AuditLoggingMiddleware(MiddlewareMixin):
             user_agent=request.META.get("HTTP_USER_AGENT", "")[:500],
             organization=organization,
         )
+
+    def _build_display(self, request, response, model_name, action):
+        """Try to build a human-readable summary from the response."""
+        try:
+            if response.get("Content-Type", "").startswith("application/json"):
+                data = json.loads(response.content.decode("utf-8"))
+                # Try common display fields
+                for field in ("__str__", "name", "title", "description", "username"):
+                    if field in data:
+                        return str(data[field])[:200]
+                # Fallback: use id
+                if "id" in data:
+                    return f"{model_name} #{data['id']}"
+        except Exception:
+            pass
+        return None
 
     def _get_action(self, method):
         """Map HTTP method to action type."""
@@ -119,7 +209,6 @@ class AuditLoggingMiddleware(MiddlewareMixin):
         - /api/v1/finance/transactions/42/   -> ('Transaction', '42')
         - /api/v1/finance/transactions/42/approve/ -> ('Transaction', '42')
         """
-        # Remove /api/v1/ prefix and trailing slash
         clean_path = path.replace("/api/v1/", "").strip("/")
         parts = clean_path.split("/")
 
@@ -127,10 +216,10 @@ class AuditLoggingMiddleware(MiddlewareMixin):
         object_id = None
 
         if len(parts) >= 2:
-            # e.g. finance/transactions -> Transaction
             resource = parts[1]
-            # Convert plural to singular, capitalize
-            model_name = resource.rstrip("s").replace("-", "_").title().replace("_", "")
+            model_name = (
+                resource.rstrip("s").replace("-", "_").title().replace("_", "")
+            )
         elif len(parts) == 1:
             model_name = parts[0].title()
 
@@ -145,9 +234,10 @@ class AuditLoggingMiddleware(MiddlewareMixin):
     def _get_sanitized_data(self, request):
         """Get request data with sensitive fields redacted."""
         try:
-            # Use DRF's parsed data if available (avoids body-already-read error)
             if hasattr(request, "data") and request.data:
-                data = dict(request.data) if hasattr(request.data, "items") else {}
+                data = (
+                    dict(request.data) if hasattr(request.data, "items") else {}
+                )
             elif hasattr(request, "POST") and request.POST:
                 data = dict(request.POST)
             else:
@@ -161,14 +251,17 @@ class AuditLoggingMiddleware(MiddlewareMixin):
         except Exception:
             data = {}
 
-        # Redact sensitive fields
         return self._redact_sensitive(data)
 
     def _redact_sensitive(self, data):
         """Recursively redact sensitive fields from data."""
         if isinstance(data, dict):
             return {
-                key: "***REDACTED***" if key.lower() in self.SENSITIVE_FIELDS else self._redact_sensitive(value)
+                key: (
+                    "***REDACTED***"
+                    if key.lower() in self.SENSITIVE_FIELDS
+                    else self._redact_sensitive(value)
+                )
                 for key, value in data.items()
             }
         elif isinstance(data, list):
