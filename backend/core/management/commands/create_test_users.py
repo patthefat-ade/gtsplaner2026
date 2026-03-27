@@ -533,35 +533,79 @@ class Command(BaseCommand):
         self.stdout.write("=" * 80)
 
         self.ALL_TEST_USERNAMES = self._collect_all_usernames()
+        errors = []
 
         # 0. Cleanup old test data to avoid FK conflicts
-        self._cleanup_old_data()
+        try:
+            self._cleanup_old_data()
+        except Exception as e:
+            errors.append(f"Cleanup: {e}")
+            self.stdout.write(self.style.WARNING(f"  WARNUNG Cleanup: {e}"))
 
         # 1. Setup Permission Groups
-        self._setup_permission_groups()
+        try:
+            self._setup_permission_groups()
+        except Exception as e:
+            errors.append(f"Permissions: {e}")
+            self.stdout.write(self.style.WARNING(f"  WARNUNG Permissions: {e}"))
 
         # 2. Create Main Tenant
-        main_org = self._create_main_tenant()
+        try:
+            main_org = self._create_main_tenant()
+        except Exception as e:
+            errors.append(f"Main Tenant: {e}")
+            self.stdout.write(self.style.ERROR(f"  FEHLER Main Tenant: {e}"))
+            return  # Cannot continue without main org
 
         # 3. Create Sub-Tenants (9 Bundeslaender) with all Schools
-        bundesland_data = self._create_bundeslaender(main_org)
+        try:
+            bundesland_data = self._create_bundeslaender(main_org)
+        except Exception as e:
+            errors.append(f"Bundeslaender: {e}")
+            self.stdout.write(self.style.ERROR(f"  FEHLER Bundeslaender: {e}"))
+            return  # Cannot continue without sub-tenants
 
         # 4. Create SuperAdmin and Admin
-        self._create_system_users(main_org)
+        try:
+            self._create_system_users(main_org)
+        except Exception as e:
+            errors.append(f"System Users: {e}")
+            self.stdout.write(self.style.WARNING(f"  WARNUNG System Users: {e}"))
 
         # 5. Create LocationManagers and Educators per School
-        self._create_school_users(bundesland_data)
+        try:
+            self._create_school_users(bundesland_data)
+        except Exception as e:
+            errors.append(f"School Users: {e}")
+            self.stdout.write(self.style.WARNING(f"  WARNUNG School Users: {e}"))
 
         # 6. Create School Year, Groups, and Students for all Schools
-        self._create_school_data(bundesland_data)
+        try:
+            self._create_school_data(bundesland_data)
+        except Exception as e:
+            errors.append(f"School Data: {e}")
+            self.stdout.write(self.style.WARNING(f"  WARNUNG School Data: {e}"))
 
         # 7. Update SystemSettings
-        self._update_system_settings()
+        try:
+            self._update_system_settings()
+        except Exception as e:
+            errors.append(f"Settings: {e}")
+            self.stdout.write(self.style.WARNING(f"  WARNUNG Settings: {e}"))
 
         self.stdout.write("\n" + "=" * 80)
-        self.stdout.write(
-            self.style.SUCCESS("Testumgebung erfolgreich erstellt/aktualisiert.")
-        )
+        if errors:
+            self.stdout.write(
+                self.style.WARNING(
+                    f"Testumgebung mit {len(errors)} Warnungen erstellt."
+                )
+            )
+            for err in errors:
+                self.stdout.write(self.style.WARNING(f"  - {err}"))
+        else:
+            self.stdout.write(
+                self.style.SUCCESS("Testumgebung erfolgreich erstellt/aktualisiert.")
+            )
         self.stdout.write("=" * 80 + "\n")
 
     # ── Step 0: Cleanup ───────────────────────────────────────────────────
@@ -570,30 +614,61 @@ class Command(BaseCommand):
         """Remove old test data to avoid FK constraint violations."""
         self.stdout.write("\n  [0/7] Alte Testdaten bereinigen...")
 
-        old_users = User.objects.filter(username__in=self.ALL_TEST_USERNAMES)
-        count = old_users.count()
-        if count > 0:
-            old_users.update(location=None)
-            self.stdout.write(f"        {count} Benutzer: location auf NULL gesetzt.")
+        try:
+            # 1. Nullify location FK on all test users
+            old_users = User.objects.filter(username__in=self.ALL_TEST_USERNAMES)
+            count = old_users.count()
+            if count > 0:
+                old_users.update(location=None)
+                self.stdout.write(f"        {count} Benutzer: location auf NULL gesetzt.")
 
-        old_locations = Location.objects.exclude(
-            organization__name__startswith="Hilfswerk"
-        )
-        loc_count = old_locations.count()
-        if loc_count > 0:
-            old_locations.delete()
-            self.stdout.write(f"        {loc_count} alte Standorte geloescht.")
+            # 2. Nullify leader FK on all groups led by test users
+            from groups.models import Group as GrpModel
+            grp_count = GrpModel.objects.filter(
+                leader__username__in=self.ALL_TEST_USERNAMES
+            ).update(leader=None)
+            if grp_count:
+                self.stdout.write(f"        {grp_count} Gruppen: leader auf NULL gesetzt.")
 
-        legacy_users = User.objects.filter(
-            username__in=["locationmanager", "educator"]
-        )
-        legacy_count = legacy_users.count()
-        if legacy_count > 0:
-            legacy_users.delete()
-            self.stdout.write(f"        {legacy_count} Legacy-Benutzer geloescht.")
+            # 3. Nullify manager FK on all locations managed by test users
+            loc_mgr_count = Location.objects.filter(
+                manager__username__in=self.ALL_TEST_USERNAMES
+            ).update(manager=None)
+            if loc_mgr_count:
+                self.stdout.write(f"        {loc_mgr_count} Standorte: manager auf NULL gesetzt.")
 
-        if count == 0 and loc_count == 0 and legacy_count == 0:
-            self.stdout.write("        Keine alten Daten gefunden.")
+            # 4. Remove GroupMember entries for legacy users
+            gm_count = GroupMember.objects.filter(
+                user__username__in=["locationmanager", "educator"]
+            ).delete()[0]
+            if gm_count:
+                self.stdout.write(f"        {gm_count} GroupMember-Eintraege geloescht.")
+
+            # 5. Delete non-Hilfswerk locations (legacy)
+            old_locations = Location.objects.exclude(
+                organization__name__startswith="Hilfswerk"
+            ).exclude(name="Hauptstandort Wien")
+            loc_count = old_locations.count()
+            if loc_count > 0:
+                old_locations.delete()
+                self.stdout.write(f"        {loc_count} alte Standorte geloescht.")
+
+            # 6. Delete legacy users (old generic test accounts)
+            legacy_users = User.objects.filter(
+                username__in=["locationmanager", "educator"]
+            )
+            legacy_count = legacy_users.count()
+            if legacy_count > 0:
+                legacy_users.delete()
+                self.stdout.write(f"        {legacy_count} Legacy-Benutzer geloescht.")
+
+            if count == 0 and loc_count == 0 and legacy_count == 0:
+                self.stdout.write("        Keine alten Daten gefunden.")
+
+        except Exception as e:
+            self.stdout.write(
+                self.style.WARNING(f"        Cleanup-Fehler (wird fortgesetzt): {e}")
+            )
 
     # ── Step 1: Permission Groups ─────────────────────────────────────────
 
