@@ -828,36 +828,61 @@ class Command(BaseCommand):
         """Create LocationManager and Educator for each school."""
         self.stdout.write("\n  [5/7] Standortleitungen und Paedagog:innen erstellen...")
 
+        created_count = 0
+        error_count = 0
+
         for bl_name, data in bundesland_data.items():
             for loc_data in data["locations"]:
                 location = loc_data["location"]
                 config = loc_data["config"]
 
                 # LocationManager
-                mgr_data = {
-                    **config["manager"],
-                    "role": User.Role.LOCATION_MANAGER,
-                    "is_staff": False,
-                    "is_superuser": False,
-                    "location": location,
-                    "group_name": "LocationManager",
-                }
-                manager_user = self._create_user(mgr_data)
+                try:
+                    mgr_data = {
+                        **config["manager"],
+                        "role": User.Role.LOCATION_MANAGER,
+                        "is_staff": False,
+                        "is_superuser": False,
+                        "location": location,
+                        "group_name": "LocationManager",
+                    }
+                    manager_user = self._create_user(mgr_data)
+                    created_count += 1
 
-                if manager_user:
-                    location.manager = manager_user
-                    location.save(update_fields=["manager"])
+                    if manager_user:
+                        location.manager = manager_user
+                        location.save(update_fields=["manager"])
+                except Exception as e:
+                    error_count += 1
+                    self.stdout.write(
+                        self.style.WARNING(
+                            f"        FEHLER Manager {config['manager']['username']}: {e}"
+                        )
+                    )
 
                 # Educator
-                edu_data = {
-                    **config["educator"],
-                    "role": User.Role.EDUCATOR,
-                    "is_staff": False,
-                    "is_superuser": False,
-                    "location": location,
-                    "group_name": "Educator",
-                }
-                self._create_user(edu_data)
+                try:
+                    edu_data = {
+                        **config["educator"],
+                        "role": User.Role.EDUCATOR,
+                        "is_staff": False,
+                        "is_superuser": False,
+                        "location": location,
+                        "group_name": "Educator",
+                    }
+                    self._create_user(edu_data)
+                    created_count += 1
+                except Exception as e:
+                    error_count += 1
+                    self.stdout.write(
+                        self.style.WARNING(
+                            f"        FEHLER Educator {config['educator']['username']}: {e}"
+                        )
+                    )
+
+        self.stdout.write(
+            f"        Gesamt: {created_count} erstellt, {error_count} Fehler."
+        )
 
     # ── Step 6: School Data (SchoolYear, Groups, Students) ────────────────
 
