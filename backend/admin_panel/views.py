@@ -9,6 +9,7 @@ from django_filters import rest_framework as django_filters
 from drf_spectacular.utils import extend_schema, extend_schema_view
 from rest_framework import permissions, serializers, viewsets
 
+from core.middleware import ensure_tenant_context
 from core.models import Organization
 from core.permissions import IsAdminOrAbove, IsSuperAdmin
 from system.models import AuditLog, SystemSetting
@@ -199,6 +200,9 @@ class OrganizationViewSet(viewsets.ModelViewSet):
         return [permissions.IsAuthenticated(), IsSuperAdmin()]
 
     def get_queryset(self):
+        # Ensure tenant context is resolved (lazy resolution for JWT auth)
+        ensure_tenant_context(self.request)
+
         qs = Organization.objects.prefetch_related("locations").filter(
             is_deleted=False
         )

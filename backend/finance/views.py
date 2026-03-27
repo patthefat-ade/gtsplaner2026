@@ -18,6 +18,7 @@ from rest_framework.decorators import action
 from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.response import Response
 
+from core.middleware import ensure_tenant_context
 from core.mixins import TenantViewSetMixin
 from core.permissions import (
     IsEducator,
@@ -313,6 +314,7 @@ class TransactionViewSet(TenantViewSetMixin, viewsets.ModelViewSet):
     @action(detail=False, methods=["get"], url_path="balance/(?P<group_id>[^/.]+)")
     def balance(self, request, group_id=None):
         """Get balance summary for a specific group."""
+        ensure_tenant_context(request)
         from groups.models import Group
 
         try:

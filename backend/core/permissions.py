@@ -248,6 +248,10 @@ class IsTenantMember(BasePermission):
         if not request.user or not request.user.is_authenticated:
             return False
 
+        # Ensure tenant context is resolved (lazy resolution for JWT auth)
+        from core.middleware import ensure_tenant_context
+        ensure_tenant_context(request)
+
         # SuperAdmin has cross-tenant access
         if get_user_group_name(request.user) == GROUP_SUPER_ADMIN:
             return True

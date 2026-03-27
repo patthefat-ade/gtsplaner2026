@@ -10,6 +10,7 @@ from django_filters import rest_framework as django_filters
 from drf_spectacular.utils import extend_schema, extend_schema_view
 from rest_framework import permissions, viewsets
 
+from core.middleware import ensure_tenant_context
 from core.models import User
 from core.permissions import IsAdminOrAbove
 from core.serializers import (
@@ -52,8 +53,8 @@ class UserViewSet(viewsets.ModelViewSet):
     """
     CRUD for user management (Admin/SuperAdmin only).
 
-    Uses request.tenant_ids from TenantMiddleware for proper multi-tenant
-    data isolation:
+    Uses request.tenant_ids from ensure_tenant_context() for proper
+    multi-tenant data isolation:
     - SuperAdmin: sees all users (is_cross_tenant=True)
     - Admin: sees users in own organization + all sub-organizations
     - Other roles: no access (empty queryset)
@@ -66,6 +67,9 @@ class UserViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated, IsAdminOrAbove]
 
     def get_queryset(self):
+        # Ensure tenant context is resolved (lazy resolution for JWT auth)
+        ensure_tenant_context(self.request)
+
         user = self.request.user
         qs = User.objects.select_related("location").filter(is_active=True)
 

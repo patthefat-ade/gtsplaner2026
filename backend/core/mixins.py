@@ -16,10 +16,16 @@ Usage:
 from rest_framework import status
 from rest_framework.response import Response
 
+from core.middleware import ensure_tenant_context
+
 
 class TenantViewSetMixin:
     """
     Mixin that automatically filters querysets by tenant (organization).
+
+    Calls ensure_tenant_context() to lazily resolve tenant context
+    after DRF JWT authentication has run. This is necessary because
+    the TenantMiddleware runs before DRF authentication.
 
     Behavior based on user role:
         - SuperAdmin (is_cross_tenant=True, tenant_ids=[]): No filter, sees all data
@@ -36,9 +42,11 @@ class TenantViewSetMixin:
         """
         Filter queryset by tenant context from request.
 
-        Uses the TenantedManager if available, otherwise filters
-        by organization_id directly.
+        Ensures tenant context is resolved before filtering.
         """
+        # Ensure tenant context is resolved (lazy resolution for JWT auth)
+        ensure_tenant_context(self.request)
+
         qs = super().get_queryset()
 
         if self.skip_tenant_filter:
@@ -66,6 +74,8 @@ class TenantViewSetMixin:
 
         Uses the user's organization from the tenant context.
         """
+        ensure_tenant_context(self.request)
+
         if self.skip_tenant_filter:
             return super().perform_create(serializer)
 
@@ -88,6 +98,8 @@ class TenantViewSetMixin:
 
         Prevents users from moving objects to a different organization.
         """
+        ensure_tenant_context(self.request)
+
         if self.skip_tenant_filter:
             return super().perform_update(serializer)
 
@@ -111,6 +123,8 @@ class TenantViewSetMixin:
         """
         Validate that deletes stay within tenant boundaries.
         """
+        ensure_tenant_context(self.request)
+
         if self.skip_tenant_filter:
             return super().perform_destroy(instance)
 
