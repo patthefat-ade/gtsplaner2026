@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <style>
+        @page {
+            size: A4 landscape;
+            margin: 1.5cm;
+        }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            font-size: 10pt;
+            color: #1a1a1a;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #3B82F6;
+        }
+        .header h1 {
+            font-size: 16pt;
+            color: #1e293b;
+        }
+        .header .meta {
+            text-align: right;
+            font-size: 9pt;
+            color: #64748b;
+        }
+        .header .meta strong {
+            color: #1e293b;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+        }
+        th {
+            background-color: #1e293b;
+            color: white;
+            padding: 8px 6px;
+            text-align: center;
+            font-size: 9pt;
+            font-weight: 600;
+        }
+        th.time-col {
+            width: 12%;
+            text-align: left;
+        }
+        th.day-col {
+            width: 17.6%;
+        }
+        td {
+            border: 1px solid #e2e8f0;
+            padding: 6px;
+            vertical-align: top;
+            font-size: 8.5pt;
+            height: 40px;
+        }
+        td.time-cell {
+            background-color: #f8fafc;
+            font-weight: 600;
+            font-size: 8pt;
+            color: #475569;
+            text-align: center;
+            vertical-align: middle;
+        }
+        .activity-cell {
+            border-radius: 3px;
+            padding: 4px 6px;
+            height: 100%;
+        }
+        .activity-name {
+            font-weight: 600;
+            font-size: 8.5pt;
+            margin-bottom: 2px;
+        }
+        .activity-desc {
+            font-size: 7.5pt;
+            color: #475569;
+        }
+        .empty-cell {
+            background-color: #fafafa;
+        }
+        .footer {
+            margin-top: 12px;
+            padding-top: 6px;
+            border-top: 1px solid #e2e8f0;
+            font-size: 7.5pt;
+            color: #94a3b8;
+            display: flex;
+            justify-content: space-between;
+        }
+        .notes {
+            margin-top: 8px;
+            padding: 8px;
+            background-color: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 4px;
+            font-size: 8pt;
+        }
+        .notes-title {
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div>
+            <h1>Wochenplan{% if plan.title %}: {{ plan.title }}{% endif %}</h1>
+            <div style="font-size: 10pt; color: #475569; margin-top: 4px;">
+                {% if plan.group %}{{ plan.group.name }}{% endif %}
+                {% if plan.group and plan.group.location %} &mdash; {{ plan.group.location.name }}{% endif %}
+            </div>
+        </div>
+        <div class="meta">
+            {% if calendar_week %}<div><strong>KW {{ calendar_week }}</strong></div>{% endif %}
+            {% if plan.week_start_date %}
+            <div>{{ plan.week_start_date|date:"d.m.Y" }} &ndash;
+                 {{ plan.week_start_date|date:"d.m.Y" }}</div>
+            {% endif %}
+        </div>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th class="time-col">Uhrzeit</th>
+                {% for day_num, day_name in days %}
+                <th class="day-col">{{ day_name }}{% if week_dates %}<br><small>{{ week_dates|slice:day_num|last }}</small>{% endif %}</th>
+                {% endfor %}
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in grid %}
+            <tr>
+                <td class="time-cell">{{ row.time }}</td>
+                {% for cell in row.cells %}
+                {% if cell %}
+                <td>
+                    <div class="activity-cell" style="background-color: {{ cell.color }}20; border-left: 3px solid {{ cell.color }};">
+                        <div class="activity-name">{{ cell.activity }}</div>
+                        {% if cell.description %}<div class="activity-desc">{{ cell.description }}</div>{% endif %}
+                    </div>
+                </td>
+                {% else %}
+                <td class="empty-cell"></td>
+                {% endif %}
+                {% endfor %}
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    {% if plan.notes %}
+    <div class="notes">
+        <div class="notes-title">Anmerkungen:</div>
+        {{ plan.notes }}
+    </div>
+    {% endif %}
+
+    <div class="footer">
+        <div>Erstellt von: {% if plan.created_by %}{{ plan.created_by.first_name }} {{ plan.created_by.last_name }}{% endif %}</div>
+        <div>Erstellt am: {{ plan.created_at|date:"d.m.Y H:i" }}</div>
+    </div>
+</body>
+</html>

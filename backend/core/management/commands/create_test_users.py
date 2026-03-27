@@ -29,6 +29,7 @@ from core.models import Location, Organization, User
 from finance.models import Transaction, TransactionCategory
 from groups.models import Group, GroupMember, SchoolYear, Student
 from timetracking.models import LeaveRequest, LeaveType, TimeEntry, WorkingHoursLimit
+from weeklyplans.models import WeeklyPlan, WeeklyPlanEntry
 
 
 class Command(BaseCommand):
@@ -618,6 +619,13 @@ class Command(BaseCommand):
         except Exception as e:
             errors.append(f"Operational Data: {e}")
             self.stdout.write(self.style.WARNING(f"  WARNUNG Operational Data: {e}"))
+
+        # 11. Create Weekly Plans and Templates
+        try:
+            self._create_weekly_plans(bundesland_data)
+        except Exception as e:
+            errors.append(f"Weekly Plans: {e}")
+            self.stdout.write(self.style.WARNING(f"  WARNUNG Weekly Plans: {e}"))
 
         self.stdout.write("\n" + "=" * 80)
         if errors:
@@ -1374,3 +1382,250 @@ class Command(BaseCommand):
         self.stdout.write(f"        {total_time} Zeiteintraege erstellt.")
         self.stdout.write(f"        {total_leave} Abwesenheitsantraege erstellt.")
         self.stdout.write(f"        {total_tx} Transaktionen erstellt.")
+
+    # ── Step 11: Weekly Plans and Templates ───────────────────────────────
+
+    def _create_weekly_plans(self, bundesland_data):
+        """Create weekly plans and templates for all groups."""
+        self.stdout.write("    [11/11] Wochenplaene und Vorlagen...")
+
+        # Delete existing weekly plans to avoid duplicates
+        WeeklyPlanEntry.objects.all().delete()
+        WeeklyPlan.objects.all().delete()
+
+        # Standard time slots for GTS (Ganztagesschule)
+        TIME_SLOTS = [
+            ("07:00", "08:00", "Fruehbetreuung"),
+            ("08:00", "09:30", "Unterrichtsblock 1"),
+            ("09:30", "09:50", "Pause / Jause"),
+            ("09:50", "11:20", "Unterrichtsblock 2"),
+            ("11:20", "12:00", "Mittagessen"),
+            ("12:00", "13:00", "Freizeitblock 1"),
+            ("13:00", "14:30", "Lernzeit"),
+            ("14:30", "15:00", "Pause / Jause"),
+            ("15:00", "16:00", "Freizeitblock 2"),
+            ("16:00", "17:00", "Spaetbetreuung"),
+        ]
+
+        # Activities per category for variety
+        ACTIVITIES = {
+            "learning": [
+                ("Mathematik", "Uebungen und Spiele"),
+                ("Deutsch Lesen", "Leseuebungen und Vorlesen"),
+                ("Sachunterricht", "Thema Natur und Umwelt"),
+                ("Englisch spielerisch", "Lieder und einfache Saetze"),
+                ("Hausaufgabenbetreuung", "Begleitung bei den Aufgaben"),
+            ],
+            "sports": [
+                ("Bewegung im Turnsaal", "Spiele und Gymnastik"),
+                ("Fussball", "Spiel auf dem Sportplatz"),
+                ("Yoga fuer Kinder", "Entspannung und Bewegung"),
+                ("Laufspiele", "Fangspiele und Staffellaeufe"),
+                ("Tanzen", "Kindertaenze und Rhythmik"),
+            ],
+            "creative": [
+                ("Basteln", "Kreatives Gestalten mit Papier"),
+                ("Malen und Zeichnen", "Freies kuenstlerisches Arbeiten"),
+                ("Musik", "Singen und Instrumente"),
+                ("Theater spielen", "Rollenspiele und Sketche"),
+                ("Toepfern", "Arbeiten mit Ton"),
+            ],
+            "social": [
+                ("Morgenkreis", "Gemeinsamer Tagesbeginn"),
+                ("Gruppenspiele", "Kooperative Spiele"),
+                ("Vorlesen", "Geschichten und Maerchen"),
+                ("Geburtstagsfeiern", "Gemeinsames Feiern"),
+                ("Projektarbeit", "Themenarbeit in Kleingruppen"),
+            ],
+            "outdoor": [
+                ("Spielplatz", "Freies Spielen draussen"),
+                ("Naturerkundung", "Baeume, Pflanzen, Tiere"),
+                ("Gartenarbeit", "Pflegen des Schulbeets"),
+                ("Waldspaziergang", "Ausflug in den nahen Wald"),
+                ("Ballspiele draussen", "Voelkerball und Co."),
+            ],
+            "meal": [
+                ("Mittagessen", "Gemeinsames Essen"),
+                ("Jause", "Gesunde Pause"),
+                ("Fruehstueck", "Gemeinsamer Start"),
+            ],
+            "free_time": [
+                ("Freispiel", "Freie Wahl der Aktivitaet"),
+                ("Brettspiele", "Gesellschaftsspiele"),
+                ("Lego und Bauen", "Konstruktionsspiele"),
+                ("Lesen in der Leseecke", "Ruhige Beschaeftigung"),
+                ("Hoerspiele", "Gemeinsames Zuhoeren"),
+            ],
+        }
+
+        COLORS = {
+            "learning": "#3B82F6",   # Blue
+            "sports": "#EF4444",     # Red
+            "creative": "#8B5CF6",   # Purple
+            "social": "#F59E0B",     # Amber
+            "outdoor": "#10B981",    # Green
+            "meal": "#78716C",       # Stone
+            "free_time": "#06B6D4",  # Cyan
+        }
+
+        # Slot-to-category mapping for realistic plans
+        SLOT_CATEGORIES = [
+            "free_time",   # 07:00-08:00 Fruehbetreuung
+            "learning",    # 08:00-09:30 Unterrichtsblock 1
+            "meal",        # 09:30-09:50 Pause/Jause
+            "learning",    # 09:50-11:20 Unterrichtsblock 2
+            "meal",        # 11:20-12:00 Mittagessen
+            "outdoor",     # 12:00-13:00 Freizeitblock 1
+            "learning",    # 13:00-14:30 Lernzeit
+            "meal",        # 14:30-15:00 Pause/Jause
+            "creative",    # 15:00-16:00 Freizeitblock 2
+            "free_time",   # 16:00-17:00 Spaetbetreuung
+        ]
+
+        rng = random.Random(42)
+        total_plans = 0
+        total_templates = 0
+
+        # First: Create 2 templates (not tied to a specific group)
+        for bl_info in bundesland_data:
+            org = bl_info["org"]
+            first_school = bl_info["schools"][0] if bl_info["schools"] else None
+            if not first_school:
+                continue
+
+            group = first_school.get("group_obj")
+            educator = first_school.get("educator_obj")
+            if not group or not educator:
+                continue
+
+            # Template 1: Standard-Wochenplan
+            tpl1, _ = WeeklyPlan.objects.update_or_create(
+                organization=org,
+                is_template=True,
+                template_name="Standard GTS Wochenplan",
+                defaults={
+                    "group": group,
+                    "title": "Standard GTS Wochenplan",
+                    "status": "published",
+                    "created_by": educator,
+                },
+            )
+            # Create entries for template
+            for day in range(5):  # Mo-Fr
+                for slot_idx, (start, end, slot_name) in enumerate(TIME_SLOTS):
+                    cat = SLOT_CATEGORIES[slot_idx]
+                    activities = ACTIVITIES[cat]
+                    activity, desc = rng.choice(activities)
+                    WeeklyPlanEntry.objects.update_or_create(
+                        weekly_plan=tpl1,
+                        day_of_week=day,
+                        start_time=start,
+                        end_time=end,
+                        defaults={
+                            "activity": activity,
+                            "description": desc,
+                            "color": COLORS[cat],
+                            "category": cat,
+                            "sort_order": slot_idx,
+                        },
+                    )
+            total_templates += 1
+
+            # Template 2: Kreativ-Schwerpunkt
+            tpl2, _ = WeeklyPlan.objects.update_or_create(
+                organization=org,
+                is_template=True,
+                template_name="Kreativ-Schwerpunkt Wochenplan",
+                defaults={
+                    "group": group,
+                    "title": "Kreativ-Schwerpunkt Wochenplan",
+                    "status": "published",
+                    "created_by": educator,
+                },
+            )
+            creative_slots = list(SLOT_CATEGORIES)
+            creative_slots[5] = "creative"   # 12:00-13:00
+            creative_slots[8] = "sports"     # 15:00-16:00
+            for day in range(5):
+                for slot_idx, (start, end, slot_name) in enumerate(TIME_SLOTS):
+                    cat = creative_slots[slot_idx]
+                    activities = ACTIVITIES[cat]
+                    activity, desc = rng.choice(activities)
+                    WeeklyPlanEntry.objects.update_or_create(
+                        weekly_plan=tpl2,
+                        day_of_week=day,
+                        start_time=start,
+                        end_time=end,
+                        defaults={
+                            "activity": activity,
+                            "description": desc,
+                            "color": COLORS[cat],
+                            "category": cat,
+                            "sort_order": slot_idx,
+                        },
+                    )
+            total_templates += 1
+            break  # Only create templates for first Bundesland
+
+        # Second: Create actual weekly plans for all groups
+        today = datetime.date.today()
+        # Find the Monday of the current week
+        current_monday = today - datetime.timedelta(days=today.weekday())
+
+        for bl_info in bundesland_data:
+            org = bl_info["org"]
+            for school in bl_info["schools"]:
+                group = school.get("group_obj")
+                educator = school.get("educator_obj")
+                if not group or not educator:
+                    continue
+
+                # Create plans for the last 4 weeks + current week
+                for week_offset in range(-4, 1):
+                    week_start = current_monday + datetime.timedelta(weeks=week_offset)
+                    cal_week = week_start.isocalendar()[1]
+
+                    plan_status = "published" if week_offset < 0 else "draft"
+                    plan, _ = WeeklyPlan.objects.update_or_create(
+                        group=group,
+                        week_start_date=week_start,
+                        defaults={
+                            "organization": org,
+                            "title": f"Wochenplan KW {cal_week}",
+                            "calendar_week": cal_week,
+                            "status": plan_status,
+                            "created_by": educator,
+                            "is_template": False,
+                        },
+                    )
+
+                    # Create entries with some variety per week
+                    for day in range(5):
+                        for slot_idx, (start, end, slot_name) in enumerate(TIME_SLOTS):
+                            cat = SLOT_CATEGORIES[slot_idx]
+                            # Add variety: sometimes swap categories for afternoon
+                            if slot_idx == 5 and rng.random() > 0.5:
+                                cat = rng.choice(["sports", "outdoor", "creative"])
+                            if slot_idx == 8 and rng.random() > 0.5:
+                                cat = rng.choice(["sports", "creative", "social"])
+
+                            activities = ACTIVITIES[cat]
+                            activity, desc = rng.choice(activities)
+
+                            WeeklyPlanEntry.objects.update_or_create(
+                                weekly_plan=plan,
+                                day_of_week=day,
+                                start_time=start,
+                                end_time=end,
+                                defaults={
+                                    "activity": activity,
+                                    "description": desc,
+                                    "color": COLORS[cat],
+                                    "category": cat,
+                                    "sort_order": slot_idx,
+                                },
+                            )
+                    total_plans += 1
+
+        self.stdout.write(f"        {total_templates} Vorlagen erstellt.")
+        self.stdout.write(f"        {total_plans} Wochenplaene erstellt.")

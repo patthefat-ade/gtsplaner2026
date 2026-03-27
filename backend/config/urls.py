@@ -92,6 +92,7 @@ urlpatterns = [
     path("api/v1/finance/", include("finance.urls")),
     path("api/v1/timetracking/", include("timetracking.urls")),
     path("api/v1/groups/", include("groups.urls")),
+    path("api/v1/weeklyplans/", include("weeklyplans.urls")),
     path("api/v1/locations/", include("core.urls.location_urls")),
     path("api/v1/admin/", include("admin_panel.urls")),
     path("api/v1/system/", include("system.urls")),

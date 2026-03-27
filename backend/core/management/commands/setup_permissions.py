@@ -47,6 +47,9 @@ CUSTOM_PERMISSIONS = [
     # Locations
     ("view_locations", "Standorte anzeigen"),
     ("manage_locations", "Standorte verwalten"),
+    # Weekly Plans
+    ("view_weeklyplans", "Wochenplaene anzeigen"),
+    ("manage_weeklyplans", "Wochenplaene erstellen und bearbeiten"),
     # Multi-Tenant
     ("cross_tenant_access", "Mandantenuebergreifender Zugriff"),
 ]
@@ -68,6 +71,9 @@ GROUP_PERMISSIONS = {
         # Timetracking: can view and create own time entries
         "view_own_timeentries",
         "manage_timeentries",
+        # Weekly Plans: can view and manage own group plans
+        "view_weeklyplans",
+        "manage_weeklyplans",
     ],
     "LocationManager": [
         # Dashboard
@@ -91,6 +97,9 @@ GROUP_PERMISSIONS = {
         "view_own_timeentries",
         "manage_timeentries",
         "approve_leave",
+        # Weekly Plans: full management
+        "view_weeklyplans",
+        "manage_weeklyplans",
     ],
     "Admin": [
         # Dashboard
@@ -114,6 +123,9 @@ GROUP_PERMISSIONS = {
         "view_own_timeentries",
         "manage_timeentries",
         "approve_leave",
+        # Weekly Plans: full management
+        "view_weeklyplans",
+        "manage_weeklyplans",
         # Admin: user and settings management
         "manage_users",
         "view_audit_log",
@@ -148,6 +160,9 @@ GROUP_PERMISSIONS = {
         "view_audit_log",
         "manage_settings",
         "manage_organizations",
+        # Weekly Plans: full management
+        "view_weeklyplans",
+        "manage_weeklyplans",
         # Multi-Tenant: cross-tenant access
         "cross_tenant_access",
     ],
