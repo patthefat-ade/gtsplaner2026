@@ -28,12 +28,11 @@ COPY . .
 # Create necessary directories
 RUN mkdir -p /app/staticfiles /app/media /app/logs
 
-# Collect static files
-# Collect static files wird im run command ausgefuehrt
+# Make startup script executable
+RUN chmod +x /app/startup.sh
 
 # Expose port
 EXPOSE 8000
 
-# Default command
-# Startup script: migrate, setup permissions, seed data, then start server
-CMD ["sh", "-c", "python manage.py migrate --noinput && python manage.py collectstatic --noinput && python manage.py setup_permissions && python manage.py create_test_users && gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 3"]
+# Use startup script for robust initialization
+CMD ["/app/startup.sh"]
