@@ -318,10 +318,30 @@ class Command(BaseCommand):
         {"first_name": "Jakob", "last_name": "Aigner", "class": "4b"},
     ]
 
+    # All test usernames managed by this command
+    ALL_TEST_USERNAMES = [
+        "superadmin", "admin",
+        # Legacy usernames from previous sprints
+        "locationmanager", "educator",
+        # New Hilfswerk usernames
+        "anita.anic", "amalia.bogdan",
+        "brigitte.berger", "clara.czermak",
+        "doris.decker", "elena.ernst",
+        "franziska.fink", "greta.gruber",
+        "hanna.hofer", "irene.illing",
+        "julia.jandl", "katharina.kern",
+        "laura.lang", "maria.maier",
+        "nina.neuner", "olivia.ortner",
+        "petra.pichler", "rosa.riedl",
+    ]
+
     def handle(self, *args, **options):
         self.stdout.write("\n" + "=" * 80)
         self.stdout.write("GTS Planer – Hilfswerk Oesterreich Testumgebung")
         self.stdout.write("=" * 80)
+
+        # 0. Cleanup old test data to avoid FK conflicts
+        self._cleanup_old_data()
 
         # 1. Setup Permission Groups
         self._setup_permission_groups()
@@ -346,6 +366,41 @@ class Command(BaseCommand):
             self.style.SUCCESS("Testumgebung erfolgreich erstellt/aktualisiert.")
         )
         self.stdout.write("=" * 80 + "\n")
+
+    # ── Step 0: Cleanup ───────────────────────────────────────────────────
+
+    def _cleanup_old_data(self):
+        """Remove old test data to avoid FK constraint violations."""
+        self.stdout.write("\n  [0/6] Alte Testdaten bereinigen...")
+
+        # Remove location FK from old test users to avoid FK violations
+        old_users = User.objects.filter(username__in=self.ALL_TEST_USERNAMES)
+        count = old_users.count()
+        if count > 0:
+            # Unset location to avoid FK issues when locations are recreated
+            old_users.update(location=None)
+            self.stdout.write(f"        {count} Benutzer: location auf NULL gesetzt.")
+
+        # Delete old locations that are not linked to any Hilfswerk organization
+        old_locations = Location.objects.exclude(
+            organization__name__startswith="Hilfswerk"
+        )
+        loc_count = old_locations.count()
+        if loc_count > 0:
+            old_locations.delete()
+            self.stdout.write(f"        {loc_count} alte Standorte geloescht.")
+
+        # Delete legacy test users (locationmanager, educator)
+        legacy_users = User.objects.filter(
+            username__in=["locationmanager", "educator"]
+        )
+        legacy_count = legacy_users.count()
+        if legacy_count > 0:
+            legacy_users.delete()
+            self.stdout.write(f"        {legacy_count} Legacy-Benutzer geloescht.")
+
+        if count == 0 and loc_count == 0 and legacy_count == 0:
+            self.stdout.write("        Keine alten Daten gefunden.")
 
     # ── Step 1: Permission Groups ─────────────────────────────────────────
 
