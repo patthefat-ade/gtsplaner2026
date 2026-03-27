@@ -203,6 +203,7 @@ export default function AttendancePage() {
       {
         onSuccess: (data) => {
           toast({
+            type: "success",
             title: "Anwesenheit gespeichert",
             description: `${data.created} erstellt, ${data.updated} aktualisiert.`,
           });
@@ -210,9 +211,9 @@ export default function AttendancePage() {
         },
         onError: () => {
           toast({
+            type: "error",
             title: "Fehler beim Speichern",
             description: "Die Anwesenheit konnte nicht gespeichert werden.",
-            variant: "destructive",
           });
         },
       }
