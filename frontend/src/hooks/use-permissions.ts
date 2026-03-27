@@ -35,6 +35,9 @@ export type PermissionCodename =
   // Locations
   | "view_locations"
   | "manage_locations"
+  // Weekly Plans
+  | "view_weeklyplans"
+  | "manage_weeklyplans"
   // Admin
   | "manage_users"
   | "manage_settings"
@@ -67,6 +70,8 @@ const roleHierarchy: Record<UserRole, number> = {
  * authenticated users (e.g., /groups/list, /timetracking/leave-requests).
  */
 const routePermissions: { path: string; permission: PermissionCodename }[] = [
+  // Weekly Plans routes
+  { path: "/weeklyplans", permission: "view_weeklyplans" },
   // Location routes
   { path: "/admin/locations", permission: "view_locations" },
   // Admin routes
@@ -101,6 +106,7 @@ const createPermissions: Record<string, PermissionCodename> = {
   transaction: "create_transactions",
   time_entry: "manage_timeentries",
   leave_request: "manage_timeentries",
+  weeklyplan: "manage_weeklyplans",
   user: "manage_users",
   organization: "manage_organizations",
 };
@@ -155,6 +161,8 @@ export function getRequiredRoleForPath(pathname: string): UserRole | null {
     create_transactions: "educator",
     view_own_timeentries: "educator",
     manage_timeentries: "educator",
+    view_weeklyplans: "educator",
+    manage_weeklyplans: "educator",
   };
 
   return permToMinRole[perm] ?? null;

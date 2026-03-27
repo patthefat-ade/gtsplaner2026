@@ -350,6 +350,74 @@ export interface StudentCreate {
   notes?: string;
 }
 
+// ─── Weekly Plans ───────────────────────────────────────────────────────────
+
+export type WeeklyPlanStatus = "draft" | "published";
+
+export type DayOfWeek = 0 | 1 | 2 | 3 | 4;
+
+export const DAY_NAMES: Record<DayOfWeek, string> = {
+  0: "Montag",
+  1: "Dienstag",
+  2: "Mittwoch",
+  3: "Donnerstag",
+  4: "Freitag",
+};
+
+export const ENTRY_CATEGORIES = [
+  { value: "learning", label: "Lernzeit", color: "#3B82F6" },
+  { value: "sports", label: "Sport & Bewegung", color: "#EF4444" },
+  { value: "creative", label: "Kreativ", color: "#8B5CF6" },
+  { value: "social", label: "Sozial", color: "#F59E0B" },
+  { value: "outdoor", label: "Outdoor", color: "#10B981" },
+  { value: "meal", label: "Mahlzeit", color: "#78716C" },
+  { value: "free_time", label: "Freizeit", color: "#06B6D4" },
+] as const;
+
+export interface WeeklyPlanEntry {
+  id?: number;
+  day_of_week: DayOfWeek;
+  day_name?: string;
+  start_time: string;
+  end_time: string;
+  activity: string;
+  description: string;
+  color: string;
+  category: string;
+  sort_order: number;
+}
+
+export interface WeeklyPlan {
+  id: number;
+  group: number;
+  group_name: string;
+  location_name: string;
+  week_start_date: string;
+  calendar_week: number;
+  title: string;
+  notes?: string;
+  status: WeeklyPlanStatus;
+  is_template: boolean;
+  template_name?: string;
+  created_by: number;
+  created_by_name: string;
+  entry_count?: number;
+  entries?: WeeklyPlanEntry[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface WeeklyPlanCreate {
+  group: number;
+  week_start_date: string;
+  title: string;
+  notes?: string;
+  status?: WeeklyPlanStatus;
+  is_template?: boolean;
+  template_name?: string;
+  entries?: Omit<WeeklyPlanEntry, "id" | "day_name">[];
+}
+
 // ─── System ──────────────────────────────────────────────────────────────────
 
 export interface AuditLogEntry {

@@ -1,0 +1,635 @@
+"use client";
+
+import { useState, useEffect, useMemo, useCallback } from "react";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
+import {
+  useWeeklyPlan,
+  useUpdateWeeklyPlan,
+  useExportPdf,
+  useDuplicateWeeklyPlan,
+} from "@/hooks/use-weeklyplans";
+import { usePermissions } from "@/hooks/use-permissions";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  ArrowLeft,
+  Pencil,
+  Save,
+  X,
+  FileDown,
+  Copy,
+  Plus,
+  Trash2,
+  CalendarDays,
+} from "lucide-react";
+import {
+  type WeeklyPlanEntry,
+  type DayOfWeek,
+  DAY_NAMES,
+  ENTRY_CATEGORIES,
+} from "@/types/models";
+
+// ── Types ───────────────────────────────────────────────────────────────────
+
+interface EntryFormData {
+  day_of_week: DayOfWeek;
+  start_time: string;
+  end_time: string;
+  activity: string;
+  description: string;
+  color: string;
+  category: string;
+  sort_order: number;
+}
+
+const DEFAULT_ENTRY: EntryFormData = {
+  day_of_week: 0,
+  start_time: "08:00",
+  end_time: "09:00",
+  activity: "",
+  description: "",
+  color: "#3B82F6",
+  category: "learning",
+  sort_order: 0,
+};
+
+// ── Helpers ─────────────────────────────────────────────────────────────────
+
+function getTimeSlots(entries: WeeklyPlanEntry[]): string[] {
+  const slots = new Set<string>();
+  entries.forEach((e) => {
+    slots.add(`${e.start_time}-${e.end_time}`);
+  });
+  return Array.from(slots).sort();
+}
+
+function getCategoryColor(category: string): string {
+  return ENTRY_CATEGORIES.find((c) => c.value === category)?.color ?? "#6B7280";
+}
+
+function getCategoryLabel(category: string): string {
+  return ENTRY_CATEGORIES.find((c) => c.value === category)?.label ?? category;
+}
+
+// ── Component ───────────────────────────────────────────────────────────────
+
+export default function WeeklyPlanDetailPage() {
+  const params = useParams();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const planId = Number(params.id);
+
+  const { hasPermission } = usePermissions();
+  const canManage = hasPermission("manage_weeklyplans");
+
+  const { data: plan, isLoading } = useWeeklyPlan(planId);
+  const updateMutation = useUpdateWeeklyPlan();
+  const exportPdf = useExportPdf();
+  const duplicateMutation = useDuplicateWeeklyPlan();
+
+  // Edit mode
+  const [isEditing, setIsEditing] = useState(searchParams.get("edit") === "true");
+  const [editedEntries, setEditedEntries] = useState<WeeklyPlanEntry[]>([]);
+  const [editTitle, setEditTitle] = useState("");
+  const [editNotes, setEditNotes] = useState("");
+  const [editStatus, setEditStatus] = useState<string>("draft");
+
+  // Entry dialog
+  const [entryDialog, setEntryDialog] = useState(false);
+  const [editingEntry, setEditingEntry] = useState<EntryFormData>(DEFAULT_ENTRY);
+  const [editingEntryIndex, setEditingEntryIndex] = useState<number | null>(null);
+
+  // Initialize edit state when plan loads
+  useEffect(() => {
+    if (plan) {
+      setEditedEntries(plan.entries ?? []);
+      setEditTitle(plan.title);
+      setEditNotes(plan.notes ?? "");
+      setEditStatus(plan.status);
+    }
+  }, [plan]);
+
+  // Grid data
+  const entries = isEditing ? editedEntries : (plan?.entries ?? []);
+  const timeSlots = useMemo(() => getTimeSlots(entries), [entries]);
+  const days: DayOfWeek[] = [0, 1, 2, 3, 4];
+
+  const getEntry = useCallback(
+    (day: DayOfWeek, slot: string): WeeklyPlanEntry | undefined => {
+      const [start, end] = slot.split("-");
+      return entries.find(
+        (e) => e.day_of_week === day && e.start_time === start && e.end_time === end
+      );
+    },
+    [entries]
+  );
+
+  // ── Entry CRUD ──────────────────────────────────────────────────────────
+
+  const openNewEntry = (day: DayOfWeek, slot?: string) => {
+    const [start, end] = slot ? slot.split("-") : ["08:00", "09:00"];
+    setEditingEntry({
+      ...DEFAULT_ENTRY,
+      day_of_week: day,
+      start_time: start,
+      end_time: end,
+      sort_order: entries.length,
+    });
+    setEditingEntryIndex(null);
+    setEntryDialog(true);
+  };
+
+  const openEditEntry = (entry: WeeklyPlanEntry, index: number) => {
+    setEditingEntry({
+      day_of_week: entry.day_of_week,
+      start_time: entry.start_time,
+      end_time: entry.end_time,
+      activity: entry.activity,
+      description: entry.description,
+      color: entry.color,
+      category: entry.category,
+      sort_order: entry.sort_order,
+    });
+    setEditingEntryIndex(index);
+    setEntryDialog(true);
+  };
+
+  const saveEntry = () => {
+    const newEntry: WeeklyPlanEntry = {
+      ...editingEntry,
+      color: getCategoryColor(editingEntry.category),
+    };
+
+    if (editingEntryIndex !== null) {
+      // Update existing
+      const updated = [...editedEntries];
+      updated[editingEntryIndex] = newEntry;
+      setEditedEntries(updated);
+    } else {
+      // Add new
+      setEditedEntries([...editedEntries, newEntry]);
+    }
+    setEntryDialog(false);
+  };
+
+  const deleteEntry = (index: number) => {
+    setEditedEntries(editedEntries.filter((_, i) => i !== index));
+  };
+
+  // ── Save Plan ─────────────────────────────────────────────────────────
+
+  const handleSave = async () => {
+    if (!plan) return;
+    await updateMutation.mutateAsync({
+      id: plan.id,
+      data: {
+        title: editTitle,
+        notes: editNotes,
+        status: editStatus as "draft" | "published",
+        entries: editedEntries.map((e) => ({
+          day_of_week: e.day_of_week,
+          start_time: e.start_time,
+          end_time: e.end_time,
+          activity: e.activity,
+          description: e.description,
+          color: e.color,
+          category: e.category,
+          sort_order: e.sort_order,
+        })),
+      },
+    });
+    setIsEditing(false);
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex h-64 items-center justify-center">
+        <p className="text-muted-foreground">Wochenplan wird geladen...</p>
+      </div>
+    );
+  }
+
+  if (!plan) {
+    return (
+      <div className="flex h-64 flex-col items-center justify-center gap-4">
+        <p className="text-muted-foreground">Wochenplan nicht gefunden</p>
+        <Button asChild variant="outline">
+          <Link href="/weeklyplans">
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Zurück zur Übersicht
+          </Link>
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="icon" asChild>
+            <Link href="/weeklyplans">
+              <ArrowLeft className="h-4 w-4" />
+            </Link>
+          </Button>
+          <div>
+            {isEditing ? (
+              <Input
+                value={editTitle}
+                onChange={(e) => setEditTitle(e.target.value)}
+                className="text-2xl font-bold"
+              />
+            ) : (
+              <h1 className="text-3xl font-bold tracking-tight">{plan.title}</h1>
+            )}
+            <div className="mt-1 flex items-center gap-2 text-muted-foreground">
+              <CalendarDays className="h-4 w-4" />
+              <span>KW {plan.calendar_week}</span>
+              <span>·</span>
+              <span>{plan.group_name}</span>
+              <span>·</span>
+              <span>{plan.location_name}</span>
+              <span>·</span>
+              <Badge variant={plan.status === "published" ? "default" : "secondary"}>
+                {plan.status === "published" ? "Veröffentlicht" : "Entwurf"}
+              </Badge>
+            </div>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          {isEditing ? (
+            <>
+              <Select value={editStatus} onValueChange={setEditStatus}>
+                <SelectTrigger className="w-[160px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="draft">Entwurf</SelectItem>
+                  <SelectItem value="published">Veröffentlicht</SelectItem>
+                </SelectContent>
+              </Select>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setIsEditing(false);
+                  setEditedEntries(plan.entries ?? []);
+                  setEditTitle(plan.title);
+                  setEditNotes(plan.notes ?? "");
+                  setEditStatus(plan.status);
+                }}
+              >
+                <X className="mr-2 h-4 w-4" />
+                Abbrechen
+              </Button>
+              <Button onClick={handleSave} disabled={updateMutation.isPending}>
+                <Save className="mr-2 h-4 w-4" />
+                {updateMutation.isPending ? "Speichern..." : "Speichern"}
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button
+                variant="outline"
+                onClick={() => exportPdf.mutate(plan.id)}
+                disabled={exportPdf.isPending}
+              >
+                <FileDown className="mr-2 h-4 w-4" />
+                PDF
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => duplicateMutation.mutate(plan.id)}
+                disabled={duplicateMutation.isPending}
+              >
+                <Copy className="mr-2 h-4 w-4" />
+                Duplizieren
+              </Button>
+              {canManage && (
+                <Button onClick={() => setIsEditing(true)}>
+                  <Pencil className="mr-2 h-4 w-4" />
+                  Bearbeiten
+                </Button>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Notes (edit mode) */}
+      {isEditing && (
+        <Card>
+          <CardContent className="pt-6">
+            <label className="mb-1 block text-sm font-medium">Notizen</label>
+            <Textarea
+              value={editNotes}
+              onChange={(e) => setEditNotes(e.target.value)}
+              placeholder="Notizen zum Wochenplan..."
+              rows={2}
+            />
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Notes (view mode) */}
+      {!isEditing && plan.notes && (
+        <Card>
+          <CardContent className="pt-6">
+            <p className="text-sm text-muted-foreground">{plan.notes}</p>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Weekly Grid */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center justify-between">
+            <span>Wochenübersicht</span>
+            {isEditing && (
+              <Button size="sm" variant="outline" onClick={() => openNewEntry(0)}>
+                <Plus className="mr-2 h-4 w-4" />
+                Zeitslot hinzufügen
+              </Button>
+            )}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="overflow-x-auto">
+          {timeSlots.length === 0 ? (
+            <div className="flex h-32 flex-col items-center justify-center gap-2">
+              <p className="text-muted-foreground">Noch keine Einträge vorhanden</p>
+              {isEditing && (
+                <Button size="sm" onClick={() => openNewEntry(0)}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Ersten Eintrag hinzufügen
+                </Button>
+              )}
+            </div>
+          ) : (
+            <table className="w-full border-collapse">
+              <thead>
+                <tr>
+                  <th className="w-[120px] border border-border bg-muted/50 p-2 text-left text-xs font-semibold">
+                    Zeit
+                  </th>
+                  {days.map((day) => (
+                    <th
+                      key={day}
+                      className="border border-border bg-muted/50 p-2 text-center text-xs font-semibold"
+                    >
+                      {DAY_NAMES[day]}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {timeSlots.map((slot) => {
+                  const [start, end] = slot.split("-");
+                  return (
+                    <tr key={slot}>
+                      <td className="border border-border bg-muted/30 p-2 text-xs font-medium">
+                        {start}
+                        <br />
+                        {end}
+                      </td>
+                      {days.map((day) => {
+                        const entry = getEntry(day, slot);
+                        const entryIndex = entry
+                          ? entries.findIndex(
+                              (e) =>
+                                e.day_of_week === day &&
+                                e.start_time === start &&
+                                e.end_time === end
+                            )
+                          : -1;
+
+                        if (entry) {
+                          return (
+                            <td
+                              key={day}
+                              className="border border-border p-1"
+                              style={{
+                                backgroundColor: `${entry.color}15`,
+                              }}
+                            >
+                              <div
+                                className={`rounded p-2 text-xs ${isEditing ? "cursor-pointer hover:opacity-80" : ""}`}
+                                style={{
+                                  borderLeft: `3px solid ${entry.color}`,
+                                }}
+                                onClick={
+                                  isEditing
+                                    ? () => openEditEntry(entry, entryIndex)
+                                    : undefined
+                                }
+                              >
+                                <div className="font-semibold">{entry.activity}</div>
+                                {entry.description && (
+                                  <div className="mt-0.5 text-muted-foreground">
+                                    {entry.description}
+                                  </div>
+                                )}
+                                <div className="mt-1">
+                                  <span
+                                    className="inline-block rounded-full px-1.5 py-0.5 text-[10px] font-medium text-white"
+                                    style={{ backgroundColor: entry.color }}
+                                  >
+                                    {getCategoryLabel(entry.category)}
+                                  </span>
+                                </div>
+                                {isEditing && (
+                                  <button
+                                    className="mt-1 text-[10px] text-destructive hover:underline"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      deleteEntry(entryIndex);
+                                    }}
+                                  >
+                                    Entfernen
+                                  </button>
+                                )}
+                              </div>
+                            </td>
+                          );
+                        }
+
+                        return (
+                          <td
+                            key={day}
+                            className={`border border-border p-1 ${isEditing ? "cursor-pointer hover:bg-muted/50" : ""}`}
+                            onClick={
+                              isEditing ? () => openNewEntry(day, slot) : undefined
+                            }
+                          >
+                            {isEditing && (
+                              <div className="flex h-full min-h-[40px] items-center justify-center text-muted-foreground">
+                                <Plus className="h-3 w-3" />
+                              </div>
+                            )}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Category Legend */}
+      <Card>
+        <CardContent className="pt-6">
+          <div className="flex flex-wrap gap-3">
+            {ENTRY_CATEGORIES.map((cat) => (
+              <div key={cat.value} className="flex items-center gap-1.5">
+                <div
+                  className="h-3 w-3 rounded-full"
+                  style={{ backgroundColor: cat.color }}
+                />
+                <span className="text-xs text-muted-foreground">{cat.label}</span>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Entry Edit Dialog */}
+      <Dialog open={entryDialog} onOpenChange={setEntryDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {editingEntryIndex !== null ? "Eintrag bearbeiten" : "Neuer Eintrag"}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="mb-1 block text-sm font-medium">Tag</label>
+                <Select
+                  value={String(editingEntry.day_of_week)}
+                  onValueChange={(v) =>
+                    setEditingEntry({
+                      ...editingEntry,
+                      day_of_week: Number(v) as DayOfWeek,
+                    })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {days.map((d) => (
+                      <SelectItem key={d} value={String(d)}>
+                        {DAY_NAMES[d]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium">Kategorie</label>
+                <Select
+                  value={editingEntry.category}
+                  onValueChange={(v) =>
+                    setEditingEntry({
+                      ...editingEntry,
+                      category: v,
+                      color: getCategoryColor(v),
+                    })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ENTRY_CATEGORIES.map((cat) => (
+                      <SelectItem key={cat.value} value={cat.value}>
+                        <div className="flex items-center gap-2">
+                          <div
+                            className="h-2.5 w-2.5 rounded-full"
+                            style={{ backgroundColor: cat.color }}
+                          />
+                          {cat.label}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="mb-1 block text-sm font-medium">Von</label>
+                <Input
+                  type="time"
+                  value={editingEntry.start_time}
+                  onChange={(e) =>
+                    setEditingEntry({ ...editingEntry, start_time: e.target.value })
+                  }
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium">Bis</label>
+                <Input
+                  type="time"
+                  value={editingEntry.end_time}
+                  onChange={(e) =>
+                    setEditingEntry({ ...editingEntry, end_time: e.target.value })
+                  }
+                />
+              </div>
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium">Aktivität</label>
+              <Input
+                value={editingEntry.activity}
+                onChange={(e) =>
+                  setEditingEntry({ ...editingEntry, activity: e.target.value })
+                }
+                placeholder="z.B. Mathematik, Fußball, Basteln..."
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium">Beschreibung</label>
+              <Textarea
+                value={editingEntry.description}
+                onChange={(e) =>
+                  setEditingEntry({ ...editingEntry, description: e.target.value })
+                }
+                placeholder="Kurze Beschreibung der Aktivität..."
+                rows={2}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEntryDialog(false)}>
+              Abbrechen
+            </Button>
+            <Button onClick={saveEntry} disabled={!editingEntry.activity}>
+              {editingEntryIndex !== null ? "Aktualisieren" : "Hinzufügen"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}

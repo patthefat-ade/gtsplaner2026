@@ -20,6 +20,8 @@ import {
   Building2,
   CheckSquare,
   MapPin,
+  CalendarDays,
+  BookTemplate,
   type LucideIcon,
 } from "lucide-react";
 import {
@@ -111,6 +113,23 @@ const navigation: NavSection[] = [
         icon: GraduationCap,
         // Educators can view, LocationManager+ can manage
         permission: "view_students",
+      },
+    ],
+  },
+  {
+    title: "Wochenpläne",
+    items: [
+      {
+        title: "Wochenpläne",
+        href: "/weeklyplans",
+        icon: CalendarDays,
+        permission: "view_weeklyplans",
+      },
+      {
+        title: "Vorlagen",
+        href: "/weeklyplans/templates",
+        icon: BookTemplate,
+        permission: "view_weeklyplans",
       },
     ],
   },
