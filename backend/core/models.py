@@ -283,11 +283,11 @@ class Location(models.Model):
     street = EncryptedCharField(
         max_length=255, blank=True, null=True, default="", verbose_name="Straße"
     )
-    city = EncryptedCharField(
-        max_length=255, blank=True, null=True, default="", verbose_name="Stadt"
+    city = models.CharField(
+        max_length=255, blank=True, default="", verbose_name="Stadt"
     )
-    postal_code = EncryptedCharField(
-        max_length=255, blank=True, null=True, default="", verbose_name="PLZ"
+    postal_code = models.CharField(
+        max_length=20, blank=True, default="", verbose_name="PLZ"
     )
     manager = models.ForeignKey(
         User,
@@ -310,6 +310,8 @@ class Location(models.Model):
         indexes = [
             models.Index(fields=["organization"]),
             models.Index(fields=["manager"]),
+            models.Index(fields=["city"]),
+            models.Index(fields=["name"]),
         ]
 
     def __str__(self) -> str:

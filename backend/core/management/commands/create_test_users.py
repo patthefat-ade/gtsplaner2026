@@ -18,12 +18,17 @@ Usage:
 """
 
 import datetime
+import random
+from decimal import Decimal
 
 from django.contrib.auth.models import Group as AuthGroup
 from django.core.management.base import BaseCommand
+from django.utils import timezone
 
 from core.models import Location, Organization, User
+from finance.models import Transaction, TransactionCategory
 from groups.models import Group, GroupMember, SchoolYear, Student
+from timetracking.models import LeaveRequest, LeaveType, TimeEntry, WorkingHoursLimit
 
 
 class Command(BaseCommand):
@@ -593,6 +598,27 @@ class Command(BaseCommand):
             errors.append(f"Settings: {e}")
             self.stdout.write(self.style.WARNING(f"  WARNUNG Settings: {e}"))
 
+        # 8. Create Leave Types and Working Hours Limits
+        try:
+            self._create_leave_types_and_limits(bundesland_data)
+        except Exception as e:
+            errors.append(f"Leave Types: {e}")
+            self.stdout.write(self.style.WARNING(f"  WARNUNG Leave Types: {e}"))
+
+        # 9. Create Transaction Categories
+        try:
+            self._create_transaction_categories(bundesland_data)
+        except Exception as e:
+            errors.append(f"Transaction Categories: {e}")
+            self.stdout.write(self.style.WARNING(f"  WARNUNG Transaction Categories: {e}"))
+
+        # 10. Create Time Entries, Leave Requests, and Transactions
+        try:
+            self._create_operational_data(bundesland_data)
+        except Exception as e:
+            errors.append(f"Operational Data: {e}")
+            self.stdout.write(self.style.WARNING(f"  WARNUNG Operational Data: {e}"))
+
         self.stdout.write("\n" + "=" * 80)
         if errors:
             self.stdout.write(
@@ -612,7 +638,7 @@ class Command(BaseCommand):
 
     def _cleanup_old_data(self):
         """Remove old test data to avoid FK constraint violations."""
-        self.stdout.write("\n  [0/7] Alte Testdaten bereinigen...")
+        self.stdout.write("\n  [0/10] Alte Testdaten bereinigen...")
 
         try:
             # 1. Nullify location FK on all test users
@@ -676,7 +702,7 @@ class Command(BaseCommand):
         """Ensure Django Permission Groups exist."""
         from django.core.management import call_command
 
-        self.stdout.write("\n  [1/7] Permission Groups einrichten...")
+        self.stdout.write("\n  [1/10] Permission Groups einrichten...")
         try:
             call_command("setup_permissions", "--reset", "--migrate-users", verbosity=0)
             self.stdout.write("        Erstellt/aktualisiert.")
@@ -687,7 +713,7 @@ class Command(BaseCommand):
 
     def _create_main_tenant(self):
         """Create Hilfswerk Oesterreich as main tenant."""
-        self.stdout.write("\n  [2/7] Hauptmandant erstellen...")
+        self.stdout.write("\n  [2/10] Hauptmandant erstellen...")
 
         main_org, created = Organization.objects.update_or_create(
             name="Hilfswerk Oesterreich",
@@ -714,7 +740,7 @@ class Command(BaseCommand):
 
     def _create_bundeslaender(self, main_org):
         """Create 9 Bundesland sub-tenants with n schools each."""
-        self.stdout.write("\n  [3/7] Bundeslaender und Schulen erstellen...")
+        self.stdout.write("\n  [3/10] Bundeslaender und Schulen erstellen...")
 
         result = {}
         for bl in self.BUNDESLAENDER:
@@ -773,7 +799,7 @@ class Command(BaseCommand):
 
     def _create_system_users(self, main_org):
         """Create SuperAdmin and Admin users at Hauptstandort Wien."""
-        self.stdout.write("\n  [4/7] System-Benutzer erstellen...")
+        self.stdout.write("\n  [4/10] System-Benutzer erstellen...")
 
         hauptstandort, hs_created = Location.objects.update_or_create(
             name="Hauptstandort Wien",
@@ -826,7 +852,7 @@ class Command(BaseCommand):
 
     def _create_school_users(self, bundesland_data):
         """Create LocationManager and Educator for each school."""
-        self.stdout.write("\n  [5/7] Standortleitungen und Paedagog:innen erstellen...")
+        self.stdout.write("\n  [5/10] Standortleitungen und Paedagog:innen erstellen...")
 
         created_count = 0
         error_count = 0
@@ -888,7 +914,7 @@ class Command(BaseCommand):
 
     def _create_school_data(self, bundesland_data):
         """Create SchoolYear, Group, GroupMember, and Students for each school."""
-        self.stdout.write("\n  [6/7] Schuljahre, Gruppen und Schueler:innen erstellen...")
+        self.stdout.write("\n  [6/10] Schuljahre, Gruppen und Schueler:innen erstellen...")
 
         total_students = 0
 
@@ -975,7 +1001,7 @@ class Command(BaseCommand):
 
     def _update_system_settings(self):
         """Ensure system settings have correct values."""
-        self.stdout.write("\n  [7/7] Systemeinstellungen aktualisieren...")
+        self.stdout.write("\n  [7/10] Systemeinstellungen aktualisieren...")
 
         from system.models import SystemSetting
 
@@ -1042,3 +1068,309 @@ class Command(BaseCommand):
         )
 
         return user
+
+    # ── Step 8: Leave Types and Working Hours Limits ──────────────────────
+
+    LEAVE_TYPES = [
+        {"name": "Urlaub", "description": "Erholungsurlaub", "requires_approval": True, "max_days": 25},
+        {"name": "Krankenstand", "description": "Krankheitsbedingte Abwesenheit", "requires_approval": False, "max_days": None},
+        {"name": "Fortbildung", "description": "Weiterbildung und Schulungen", "requires_approval": True, "max_days": 5},
+        {"name": "Sonderurlaub", "description": "Sonderurlaub (Hochzeit, Geburt, etc.)", "requires_approval": True, "max_days": 3},
+        {"name": "Pflegeurlaub", "description": "Pflege von Angehoerigen", "requires_approval": True, "max_days": 5},
+    ]
+
+    def _create_leave_types_and_limits(self, bundesland_data):
+        """Create leave types and working hours limits for each location."""
+        self.stdout.write("\n  [8/10] Urlaubsarten und Arbeitszeitlimits erstellen...")
+
+        total_types = 0
+        total_limits = 0
+
+        for bl_name, data in bundesland_data.items():
+            org = data["org"]
+
+            for loc_data in data["locations"]:
+                location = loc_data["location"]
+
+                # Leave Types
+                for lt in self.LEAVE_TYPES:
+                    LeaveType.objects.update_or_create(
+                        location=location,
+                        name=lt["name"],
+                        defaults={
+                            "organization": org,
+                            "description": lt["description"],
+                            "requires_approval": lt["requires_approval"],
+                            "max_days_per_year": lt["max_days"],
+                        },
+                    )
+                    total_types += 1
+
+                # Working Hours Limit
+                WorkingHoursLimit.objects.update_or_create(
+                    location=location,
+                    defaults={
+                        "organization": org,
+                        "max_hours_per_week": Decimal("40.00"),
+                        "max_hours_per_day": Decimal("10.00"),
+                        "break_after_hours": Decimal("6.00"),
+                        "break_duration_minutes": 30,
+                    },
+                )
+                total_limits += 1
+
+        self.stdout.write(f"        {total_types} Urlaubsarten erstellt.")
+        self.stdout.write(f"        {total_limits} Arbeitszeitlimits erstellt.")
+
+    # ── Step 9: Transaction Categories ────────────────────────────────────
+
+    EXPENSE_CATEGORIES = [
+        {"name": "Bastelmaterial", "color": "#FF6B6B", "description": "Bastel- und Kreativmaterial"},
+        {"name": "Ausflüge", "color": "#4ECDC4", "description": "Ausflüge und Exkursionen"},
+        {"name": "Verpflegung", "color": "#45B7D1", "description": "Snacks und Getraenke"},
+        {"name": "Sportgeraete", "color": "#96CEB4", "description": "Sportgeraete und Zubehoer"},
+        {"name": "Bueromaterial", "color": "#FFEAA7", "description": "Buerobedarf und Druckmaterial"},
+        {"name": "Spiele", "color": "#DDA0DD", "description": "Gesellschaftsspiele und Spielzeug"},
+    ]
+
+    INCOME_CATEGORIES = [
+        {"name": "Elternbeitraege", "color": "#2ECC71", "description": "Monatliche Elternbeitraege"},
+        {"name": "Foerderungen", "color": "#3498DB", "description": "Oeffentliche Foerderungen"},
+        {"name": "Spenden", "color": "#E67E22", "description": "Spenden und Zuwendungen"},
+    ]
+
+    def _create_transaction_categories(self, bundesland_data):
+        """Create transaction categories for each location."""
+        self.stdout.write("\n  [9/10] Transaktionskategorien erstellen...")
+
+        total = 0
+
+        for bl_name, data in bundesland_data.items():
+            org = data["org"]
+
+            for loc_data in data["locations"]:
+                location = loc_data["location"]
+
+                for cat in self.EXPENSE_CATEGORIES:
+                    TransactionCategory.objects.update_or_create(
+                        location=location,
+                        name=cat["name"],
+                        category_type=TransactionCategory.CategoryType.EXPENSE,
+                        defaults={
+                            "organization": org,
+                            "description": cat["description"],
+                            "color": cat["color"],
+                            "is_system_category": True,
+                        },
+                    )
+                    total += 1
+
+                for cat in self.INCOME_CATEGORIES:
+                    TransactionCategory.objects.update_or_create(
+                        location=location,
+                        name=cat["name"],
+                        category_type=TransactionCategory.CategoryType.INCOME,
+                        defaults={
+                            "organization": org,
+                            "description": cat["description"],
+                            "color": cat["color"],
+                            "is_system_category": True,
+                        },
+                    )
+                    total += 1
+
+        self.stdout.write(f"        {total} Transaktionskategorien erstellt.")
+
+    # ── Step 10: Operational Data (TimeEntries, LeaveRequests, Transactions) ──
+
+    def _create_operational_data(self, bundesland_data):
+        """Create realistic time entries, leave requests, and transactions."""
+        self.stdout.write("\n  [10/10] Zeiteintraege, Abwesenheitsantraege und Transaktionen erstellen...")
+
+        total_time = 0
+        total_leave = 0
+        total_tx = 0
+
+        # Use a fixed seed for reproducibility
+        rng = random.Random(42)
+
+        for bl_name, data in bundesland_data.items():
+            org = data["org"]
+
+            for loc_data in data["locations"]:
+                location = loc_data["location"]
+                config = loc_data["config"]
+
+                # Find the educator user for this location
+                try:
+                    educator = User.objects.get(username=config["educator"]["username"])
+                except User.DoesNotExist:
+                    continue
+
+                # Find the group for this location
+                groups = Group.objects.filter(location=location)
+                if not groups.exists():
+                    continue
+                group = groups.first()
+
+                # ── Time Entries: 10 entries per educator over last 2 weeks ──
+                today = datetime.date.today()
+                for day_offset in range(14):
+                    work_date = today - datetime.timedelta(days=day_offset)
+                    # Skip weekends
+                    if work_date.weekday() >= 5:
+                        continue
+
+                    start_hour = rng.choice([11, 12, 13])
+                    start_min = rng.choice([0, 15, 30])
+                    end_hour = start_hour + rng.choice([3, 4, 5])
+                    end_min = rng.choice([0, 15, 30, 45])
+
+                    notes_options = [
+                        "Nachmittagsbetreuung",
+                        "Hausaufgabenbetreuung",
+                        "Kreativworkshop",
+                        "Sportprogramm",
+                        "Freizeitbetreuung",
+                        "Lernfoerderung",
+                        "Projektarbeit",
+                    ]
+
+                    te, created = TimeEntry.objects.update_or_create(
+                        user=educator,
+                        group=group,
+                        date=work_date,
+                        defaults={
+                            "organization": org,
+                            "start_time": datetime.time(start_hour, start_min),
+                            "end_time": datetime.time(end_hour, end_min),
+                            "notes": rng.choice(notes_options),
+                        },
+                    )
+                    total_time += 1
+
+                # ── Leave Requests: 2-3 per educator ──
+                leave_types = LeaveType.objects.filter(location=location)
+                if leave_types.exists():
+                    # 1. Approved vacation in the past
+                    lt_urlaub = leave_types.filter(name="Urlaub").first()
+                    if lt_urlaub:
+                        start = today - datetime.timedelta(days=rng.randint(30, 60))
+                        end = start + datetime.timedelta(days=rng.randint(3, 7))
+                        lr, _ = LeaveRequest.objects.update_or_create(
+                            user=educator,
+                            leave_type=lt_urlaub,
+                            start_date=start,
+                            defaults={
+                                "organization": org,
+                                "end_date": end,
+                                "reason": "Erholungsurlaub",
+                                "status": LeaveRequest.Status.APPROVED,
+                            },
+                        )
+                        total_leave += 1
+
+                    # 2. Pending sick leave
+                    lt_krank = leave_types.filter(name="Krankenstand").first()
+                    if lt_krank:
+                        start = today + datetime.timedelta(days=rng.randint(1, 5))
+                        end = start + datetime.timedelta(days=rng.randint(1, 3))
+                        lr, _ = LeaveRequest.objects.update_or_create(
+                            user=educator,
+                            leave_type=lt_krank,
+                            start_date=start,
+                            defaults={
+                                "organization": org,
+                                "end_date": end,
+                                "reason": "Grippaler Infekt",
+                                "status": LeaveRequest.Status.PENDING,
+                            },
+                        )
+                        total_leave += 1
+
+                    # 3. Future training (pending)
+                    lt_fortb = leave_types.filter(name="Fortbildung").first()
+                    if lt_fortb:
+                        start = today + datetime.timedelta(days=rng.randint(14, 30))
+                        end = start + datetime.timedelta(days=rng.randint(1, 2))
+                        lr, _ = LeaveRequest.objects.update_or_create(
+                            user=educator,
+                            leave_type=lt_fortb,
+                            start_date=start,
+                            defaults={
+                                "organization": org,
+                                "end_date": end,
+                                "reason": "Erste-Hilfe-Kurs Auffrischung",
+                                "status": LeaveRequest.Status.PENDING,
+                            },
+                        )
+                        total_leave += 1
+
+                # ── Transactions: 5-8 per group ──
+                expense_cats = TransactionCategory.objects.filter(
+                    location=location,
+                    category_type=TransactionCategory.CategoryType.EXPENSE,
+                )
+                income_cats = TransactionCategory.objects.filter(
+                    location=location,
+                    category_type=TransactionCategory.CategoryType.INCOME,
+                )
+
+                tx_descriptions = {
+                    "Bastelmaterial": ["Papier und Stifte", "Klebstoff und Scheren", "Farben und Pinsel"],
+                    "Ausflüge": ["Eintritt Tierpark", "Busfahrt Wandertag", "Eintritt Museum"],
+                    "Verpflegung": ["Obst und Gemuese", "Getraenke", "Jause fuer Ausflug"],
+                    "Sportgeraete": ["Baelle und Seile", "Turnmatten"],
+                    "Bueromaterial": ["Druckerpapier", "Ordner und Mappen"],
+                    "Spiele": ["Brettspiele", "Kartenspiele"],
+                }
+
+                # Expense transactions
+                for i, cat in enumerate(expense_cats[:4]):
+                    tx_date = today - datetime.timedelta(days=rng.randint(1, 30))
+                    descs = tx_descriptions.get(cat.name, [f"Ausgabe {cat.name}"])
+                    amount = Decimal(str(round(rng.uniform(5.0, 80.0), 2)))
+                    status = rng.choice([
+                        Transaction.Status.APPROVED,
+                        Transaction.Status.APPROVED,
+                        Transaction.Status.PENDING,
+                    ])
+
+                    tx, _ = Transaction.objects.update_or_create(
+                        group=group,
+                        description=rng.choice(descs),
+                        transaction_date=tx_date,
+                        defaults={
+                            "organization": org,
+                            "category": cat,
+                            "amount": amount,
+                            "transaction_type": Transaction.TransactionType.EXPENSE,
+                            "created_by": educator,
+                            "status": status,
+                        },
+                    )
+                    total_tx += 1
+
+                # Income transactions
+                for cat in income_cats[:2]:
+                    tx_date = today - datetime.timedelta(days=rng.randint(1, 30))
+                    amount = Decimal(str(round(rng.uniform(50.0, 500.0), 2)))
+
+                    tx, _ = Transaction.objects.update_or_create(
+                        group=group,
+                        description=f"{cat.name} {tx_date.strftime('%B %Y')}",
+                        transaction_date=tx_date,
+                        defaults={
+                            "organization": org,
+                            "category": cat,
+                            "amount": amount,
+                            "transaction_type": Transaction.TransactionType.INCOME,
+                            "created_by": educator,
+                            "status": Transaction.Status.APPROVED,
+                        },
+                    )
+                    total_tx += 1
+
+        self.stdout.write(f"        {total_time} Zeiteintraege erstellt.")
+        self.stdout.write(f"        {total_leave} Abwesenheitsantraege erstellt.")
+        self.stdout.write(f"        {total_tx} Transaktionen erstellt.")
