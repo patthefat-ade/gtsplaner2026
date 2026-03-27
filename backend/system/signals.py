@@ -3,6 +3,9 @@ Audit Signals for automatic logging of model changes.
 
 Captures create, update, and delete events for key models
 and logs them to the AuditLog.
+
+Organization is automatically resolved from the instance if available,
+allowing proper tenant-scoping of audit entries.
 """
 
 import logging
@@ -43,6 +46,45 @@ def _should_track(instance):
     return model_label in TRACKED_MODELS
 
 
+def _resolve_organization(instance):
+    """
+    Try to resolve the organization from the instance.
+
+    Checks in order:
+    1. instance.organization (TenantModel instances)
+    2. instance.organization (Organization model itself -> use self)
+    3. instance.location.organization (User model via location)
+    4. None (system-level actions without tenant context)
+    """
+    # Direct organization FK (TenantModel subclasses)
+    org = getattr(instance, "organization", None)
+    if org is not None:
+        # If the instance IS an Organization, use it directly
+        from core.models import Organization
+        if isinstance(org, Organization):
+            return org
+        # If org is an int (organization_id), try to resolve
+        if isinstance(org, int):
+            try:
+                return Organization.objects.get(pk=org)
+            except Organization.DoesNotExist:
+                return None
+
+    # For Organization model itself
+    from core.models import Organization
+    if isinstance(instance, Organization):
+        return instance
+
+    # For User model: try location -> organization
+    location = getattr(instance, "location", None)
+    if location is not None:
+        org = getattr(location, "organization", None)
+        if org is not None:
+            return org
+
+    return None
+
+
 @receiver(post_save)
 def audit_post_save(sender, instance, created, **kwargs):
     """Log create and update events for tracked models."""
@@ -59,6 +101,7 @@ def audit_post_save(sender, instance, created, **kwargs):
         action = "create" if created else "update"
         model_name = instance.__class__.__name__
         object_id = str(instance.pk) if instance.pk else ""
+        organization = _resolve_organization(instance)
 
         # Build a summary of changes
         changes = {}
@@ -81,6 +124,7 @@ def audit_post_save(sender, instance, created, **kwargs):
             model_name=model_name,
             object_id=object_id,
             changes=changes,
+            organization=organization,
         )
     except Exception as e:
         logger.error(f"Failed to create audit log via signal: {e}")
@@ -100,9 +144,10 @@ def audit_post_delete(sender, instance, **kwargs):
 
         model_name = instance.__class__.__name__
         object_id = str(instance.pk) if instance.pk else ""
+        organization = _resolve_organization(instance)
 
         changes = {
-            "action": "Eintrag gelöscht",
+            "action": "Eintrag geloescht",
             "model": model_name,
         }
 
@@ -117,6 +162,7 @@ def audit_post_delete(sender, instance, **kwargs):
             model_name=model_name,
             object_id=object_id,
             changes=changes,
+            organization=organization,
         )
     except Exception as e:
         logger.error(f"Failed to create audit log via signal: {e}")

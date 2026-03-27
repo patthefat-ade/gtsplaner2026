@@ -82,6 +82,13 @@ class AuditLoggingMiddleware(MiddlewareMixin):
         model_name, object_id = self._parse_resource(request.path)
         request_data = self._get_sanitized_data(request)
 
+        # Resolve organization from user's location or tenant context
+        organization = None
+        if hasattr(request.user, "location") and request.user.location:
+            organization = request.user.location.organization
+        elif hasattr(request, "tenant") and request.tenant:
+            organization = request.tenant
+
         AuditLog.objects.create(
             user=request.user,
             action=action,
@@ -90,6 +97,7 @@ class AuditLoggingMiddleware(MiddlewareMixin):
             changes=request_data,
             ip_address=self._get_client_ip(request),
             user_agent=request.META.get("HTTP_USER_AGENT", "")[:500],
+            organization=organization,
         )
 
     def _get_action(self, method):

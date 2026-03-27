@@ -342,6 +342,8 @@ class TenantModel(models.Model):
     organization = models.ForeignKey(
         Organization,
         on_delete=models.CASCADE,
+        null=True,
+        blank=True,
         related_name="%(app_label)s_%(class)s_set",
         verbose_name="Organisation",
         db_index=True,
