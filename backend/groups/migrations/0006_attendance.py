@@ -1,7 +1,6 @@
 """
 Migration for Attendance model.
 """
-
 from django.conf import settings
 from django.db import migrations, models
 import django.db.models.deletion
@@ -12,7 +11,7 @@ class Migration(migrations.Migration):
     dependencies = [
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
         ("core", "0001_initial"),
-        ("groups", "0002_alter_group_options_alter_groupmember_options_and_more"),
+        ("groups", "0005_group_organization_groupmember_organization_and_more"),
     ]
 
     operations = [
