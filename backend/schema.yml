@@ -1454,6 +1454,11 @@ paths:
         description: Eine Seitenzahl in der paginierten Ergebnismenge.
         schema:
           type: integer
+      - in: query
+        name: school_year_id
+        schema:
+          type: number
+        description: Schuljahr-ID
       - name: search
         required: false
         in: query
@@ -2157,6 +2162,531 @@ paths:
               schema:
                 $ref: '#/components/schemas/Attendance'
           description: ''
+  /api/v1/groups/autonomous-days/:
+    get:
+      operationId: groups_autonomous_days_list
+      description: |-
+        CRUD for autonomous school days within school years.
+
+        Endpoints:
+        - GET /autonomous-days/ - List all autonomous days (filterable by school_year)
+        - POST /autonomous-days/ - Create a new autonomous day
+        - GET /autonomous-days/{id}/ - Retrieve an autonomous day
+        - PATCH /autonomous-days/{id}/ - Update an autonomous day
+        - DELETE /autonomous-days/{id}/ - Soft-delete an autonomous day
+
+        Permissions:
+        - Educators: Read access
+        - LocationManager+: Full CRUD
+      parameters:
+      - name: ordering
+        required: false
+        in: query
+        description: Feld, das zum Sortieren der Ergebnisse verwendet werden soll.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: Eine Seitenzahl in der paginierten Ergebnismenge.
+        schema:
+          type: integer
+      - in: query
+        name: school_year
+        schema:
+          type: number
+      - in: query
+        name: school_year_id
+        schema:
+          type: number
+      - name: search
+        required: false
+        in: query
+        description: Ein Suchbegriff.
+        schema:
+          type: string
+      tags:
+      - groups
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedAutonomousDayList'
+          description: ''
+    post:
+      operationId: groups_autonomous_days_create
+      description: |-
+        CRUD for autonomous school days within school years.
+
+        Endpoints:
+        - GET /autonomous-days/ - List all autonomous days (filterable by school_year)
+        - POST /autonomous-days/ - Create a new autonomous day
+        - GET /autonomous-days/{id}/ - Retrieve an autonomous day
+        - PATCH /autonomous-days/{id}/ - Update an autonomous day
+        - DELETE /autonomous-days/{id}/ - Soft-delete an autonomous day
+
+        Permissions:
+        - Educators: Read access
+        - LocationManager+: Full CRUD
+      tags:
+      - groups
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AutonomousDayCreateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/AutonomousDayCreateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/AutonomousDayCreateRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AutonomousDayCreate'
+          description: ''
+  /api/v1/groups/autonomous-days/{id}/:
+    get:
+      operationId: groups_autonomous_days_retrieve
+      description: |-
+        CRUD for autonomous school days within school years.
+
+        Endpoints:
+        - GET /autonomous-days/ - List all autonomous days (filterable by school_year)
+        - POST /autonomous-days/ - Create a new autonomous day
+        - GET /autonomous-days/{id}/ - Retrieve an autonomous day
+        - PATCH /autonomous-days/{id}/ - Update an autonomous day
+        - DELETE /autonomous-days/{id}/ - Soft-delete an autonomous day
+
+        Permissions:
+        - Educators: Read access
+        - LocationManager+: Full CRUD
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: Ein eindeutiger Ganzzahl-Wert, der Schulautonomer Tag identifiziert.
+        required: true
+      tags:
+      - groups
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AutonomousDay'
+          description: ''
+    put:
+      operationId: groups_autonomous_days_update
+      description: |-
+        CRUD for autonomous school days within school years.
+
+        Endpoints:
+        - GET /autonomous-days/ - List all autonomous days (filterable by school_year)
+        - POST /autonomous-days/ - Create a new autonomous day
+        - GET /autonomous-days/{id}/ - Retrieve an autonomous day
+        - PATCH /autonomous-days/{id}/ - Update an autonomous day
+        - DELETE /autonomous-days/{id}/ - Soft-delete an autonomous day
+
+        Permissions:
+        - Educators: Read access
+        - LocationManager+: Full CRUD
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: Ein eindeutiger Ganzzahl-Wert, der Schulautonomer Tag identifiziert.
+        required: true
+      tags:
+      - groups
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AutonomousDayCreateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/AutonomousDayCreateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/AutonomousDayCreateRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AutonomousDayCreate'
+          description: ''
+    patch:
+      operationId: groups_autonomous_days_partial_update
+      description: |-
+        CRUD for autonomous school days within school years.
+
+        Endpoints:
+        - GET /autonomous-days/ - List all autonomous days (filterable by school_year)
+        - POST /autonomous-days/ - Create a new autonomous day
+        - GET /autonomous-days/{id}/ - Retrieve an autonomous day
+        - PATCH /autonomous-days/{id}/ - Update an autonomous day
+        - DELETE /autonomous-days/{id}/ - Soft-delete an autonomous day
+
+        Permissions:
+        - Educators: Read access
+        - LocationManager+: Full CRUD
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: Ein eindeutiger Ganzzahl-Wert, der Schulautonomer Tag identifiziert.
+        required: true
+      tags:
+      - groups
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedAutonomousDayCreateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedAutonomousDayCreateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedAutonomousDayCreateRequest'
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AutonomousDayCreate'
+          description: ''
+    delete:
+      operationId: groups_autonomous_days_destroy
+      description: |-
+        CRUD for autonomous school days within school years.
+
+        Endpoints:
+        - GET /autonomous-days/ - List all autonomous days (filterable by school_year)
+        - POST /autonomous-days/ - Create a new autonomous day
+        - GET /autonomous-days/{id}/ - Retrieve an autonomous day
+        - PATCH /autonomous-days/{id}/ - Update an autonomous day
+        - DELETE /autonomous-days/{id}/ - Soft-delete an autonomous day
+
+        Permissions:
+        - Educators: Read access
+        - LocationManager+: Full CRUD
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: Ein eindeutiger Ganzzahl-Wert, der Schulautonomer Tag identifiziert.
+        required: true
+      tags:
+      - groups
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/v1/groups/contacts/:
+    get:
+      operationId: groups_contacts_list
+      description: |-
+        CRUD for student contact persons.
+
+        Endpoints:
+        - GET /contacts/ - List all contacts (filterable by student_id)
+        - POST /contacts/ - Create a new contact
+        - GET /contacts/{id}/ - Retrieve a contact
+        - PATCH /contacts/{id}/ - Update a contact
+        - DELETE /contacts/{id}/ - Soft-delete a contact
+
+        Permissions:
+        - Educators: Read access for students in their groups
+        - LocationManager+: Full CRUD
+        - Admin/SuperAdmin: Full access within tenant
+      parameters:
+      - in: query
+        name: is_primary
+        schema:
+          type: boolean
+      - name: ordering
+        required: false
+        in: query
+        description: Feld, das zum Sortieren der Ergebnisse verwendet werden soll.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: Eine Seitenzahl in der paginierten Ergebnismenge.
+        schema:
+          type: integer
+      - in: query
+        name: relationship
+        schema:
+          type: string
+          title: Beziehung
+          enum:
+          - aunt
+          - authorized
+          - grandparent
+          - parent
+          - relative
+          - uncle
+        description: |-
+          * `parent` - Elternteil
+          * `uncle` - Onkel
+          * `aunt` - Tante
+          * `grandparent` - Grosselternteil
+          * `relative` - Verwandte/r
+          * `authorized` - Abholberechtigte Person
+      - name: search
+        required: false
+        in: query
+        description: Ein Suchbegriff.
+        schema:
+          type: string
+      - in: query
+        name: student_id
+        schema:
+          type: number
+      tags:
+      - Kontaktpersonen
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedStudentContactListList'
+          description: ''
+    post:
+      operationId: groups_contacts_create
+      description: |-
+        CRUD for student contact persons.
+
+        Endpoints:
+        - GET /contacts/ - List all contacts (filterable by student_id)
+        - POST /contacts/ - Create a new contact
+        - GET /contacts/{id}/ - Retrieve a contact
+        - PATCH /contacts/{id}/ - Update a contact
+        - DELETE /contacts/{id}/ - Soft-delete a contact
+
+        Permissions:
+        - Educators: Read access for students in their groups
+        - LocationManager+: Full CRUD
+        - Admin/SuperAdmin: Full access within tenant
+      tags:
+      - Kontaktpersonen
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StudentContactCreateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/StudentContactCreateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/StudentContactCreateRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StudentContactCreate'
+          description: ''
+  /api/v1/groups/contacts/{id}/:
+    get:
+      operationId: groups_contacts_retrieve
+      description: |-
+        CRUD for student contact persons.
+
+        Endpoints:
+        - GET /contacts/ - List all contacts (filterable by student_id)
+        - POST /contacts/ - Create a new contact
+        - GET /contacts/{id}/ - Retrieve a contact
+        - PATCH /contacts/{id}/ - Update a contact
+        - DELETE /contacts/{id}/ - Soft-delete a contact
+
+        Permissions:
+        - Educators: Read access for students in their groups
+        - LocationManager+: Full CRUD
+        - Admin/SuperAdmin: Full access within tenant
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: Ein eindeutiger Ganzzahl-Wert, der Kontaktperson identifiziert.
+        required: true
+      tags:
+      - Kontaktpersonen
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StudentContactList'
+          description: ''
+    put:
+      operationId: groups_contacts_update
+      description: |-
+        CRUD for student contact persons.
+
+        Endpoints:
+        - GET /contacts/ - List all contacts (filterable by student_id)
+        - POST /contacts/ - Create a new contact
+        - GET /contacts/{id}/ - Retrieve a contact
+        - PATCH /contacts/{id}/ - Update a contact
+        - DELETE /contacts/{id}/ - Soft-delete a contact
+
+        Permissions:
+        - Educators: Read access for students in their groups
+        - LocationManager+: Full CRUD
+        - Admin/SuperAdmin: Full access within tenant
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: Ein eindeutiger Ganzzahl-Wert, der Kontaktperson identifiziert.
+        required: true
+      tags:
+      - Kontaktpersonen
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StudentContactCreateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/StudentContactCreateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/StudentContactCreateRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StudentContactCreate'
+          description: ''
+    patch:
+      operationId: groups_contacts_partial_update
+      description: |-
+        CRUD for student contact persons.
+
+        Endpoints:
+        - GET /contacts/ - List all contacts (filterable by student_id)
+        - POST /contacts/ - Create a new contact
+        - GET /contacts/{id}/ - Retrieve a contact
+        - PATCH /contacts/{id}/ - Update a contact
+        - DELETE /contacts/{id}/ - Soft-delete a contact
+
+        Permissions:
+        - Educators: Read access for students in their groups
+        - LocationManager+: Full CRUD
+        - Admin/SuperAdmin: Full access within tenant
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: Ein eindeutiger Ganzzahl-Wert, der Kontaktperson identifiziert.
+        required: true
+      tags:
+      - Kontaktpersonen
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedStudentContactCreateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedStudentContactCreateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedStudentContactCreateRequest'
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StudentContactCreate'
+          description: ''
+    delete:
+      operationId: groups_contacts_destroy
+      description: |-
+        CRUD for student contact persons.
+
+        Endpoints:
+        - GET /contacts/ - List all contacts (filterable by student_id)
+        - POST /contacts/ - Create a new contact
+        - GET /contacts/{id}/ - Retrieve a contact
+        - PATCH /contacts/{id}/ - Update a contact
+        - DELETE /contacts/{id}/ - Soft-delete a contact
+
+        Permissions:
+        - Educators: Read access for students in their groups
+        - LocationManager+: Full CRUD
+        - Admin/SuperAdmin: Full access within tenant
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: Ein eindeutiger Ganzzahl-Wert, der Kontaktperson identifiziert.
+        required: true
+      tags:
+      - Kontaktpersonen
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '204':
+          description: No response body
   /api/v1/groups/groups/:
     get:
       operationId: groups_groups_list
@@ -2481,6 +3011,256 @@ paths:
               schema:
                 $ref: '#/components/schemas/GroupList'
           description: ''
+  /api/v1/groups/holidays/:
+    get:
+      operationId: groups_holidays_list
+      description: |-
+        CRUD for holiday periods within school years.
+
+        Endpoints:
+        - GET /holidays/ - List all holiday periods (filterable by school_year)
+        - POST /holidays/ - Create a new holiday period
+        - GET /holidays/{id}/ - Retrieve a holiday period
+        - PATCH /holidays/{id}/ - Update a holiday period
+        - DELETE /holidays/{id}/ - Soft-delete a holiday period
+
+        Permissions:
+        - Educators: Read access
+        - LocationManager+: Full CRUD
+      parameters:
+      - name: ordering
+        required: false
+        in: query
+        description: Feld, das zum Sortieren der Ergebnisse verwendet werden soll.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: Eine Seitenzahl in der paginierten Ergebnismenge.
+        schema:
+          type: integer
+      - in: query
+        name: school_year
+        schema:
+          type: number
+      - in: query
+        name: school_year_id
+        schema:
+          type: number
+      - name: search
+        required: false
+        in: query
+        description: Ein Suchbegriff.
+        schema:
+          type: string
+      tags:
+      - groups
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedHolidayPeriodList'
+          description: ''
+    post:
+      operationId: groups_holidays_create
+      description: |-
+        CRUD for holiday periods within school years.
+
+        Endpoints:
+        - GET /holidays/ - List all holiday periods (filterable by school_year)
+        - POST /holidays/ - Create a new holiday period
+        - GET /holidays/{id}/ - Retrieve a holiday period
+        - PATCH /holidays/{id}/ - Update a holiday period
+        - DELETE /holidays/{id}/ - Soft-delete a holiday period
+
+        Permissions:
+        - Educators: Read access
+        - LocationManager+: Full CRUD
+      tags:
+      - groups
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/HolidayPeriodCreateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/HolidayPeriodCreateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/HolidayPeriodCreateRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HolidayPeriodCreate'
+          description: ''
+  /api/v1/groups/holidays/{id}/:
+    get:
+      operationId: groups_holidays_retrieve
+      description: |-
+        CRUD for holiday periods within school years.
+
+        Endpoints:
+        - GET /holidays/ - List all holiday periods (filterable by school_year)
+        - POST /holidays/ - Create a new holiday period
+        - GET /holidays/{id}/ - Retrieve a holiday period
+        - PATCH /holidays/{id}/ - Update a holiday period
+        - DELETE /holidays/{id}/ - Soft-delete a holiday period
+
+        Permissions:
+        - Educators: Read access
+        - LocationManager+: Full CRUD
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: Ein eindeutiger Ganzzahl-Wert, der Ferienzeit identifiziert.
+        required: true
+      tags:
+      - groups
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HolidayPeriod'
+          description: ''
+    put:
+      operationId: groups_holidays_update
+      description: |-
+        CRUD for holiday periods within school years.
+
+        Endpoints:
+        - GET /holidays/ - List all holiday periods (filterable by school_year)
+        - POST /holidays/ - Create a new holiday period
+        - GET /holidays/{id}/ - Retrieve a holiday period
+        - PATCH /holidays/{id}/ - Update a holiday period
+        - DELETE /holidays/{id}/ - Soft-delete a holiday period
+
+        Permissions:
+        - Educators: Read access
+        - LocationManager+: Full CRUD
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: Ein eindeutiger Ganzzahl-Wert, der Ferienzeit identifiziert.
+        required: true
+      tags:
+      - groups
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/HolidayPeriodCreateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/HolidayPeriodCreateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/HolidayPeriodCreateRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HolidayPeriodCreate'
+          description: ''
+    patch:
+      operationId: groups_holidays_partial_update
+      description: |-
+        CRUD for holiday periods within school years.
+
+        Endpoints:
+        - GET /holidays/ - List all holiday periods (filterable by school_year)
+        - POST /holidays/ - Create a new holiday period
+        - GET /holidays/{id}/ - Retrieve a holiday period
+        - PATCH /holidays/{id}/ - Update a holiday period
+        - DELETE /holidays/{id}/ - Soft-delete a holiday period
+
+        Permissions:
+        - Educators: Read access
+        - LocationManager+: Full CRUD
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: Ein eindeutiger Ganzzahl-Wert, der Ferienzeit identifiziert.
+        required: true
+      tags:
+      - groups
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedHolidayPeriodCreateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedHolidayPeriodCreateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedHolidayPeriodCreateRequest'
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HolidayPeriodCreate'
+          description: ''
+    delete:
+      operationId: groups_holidays_destroy
+      description: |-
+        CRUD for holiday periods within school years.
+
+        Endpoints:
+        - GET /holidays/ - List all holiday periods (filterable by school_year)
+        - POST /holidays/ - Create a new holiday period
+        - GET /holidays/{id}/ - Retrieve a holiday period
+        - PATCH /holidays/{id}/ - Update a holiday period
+        - DELETE /holidays/{id}/ - Soft-delete a holiday period
+
+        Permissions:
+        - Educators: Read access
+        - LocationManager+: Full CRUD
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: Ein eindeutiger Ganzzahl-Wert, der Ferienzeit identifiziert.
+        required: true
+      tags:
+      - groups
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '204':
+          description: No response body
   /api/v1/groups/members/:
     get:
       operationId: groups_members_list
@@ -3285,6 +4065,385 @@ paths:
       responses:
         '204':
           description: No response body
+  /api/v1/groups/transfers/:
+    get:
+      operationId: groups_transfers_list
+      description: |-
+        CRUD for temporary group transfers with confirmation workflow.
+
+        Standard CRUD endpoints plus:
+        - POST /transfers/{id}/confirm/ - Confirm a pending transfer
+        - POST /transfers/{id}/reject/ - Reject a pending transfer
+        - POST /transfers/{id}/complete/ - Mark a confirmed transfer as completed
+
+        Permissions:
+        - Educators: Create requests, view transfers for their groups
+        - LocationManager+: Confirm/reject/complete, view all at location
+        - Admin/SuperAdmin: Full access within tenant
+      parameters:
+      - in: query
+        name: end_date
+        schema:
+          type: string
+          format: date
+      - name: ordering
+        required: false
+        in: query
+        description: Feld, das zum Sortieren der Ergebnisse verwendet werden soll.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: Eine Seitenzahl in der paginierten Ergebnismenge.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: Ein Suchbegriff.
+        schema:
+          type: string
+      - in: query
+        name: source_group_id
+        schema:
+          type: number
+      - in: query
+        name: start_date
+        schema:
+          type: string
+          format: date
+      - in: query
+        name: status
+        schema:
+          type: string
+          enum:
+          - completed
+          - confirmed
+          - pending
+          - rejected
+        description: |-
+          * `pending` - Ausstehend
+          * `confirmed` - Bestaetigt
+          * `rejected` - Abgelehnt
+          * `completed` - Abgeschlossen
+      - in: query
+        name: student_id
+        schema:
+          type: number
+      - in: query
+        name: target_group_id
+        schema:
+          type: number
+      - in: query
+        name: transfer_date
+        schema:
+          type: string
+          format: date
+      tags:
+      - Gruppenwechsel
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedGroupTransferListList'
+          description: ''
+    post:
+      operationId: groups_transfers_create
+      description: |-
+        CRUD for temporary group transfers with confirmation workflow.
+
+        Standard CRUD endpoints plus:
+        - POST /transfers/{id}/confirm/ - Confirm a pending transfer
+        - POST /transfers/{id}/reject/ - Reject a pending transfer
+        - POST /transfers/{id}/complete/ - Mark a confirmed transfer as completed
+
+        Permissions:
+        - Educators: Create requests, view transfers for their groups
+        - LocationManager+: Confirm/reject/complete, view all at location
+        - Admin/SuperAdmin: Full access within tenant
+      tags:
+      - Gruppenwechsel
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GroupTransferCreateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/GroupTransferCreateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/GroupTransferCreateRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GroupTransferCreate'
+          description: ''
+  /api/v1/groups/transfers/{id}/:
+    get:
+      operationId: groups_transfers_retrieve
+      description: |-
+        CRUD for temporary group transfers with confirmation workflow.
+
+        Standard CRUD endpoints plus:
+        - POST /transfers/{id}/confirm/ - Confirm a pending transfer
+        - POST /transfers/{id}/reject/ - Reject a pending transfer
+        - POST /transfers/{id}/complete/ - Mark a confirmed transfer as completed
+
+        Permissions:
+        - Educators: Create requests, view transfers for their groups
+        - LocationManager+: Confirm/reject/complete, view all at location
+        - Admin/SuperAdmin: Full access within tenant
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: Ein eindeutiger Ganzzahl-Wert, der Gruppenwechsel identifiziert.
+        required: true
+      tags:
+      - Gruppenwechsel
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GroupTransferList'
+          description: ''
+    put:
+      operationId: groups_transfers_update
+      description: |-
+        CRUD for temporary group transfers with confirmation workflow.
+
+        Standard CRUD endpoints plus:
+        - POST /transfers/{id}/confirm/ - Confirm a pending transfer
+        - POST /transfers/{id}/reject/ - Reject a pending transfer
+        - POST /transfers/{id}/complete/ - Mark a confirmed transfer as completed
+
+        Permissions:
+        - Educators: Create requests, view transfers for their groups
+        - LocationManager+: Confirm/reject/complete, view all at location
+        - Admin/SuperAdmin: Full access within tenant
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: Ein eindeutiger Ganzzahl-Wert, der Gruppenwechsel identifiziert.
+        required: true
+      tags:
+      - Gruppenwechsel
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GroupTransferListRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/GroupTransferListRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/GroupTransferListRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GroupTransferList'
+          description: ''
+    patch:
+      operationId: groups_transfers_partial_update
+      description: |-
+        CRUD for temporary group transfers with confirmation workflow.
+
+        Standard CRUD endpoints plus:
+        - POST /transfers/{id}/confirm/ - Confirm a pending transfer
+        - POST /transfers/{id}/reject/ - Reject a pending transfer
+        - POST /transfers/{id}/complete/ - Mark a confirmed transfer as completed
+
+        Permissions:
+        - Educators: Create requests, view transfers for their groups
+        - LocationManager+: Confirm/reject/complete, view all at location
+        - Admin/SuperAdmin: Full access within tenant
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: Ein eindeutiger Ganzzahl-Wert, der Gruppenwechsel identifiziert.
+        required: true
+      tags:
+      - Gruppenwechsel
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedGroupTransferListRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedGroupTransferListRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedGroupTransferListRequest'
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GroupTransferList'
+          description: ''
+    delete:
+      operationId: groups_transfers_destroy
+      description: |-
+        CRUD for temporary group transfers with confirmation workflow.
+
+        Standard CRUD endpoints plus:
+        - POST /transfers/{id}/confirm/ - Confirm a pending transfer
+        - POST /transfers/{id}/reject/ - Reject a pending transfer
+        - POST /transfers/{id}/complete/ - Mark a confirmed transfer as completed
+
+        Permissions:
+        - Educators: Create requests, view transfers for their groups
+        - LocationManager+: Confirm/reject/complete, view all at location
+        - Admin/SuperAdmin: Full access within tenant
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: Ein eindeutiger Ganzzahl-Wert, der Gruppenwechsel identifiziert.
+        required: true
+      tags:
+      - Gruppenwechsel
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/v1/groups/transfers/{id}/complete/:
+    post:
+      operationId: groups_transfers_complete_create
+      description: Mark a confirmed transfer as completed.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: Ein eindeutiger Ganzzahl-Wert, der Gruppenwechsel identifiziert.
+        required: true
+      tags:
+      - Gruppenwechsel
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GroupTransferCompleteRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/GroupTransferCompleteRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/GroupTransferCompleteRequest'
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GroupTransferList'
+          description: ''
+  /api/v1/groups/transfers/{id}/confirm/:
+    post:
+      operationId: groups_transfers_confirm_create
+      description: Confirm a pending group transfer.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: Ein eindeutiger Ganzzahl-Wert, der Gruppenwechsel identifiziert.
+        required: true
+      tags:
+      - Gruppenwechsel
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GroupTransferConfirmRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/GroupTransferConfirmRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/GroupTransferConfirmRequest'
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GroupTransferList'
+          description: ''
+  /api/v1/groups/transfers/{id}/reject/:
+    post:
+      operationId: groups_transfers_reject_create
+      description: Reject a pending group transfer.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: Ein eindeutiger Ganzzahl-Wert, der Gruppenwechsel identifiziert.
+        required: true
+      tags:
+      - Gruppenwechsel
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GroupTransferConfirmRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/GroupTransferConfirmRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/GroupTransferConfirmRequest'
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GroupTransferList'
+          description: ''
   /api/v1/locations/:
     get:
       operationId: locations_list
@@ -5390,6 +6549,99 @@ components:
       - model_name
       - object_id
       - user
+    AutonomousDay:
+      type: object
+      description: Serializer for listing and retrieving autonomous days.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        school_year:
+          type: integer
+          title: Schuljahr
+        name:
+          type: string
+          title: Bezeichnung
+          description: z.B. Schulautonomer Tag, Pädagogischer Tag
+          maxLength: 100
+        date:
+          type: string
+          format: date
+          title: Datum
+        description:
+          type: string
+          title: Beschreibung
+          description: Optionale Beschreibung oder Begründung
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+          title: Erstellt am
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+          title: Aktualisiert am
+      required:
+      - created_at
+      - date
+      - id
+      - name
+      - school_year
+      - updated_at
+    AutonomousDayCreate:
+      type: object
+      description: Serializer for creating/updating autonomous days.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        school_year:
+          type: integer
+          title: Schuljahr
+        name:
+          type: string
+          title: Bezeichnung
+          description: z.B. Schulautonomer Tag, Pädagogischer Tag
+          maxLength: 100
+        date:
+          type: string
+          format: date
+          title: Datum
+        description:
+          type: string
+          title: Beschreibung
+          description: Optionale Beschreibung oder Begründung
+      required:
+      - date
+      - id
+      - name
+      - school_year
+    AutonomousDayCreateRequest:
+      type: object
+      description: Serializer for creating/updating autonomous days.
+      properties:
+        school_year:
+          type: integer
+          title: Schuljahr
+        name:
+          type: string
+          minLength: 1
+          title: Bezeichnung
+          description: z.B. Schulautonomer Tag, Pädagogischer Tag
+          maxLength: 100
+        date:
+          type: string
+          format: date
+          title: Datum
+        description:
+          type: string
+          title: Beschreibung
+          description: Optionale Beschreibung oder Begründung
+      required:
+      - date
+      - name
+      - school_year
     BulkAttendance:
       type: object
       description: |-
@@ -5981,6 +7233,291 @@ components:
         * `educator` - Paedagogin
         * `assistant` - Assistenz
         * `substitute` - Vertretung
+    GroupTransferCompleteRequest:
+      type: object
+      description: Serializer for completing a transfer.
+      properties:
+        notes:
+          type: string
+          default: ''
+    GroupTransferConfirmRequest:
+      type: object
+      description: Serializer for confirming or rejecting a transfer.
+      properties:
+        notes:
+          type: string
+          default: ''
+    GroupTransferCreate:
+      type: object
+      description: Serializer for creating a new group transfer request.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        student:
+          type: integer
+          title: Schueler/in
+        source_group:
+          type: integer
+          title: Herkunftsgruppe
+        target_group:
+          type: integer
+          title: Zielgruppe
+        transfer_date:
+          type: string
+          format: date
+          title: Datum des Wechsels
+        start_time:
+          type: string
+          format: time
+          title: Beginn
+          description: Uhrzeit ab der das Kind in der Zielgruppe ist
+        end_time:
+          type: string
+          format: time
+          nullable: true
+          title: Ende
+          description: Uhrzeit bis der das Kind in der Zielgruppe ist (leer = ganzer
+            Tag)
+        reason:
+          type: string
+          title: Grund
+        notes:
+          type: string
+          title: Notizen
+          description: Zusaetzliche Notizen zum Gruppenwechsel
+        status:
+          allOf:
+          - $ref: '#/components/schemas/GroupTransferStatusEnum'
+          readOnly: true
+        requested_by:
+          type: integer
+          readOnly: true
+          nullable: true
+          title: Angefragt von
+      required:
+      - id
+      - requested_by
+      - source_group
+      - start_time
+      - status
+      - student
+      - target_group
+      - transfer_date
+    GroupTransferCreateRequest:
+      type: object
+      description: Serializer for creating a new group transfer request.
+      properties:
+        student:
+          type: integer
+          title: Schueler/in
+        source_group:
+          type: integer
+          title: Herkunftsgruppe
+        target_group:
+          type: integer
+          title: Zielgruppe
+        transfer_date:
+          type: string
+          format: date
+          title: Datum des Wechsels
+        start_time:
+          type: string
+          format: time
+          title: Beginn
+          description: Uhrzeit ab der das Kind in der Zielgruppe ist
+        end_time:
+          type: string
+          format: time
+          nullable: true
+          title: Ende
+          description: Uhrzeit bis der das Kind in der Zielgruppe ist (leer = ganzer
+            Tag)
+        reason:
+          type: string
+          title: Grund
+        notes:
+          type: string
+          title: Notizen
+          description: Zusaetzliche Notizen zum Gruppenwechsel
+      required:
+      - source_group
+      - start_time
+      - student
+      - target_group
+      - transfer_date
+    GroupTransferList:
+      type: object
+      description: Serializer for listing group transfers.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        student:
+          type: integer
+          title: Schueler/in
+        student_name:
+          type: string
+          readOnly: true
+        source_group:
+          type: integer
+          title: Herkunftsgruppe
+        source_group_name:
+          type: string
+          readOnly: true
+        target_group:
+          type: integer
+          title: Zielgruppe
+        target_group_name:
+          type: string
+          readOnly: true
+        location_name:
+          type: string
+          readOnly: true
+        transfer_date:
+          type: string
+          format: date
+          title: Datum des Wechsels
+        start_time:
+          type: string
+          format: time
+          title: Beginn
+          description: Uhrzeit ab der das Kind in der Zielgruppe ist
+        end_time:
+          type: string
+          format: time
+          nullable: true
+          title: Ende
+          description: Uhrzeit bis der das Kind in der Zielgruppe ist (leer = ganzer
+            Tag)
+        reason:
+          type: string
+          title: Grund
+        status:
+          $ref: '#/components/schemas/GroupTransferStatusEnum'
+        status_display:
+          type: string
+          readOnly: true
+        requested_by:
+          type: integer
+          nullable: true
+          title: Angefragt von
+        requested_by_name:
+          type: string
+          readOnly: true
+        confirmed_by:
+          type: integer
+          readOnly: true
+          nullable: true
+          title: Bestaetigt/Abgelehnt von
+        confirmed_by_name:
+          type: string
+          readOnly: true
+        confirmed_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+          title: Bestaetigt/Abgelehnt am
+        completed_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+          title: Abgeschlossen am
+        notes:
+          type: string
+          title: Notizen
+          description: Zusaetzliche Notizen zum Gruppenwechsel
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+          title: Erstellt am
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+          title: Aktualisiert am
+      required:
+      - completed_at
+      - confirmed_at
+      - confirmed_by
+      - confirmed_by_name
+      - created_at
+      - id
+      - location_name
+      - requested_by_name
+      - source_group
+      - source_group_name
+      - start_time
+      - status_display
+      - student
+      - student_name
+      - target_group
+      - target_group_name
+      - transfer_date
+      - updated_at
+    GroupTransferListRequest:
+      type: object
+      description: Serializer for listing group transfers.
+      properties:
+        student:
+          type: integer
+          title: Schueler/in
+        source_group:
+          type: integer
+          title: Herkunftsgruppe
+        target_group:
+          type: integer
+          title: Zielgruppe
+        transfer_date:
+          type: string
+          format: date
+          title: Datum des Wechsels
+        start_time:
+          type: string
+          format: time
+          title: Beginn
+          description: Uhrzeit ab der das Kind in der Zielgruppe ist
+        end_time:
+          type: string
+          format: time
+          nullable: true
+          title: Ende
+          description: Uhrzeit bis der das Kind in der Zielgruppe ist (leer = ganzer
+            Tag)
+        reason:
+          type: string
+          title: Grund
+        status:
+          $ref: '#/components/schemas/GroupTransferStatusEnum'
+        requested_by:
+          type: integer
+          nullable: true
+          title: Angefragt von
+        notes:
+          type: string
+          title: Notizen
+          description: Zusaetzliche Notizen zum Gruppenwechsel
+      required:
+      - source_group
+      - start_time
+      - student
+      - target_group
+      - transfer_date
+    GroupTransferStatusEnum:
+      enum:
+      - pending
+      - confirmed
+      - rejected
+      - completed
+      type: string
+      description: |-
+        * `pending` - Ausstehend
+        * `confirmed` - Bestaetigt
+        * `rejected` - Abgelehnt
+        * `completed` - Abgeschlossen
     GroupUserCompact:
       type: object
       description: Compact user representation for nested display in groups.
@@ -6015,6 +7552,102 @@ components:
       - service
       - status
       - version
+    HolidayPeriod:
+      type: object
+      description: Serializer for listing and retrieving holiday periods.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        school_year:
+          type: integer
+          title: Schuljahr
+        name:
+          type: string
+          title: Bezeichnung
+          description: z.B. Weihnachtsferien, Semesterferien, Osterferien
+          maxLength: 100
+        start_date:
+          type: string
+          format: date
+          title: Beginn
+        end_date:
+          type: string
+          format: date
+          title: Ende
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+          title: Erstellt am
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+          title: Aktualisiert am
+      required:
+      - created_at
+      - end_date
+      - id
+      - name
+      - school_year
+      - start_date
+      - updated_at
+    HolidayPeriodCreate:
+      type: object
+      description: Serializer for creating/updating holiday periods.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        school_year:
+          type: integer
+          title: Schuljahr
+        name:
+          type: string
+          title: Bezeichnung
+          description: z.B. Weihnachtsferien, Semesterferien, Osterferien
+          maxLength: 100
+        start_date:
+          type: string
+          format: date
+          title: Beginn
+        end_date:
+          type: string
+          format: date
+          title: Ende
+      required:
+      - end_date
+      - id
+      - name
+      - school_year
+      - start_date
+    HolidayPeriodCreateRequest:
+      type: object
+      description: Serializer for creating/updating holiday periods.
+      properties:
+        school_year:
+          type: integer
+          title: Schuljahr
+        name:
+          type: string
+          minLength: 1
+          title: Bezeichnung
+          description: z.B. Weihnachtsferien, Semesterferien, Osterferien
+          maxLength: 100
+        start_date:
+          type: string
+          format: date
+          title: Beginn
+        end_date:
+          type: string
+          format: date
+          title: Ende
+      required:
+      - end_date
+      - name
+      - school_year
+      - start_date
     LeaveRequestApproval:
       type: object
       description: Serializer for approve/reject actions on leave requests.
@@ -6803,6 +8436,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/AuditLog'
+    PaginatedAutonomousDayList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/AutonomousDay'
     PaginatedGroupListList:
       type: object
       required:
@@ -6849,6 +8505,52 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/GroupMember'
+    PaginatedGroupTransferListList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/GroupTransferList'
+    PaginatedHolidayPeriodList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/HolidayPeriod'
     PaginatedLeaveRequestListList:
       type: object
       required:
@@ -6987,6 +8689,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Semester'
+    PaginatedStudentContactListList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/StudentContactList'
     PaginatedStudentListList:
       type: object
       required:
@@ -7251,6 +8976,27 @@ components:
         notes:
           type: string
           title: Notizen
+    PatchedAutonomousDayCreateRequest:
+      type: object
+      description: Serializer for creating/updating autonomous days.
+      properties:
+        school_year:
+          type: integer
+          title: Schuljahr
+        name:
+          type: string
+          minLength: 1
+          title: Bezeichnung
+          description: z.B. Schulautonomer Tag, Pädagogischer Tag
+          maxLength: 100
+        date:
+          type: string
+          format: date
+          title: Datum
+        description:
+          type: string
+          title: Beschreibung
+          description: Optionale Beschreibung oder Begründung
     PatchedGroupCreateRequest:
       type: object
       description: Serializer for creating/updating groups.
@@ -7289,6 +9035,69 @@ components:
           allOf:
           - $ref: '#/components/schemas/GroupMemberRoleEnum'
           title: Rolle in Gruppe
+    PatchedGroupTransferListRequest:
+      type: object
+      description: Serializer for listing group transfers.
+      properties:
+        student:
+          type: integer
+          title: Schueler/in
+        source_group:
+          type: integer
+          title: Herkunftsgruppe
+        target_group:
+          type: integer
+          title: Zielgruppe
+        transfer_date:
+          type: string
+          format: date
+          title: Datum des Wechsels
+        start_time:
+          type: string
+          format: time
+          title: Beginn
+          description: Uhrzeit ab der das Kind in der Zielgruppe ist
+        end_time:
+          type: string
+          format: time
+          nullable: true
+          title: Ende
+          description: Uhrzeit bis der das Kind in der Zielgruppe ist (leer = ganzer
+            Tag)
+        reason:
+          type: string
+          title: Grund
+        status:
+          $ref: '#/components/schemas/GroupTransferStatusEnum'
+        requested_by:
+          type: integer
+          nullable: true
+          title: Angefragt von
+        notes:
+          type: string
+          title: Notizen
+          description: Zusaetzliche Notizen zum Gruppenwechsel
+    PatchedHolidayPeriodCreateRequest:
+      type: object
+      description: Serializer for creating/updating holiday periods.
+      properties:
+        school_year:
+          type: integer
+          title: Schuljahr
+        name:
+          type: string
+          minLength: 1
+          title: Bezeichnung
+          description: z.B. Weihnachtsferien, Semesterferien, Osterferien
+          maxLength: 100
+        start_date:
+          type: string
+          format: date
+          title: Beginn
+        end_date:
+          type: string
+          format: date
+          title: Ende
     PatchedLeaveRequestCreateRequest:
       type: object
       description: Serializer for creating a leave request.
@@ -7478,6 +9287,49 @@ components:
         is_active:
           type: boolean
           title: Aktiv
+    PatchedStudentContactCreateRequest:
+      type: object
+      description: Serializer for creating/updating a student contact.
+      properties:
+        student:
+          type: integer
+          title: Schueler/in
+        is_primary:
+          type: boolean
+          title: Hauptansprechperson
+          description: Genau eine Kontaktperson pro Schueler muss als Hauptansprechperson
+            markiert sein.
+        relationship:
+          allOf:
+          - $ref: '#/components/schemas/StudentContactRelationshipEnum'
+          title: Beziehung
+        first_name:
+          type: string
+          minLength: 1
+          title: Vorname
+          maxLength: 255
+        last_name:
+          type: string
+          minLength: 1
+          title: Nachname
+          maxLength: 255
+        phone:
+          type: string
+          nullable: true
+          title: Telefon
+          maxLength: 255
+        email:
+          type: string
+          format: email
+          nullable: true
+          title: E-Mail
+          maxLength: 255
+        whatsapp_available:
+          type: boolean
+          title: WhatsApp verfuegbar
+        notes:
+          type: string
+          title: Notizen
     PatchedStudentCreateRequest:
       type: object
       description: Serializer for creating/updating students.
@@ -8026,6 +9878,190 @@ components:
       - name
       - school_year
       - start_date
+    StudentContactCreate:
+      type: object
+      description: Serializer for creating/updating a student contact.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        student:
+          type: integer
+          title: Schueler/in
+        is_primary:
+          type: boolean
+          title: Hauptansprechperson
+          description: Genau eine Kontaktperson pro Schueler muss als Hauptansprechperson
+            markiert sein.
+        relationship:
+          allOf:
+          - $ref: '#/components/schemas/StudentContactRelationshipEnum'
+          title: Beziehung
+        first_name:
+          type: string
+          title: Vorname
+          maxLength: 255
+        last_name:
+          type: string
+          title: Nachname
+          maxLength: 255
+        phone:
+          type: string
+          nullable: true
+          title: Telefon
+          maxLength: 255
+        email:
+          type: string
+          format: email
+          nullable: true
+          title: E-Mail
+          maxLength: 255
+        whatsapp_available:
+          type: boolean
+          title: WhatsApp verfuegbar
+        notes:
+          type: string
+          title: Notizen
+      required:
+      - first_name
+      - id
+      - last_name
+      - relationship
+      - student
+    StudentContactCreateRequest:
+      type: object
+      description: Serializer for creating/updating a student contact.
+      properties:
+        student:
+          type: integer
+          title: Schueler/in
+        is_primary:
+          type: boolean
+          title: Hauptansprechperson
+          description: Genau eine Kontaktperson pro Schueler muss als Hauptansprechperson
+            markiert sein.
+        relationship:
+          allOf:
+          - $ref: '#/components/schemas/StudentContactRelationshipEnum'
+          title: Beziehung
+        first_name:
+          type: string
+          minLength: 1
+          title: Vorname
+          maxLength: 255
+        last_name:
+          type: string
+          minLength: 1
+          title: Nachname
+          maxLength: 255
+        phone:
+          type: string
+          nullable: true
+          title: Telefon
+          maxLength: 255
+        email:
+          type: string
+          format: email
+          nullable: true
+          title: E-Mail
+          maxLength: 255
+        whatsapp_available:
+          type: boolean
+          title: WhatsApp verfuegbar
+        notes:
+          type: string
+          title: Notizen
+      required:
+      - first_name
+      - last_name
+      - relationship
+      - student
+    StudentContactList:
+      type: object
+      description: Serializer for listing student contacts.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        student:
+          type: integer
+          title: Schueler/in
+        student_name:
+          type: string
+          readOnly: true
+        is_primary:
+          type: boolean
+          title: Hauptansprechperson
+          description: Genau eine Kontaktperson pro Schueler muss als Hauptansprechperson
+            markiert sein.
+        relationship:
+          allOf:
+          - $ref: '#/components/schemas/StudentContactRelationshipEnum'
+          title: Beziehung
+        relationship_display:
+          type: string
+          readOnly: true
+        first_name:
+          type: string
+          title: Vorname
+          maxLength: 255
+        last_name:
+          type: string
+          title: Nachname
+          maxLength: 255
+        phone:
+          type: string
+          nullable: true
+          title: Telefon
+          maxLength: 255
+        email:
+          type: string
+          format: email
+          nullable: true
+          title: E-Mail
+          maxLength: 255
+        whatsapp_available:
+          type: boolean
+          title: WhatsApp verfuegbar
+        notes:
+          type: string
+          title: Notizen
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+          title: Erstellt am
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+          title: Aktualisiert am
+      required:
+      - created_at
+      - first_name
+      - id
+      - last_name
+      - relationship
+      - relationship_display
+      - student
+      - student_name
+      - updated_at
+    StudentContactRelationshipEnum:
+      enum:
+      - parent
+      - uncle
+      - aunt
+      - grandparent
+      - relative
+      - authorized
+      type: string
+      description: |-
+        * `parent` - Elternteil
+        * `uncle` - Onkel
+        * `aunt` - Tante
+        * `grandparent` - Grosselternteil
+        * `relative` - Verwandte/r
+        * `authorized` - Abholberechtigte Person
     StudentCreate:
       type: object
       description: Serializer for creating/updating students.
@@ -8694,6 +10730,14 @@ components:
         group_name:
           type: string
           readOnly: true
+        school_year:
+          type: integer
+          nullable: true
+          title: Schuljahr
+          description: Zugehöriges Schuljahr (wird automatisch zugeordnet)
+        school_year_name:
+          type: string
+          readOnly: true
         category:
           type: integer
           nullable: true
@@ -8774,6 +10818,7 @@ components:
       - group_name
       - id
       - receipts
+      - school_year_name
       - status
       - transaction_date
       - transaction_type
@@ -8789,6 +10834,14 @@ components:
           type: integer
           title: Gruppe
         group_name:
+          type: string
+          readOnly: true
+        school_year:
+          type: integer
+          nullable: true
+          title: Schuljahr
+          description: Zugehöriges Schuljahr (wird automatisch zugeordnet)
+        school_year_name:
           type: string
           readOnly: true
         category:
@@ -8858,6 +10911,7 @@ components:
       - group_name
       - id
       - receipt_count
+      - school_year_name
       - status
       - transaction_date
       - transaction_type
@@ -8868,6 +10922,11 @@ components:
         group:
           type: integer
           title: Gruppe
+        school_year:
+          type: integer
+          nullable: true
+          title: Schuljahr
+          description: Zugehöriges Schuljahr (wird automatisch zugeordnet)
         category:
           type: integer
           nullable: true
@@ -10190,6 +12249,12 @@ tags:
   description: Zeiterfassung & Arbeitszeiten
 - name: Groups
   description: Gruppen- & Schülerverwaltung
+- name: Gruppenwechsel
+  description: Temporäre Gruppenwechsel & Bestätigungsworkflow
+- name: Kontaktpersonen
+  description: Kontaktpersonen & Abholberechtigte
+- name: Schulkalender
+  description: Ferien & schulautonome Tage
 - name: WeeklyPlans
   description: Wochenpläne & Tagesaktivitäten
 - name: Admin
