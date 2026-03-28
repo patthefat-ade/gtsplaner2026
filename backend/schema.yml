@@ -2687,6 +2687,321 @@ paths:
       responses:
         '204':
           description: No response body
+  /api/v1/groups/daily-protocols/:
+    get:
+      operationId: groups_daily_protocols_list
+      description: |-
+        ViewSet for DailyProtocol CRUD operations.
+
+        Provides:
+        - Standard CRUD (list, create, retrieve, update, destroy)
+        - Bulk create/update for a group on a specific date
+        - By-student endpoint for protocol history
+      parameters:
+      - in: query
+        name: date
+        schema:
+          type: string
+          format: date
+      - in: query
+        name: date_from
+        schema:
+          type: string
+          format: date
+      - in: query
+        name: date_to
+        schema:
+          type: string
+          format: date
+      - in: query
+        name: group_id
+        schema:
+          type: number
+      - in: query
+        name: has_incidents
+        schema:
+          type: boolean
+      - in: query
+        name: incident_severity
+        schema:
+          type: string
+      - name: ordering
+        required: false
+        in: query
+        description: Feld, das zum Sortieren der Ergebnisse verwendet werden soll.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: Eine Seitenzahl in der paginierten Ergebnismenge.
+        schema:
+          type: integer
+      - in: query
+        name: school_year_id
+        schema:
+          type: number
+      - name: search
+        required: false
+        in: query
+        description: Ein Suchbegriff.
+        schema:
+          type: string
+      - in: query
+        name: student_id
+        schema:
+          type: number
+      tags:
+      - groups
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedDailyProtocolList'
+          description: ''
+    post:
+      operationId: groups_daily_protocols_create
+      description: |-
+        ViewSet for DailyProtocol CRUD operations.
+
+        Provides:
+        - Standard CRUD (list, create, retrieve, update, destroy)
+        - Bulk create/update for a group on a specific date
+        - By-student endpoint for protocol history
+      tags:
+      - groups
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DailyProtocolCreateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/DailyProtocolCreateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/DailyProtocolCreateRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DailyProtocolCreate'
+          description: ''
+  /api/v1/groups/daily-protocols/{id}/:
+    get:
+      operationId: groups_daily_protocols_retrieve
+      description: |-
+        ViewSet for DailyProtocol CRUD operations.
+
+        Provides:
+        - Standard CRUD (list, create, retrieve, update, destroy)
+        - Bulk create/update for a group on a specific date
+        - By-student endpoint for protocol history
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: Ein eindeutiger Ganzzahl-Wert, der Tagesprotokoll identifiziert.
+        required: true
+      tags:
+      - groups
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DailyProtocol'
+          description: ''
+    put:
+      operationId: groups_daily_protocols_update
+      description: |-
+        ViewSet for DailyProtocol CRUD operations.
+
+        Provides:
+        - Standard CRUD (list, create, retrieve, update, destroy)
+        - Bulk create/update for a group on a specific date
+        - By-student endpoint for protocol history
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: Ein eindeutiger Ganzzahl-Wert, der Tagesprotokoll identifiziert.
+        required: true
+      tags:
+      - groups
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DailyProtocolCreateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/DailyProtocolCreateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/DailyProtocolCreateRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DailyProtocolCreate'
+          description: ''
+    patch:
+      operationId: groups_daily_protocols_partial_update
+      description: |-
+        ViewSet for DailyProtocol CRUD operations.
+
+        Provides:
+        - Standard CRUD (list, create, retrieve, update, destroy)
+        - Bulk create/update for a group on a specific date
+        - By-student endpoint for protocol history
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: Ein eindeutiger Ganzzahl-Wert, der Tagesprotokoll identifiziert.
+        required: true
+      tags:
+      - groups
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedDailyProtocolCreateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedDailyProtocolCreateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedDailyProtocolCreateRequest'
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DailyProtocolCreate'
+          description: ''
+    delete:
+      operationId: groups_daily_protocols_destroy
+      description: |-
+        ViewSet for DailyProtocol CRUD operations.
+
+        Provides:
+        - Standard CRUD (list, create, retrieve, update, destroy)
+        - Bulk create/update for a group on a specific date
+        - By-student endpoint for protocol history
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: Ein eindeutiger Ganzzahl-Wert, der Tagesprotokoll identifiziert.
+        required: true
+      tags:
+      - groups
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/v1/groups/daily-protocols/bulk/:
+    post:
+      operationId: groups_daily_protocols_bulk_create
+      description: |-
+        Bulk create or update daily protocols for a group on a specific date.
+
+        Expects:
+        {
+            "group_id": 1,
+            "date": "2026-03-28",
+            "school_year_id": 1,
+            "records": [
+                {
+                    "student_id": 1,
+                    "arrival_time": "08:00",
+                    "arrival_notes": "",
+                    "incidents": "",
+                    "incident_severity": "normal",
+                    "pickup_time": "16:00",
+                    "picked_up_by_id": null,
+                    "pickup_notes": ""
+                },
+                ...
+            ]
+        }
+      tags:
+      - groups
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BulkDailyProtocolRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/BulkDailyProtocolRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/BulkDailyProtocolRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BulkDailyProtocol'
+          description: ''
+  /api/v1/groups/daily-protocols/by-student/{student_id}/:
+    get:
+      operationId: groups_daily_protocols_by_student_retrieve
+      description: |-
+        Get all protocols for a specific student.
+        Supports date_from and date_to query params.
+      parameters:
+      - in: path
+        name: student_id
+        schema:
+          type: string
+          pattern: ^[0-9]+$
+        required: true
+      tags:
+      - groups
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DailyProtocol'
+          description: ''
   /api/v1/groups/groups/:
     get:
       operationId: groups_groups_list
@@ -6706,6 +7021,52 @@ components:
       required:
       - date
       - records
+    BulkDailyProtocol:
+      type: object
+      description: Serializer for bulk creating/updating protocols for a group on
+        a date.
+      properties:
+        group_id:
+          type: integer
+        date:
+          type: string
+          format: date
+        school_year_id:
+          type: integer
+          nullable: true
+        records:
+          type: array
+          items:
+            type: object
+            additionalProperties: {}
+          minItems: 1
+      required:
+      - date
+      - group_id
+      - records
+    BulkDailyProtocolRequest:
+      type: object
+      description: Serializer for bulk creating/updating protocols for a group on
+        a date.
+      properties:
+        group_id:
+          type: integer
+        date:
+          type: string
+          format: date
+        school_year_id:
+          type: integer
+          nullable: true
+        records:
+          type: array
+          items:
+            type: object
+            additionalProperties: {}
+          minItems: 1
+      required:
+      - date
+      - group_id
+      - records
     CategoryEnum:
       enum:
       - lernen
@@ -6790,6 +7151,244 @@ components:
           description: Detaillierte Aktivitätsbeschreibung für diesen Tag (Rich-Text/HTML)
       required:
       - day_of_week
+    DailyProtocol:
+      type: object
+      description: Read serializer for DailyProtocol with nested names.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        student:
+          type: integer
+          title: Schueler/in
+        student_name:
+          type: string
+          readOnly: true
+        date:
+          type: string
+          format: date
+          title: Datum
+        group:
+          type: integer
+          title: Hauptgruppe
+          description: Die Stammgruppe des Schuelers.
+        group_name:
+          type: string
+          readOnly: true
+        effective_group:
+          type: integer
+          nullable: true
+          title: Tatsaechliche Gruppe
+          description: Falls der Schueler an diesem Tag die Gruppe gewechselt hat.
+        effective_group_name:
+          type: string
+          readOnly: true
+        transfer:
+          type: integer
+          nullable: true
+          title: Gruppenwechsel
+          description: Verknuepfung zum Gruppenwechsel, falls vorhanden.
+        has_transfer:
+          type: boolean
+          readOnly: true
+        school_year:
+          type: integer
+          nullable: true
+          title: Schuljahr
+        school_year_name:
+          type: string
+          readOnly: true
+        arrival_time:
+          type: string
+          format: time
+          nullable: true
+          title: Ankunftszeit
+        arrival_notes:
+          type: string
+          title: Ankunft-Notizen
+          description: z.B. von wem gebracht, Besonderheiten bei Ankunft.
+        incidents:
+          type: string
+          title: Besondere Vorkommnisse
+        incident_severity:
+          allOf:
+          - $ref: '#/components/schemas/IncidentSeverityEnum'
+          title: Schweregrad
+        pickup_time:
+          type: string
+          format: time
+          nullable: true
+          title: Abholzeit
+        picked_up_by:
+          type: integer
+          nullable: true
+          title: Abgeholt von
+          description: Kontaktperson die das Kind abgeholt hat.
+        picked_up_by_name:
+          type: string
+          readOnly: true
+        pickup_notes:
+          type: string
+          title: Abhol-Notizen
+        recorded_by:
+          type: integer
+          nullable: true
+          title: Erfasst von
+        recorded_by_name:
+          type: string
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+          title: Erstellt am
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+          title: Aktualisiert am
+      required:
+      - created_at
+      - date
+      - effective_group_name
+      - group
+      - group_name
+      - has_transfer
+      - id
+      - picked_up_by_name
+      - recorded_by_name
+      - school_year_name
+      - student
+      - student_name
+      - updated_at
+    DailyProtocolCreate:
+      type: object
+      description: Write serializer for creating/updating a DailyProtocol.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        student:
+          type: integer
+          title: Schueler/in
+        date:
+          type: string
+          format: date
+          title: Datum
+        group:
+          type: integer
+          title: Hauptgruppe
+          description: Die Stammgruppe des Schuelers.
+        effective_group:
+          type: integer
+          nullable: true
+          title: Tatsaechliche Gruppe
+          description: Falls der Schueler an diesem Tag die Gruppe gewechselt hat.
+        transfer:
+          type: integer
+          nullable: true
+          title: Gruppenwechsel
+          description: Verknuepfung zum Gruppenwechsel, falls vorhanden.
+        school_year:
+          type: integer
+          nullable: true
+          title: Schuljahr
+        arrival_time:
+          type: string
+          format: time
+          nullable: true
+          title: Ankunftszeit
+        arrival_notes:
+          type: string
+          title: Ankunft-Notizen
+          description: z.B. von wem gebracht, Besonderheiten bei Ankunft.
+        incidents:
+          type: string
+          title: Besondere Vorkommnisse
+        incident_severity:
+          allOf:
+          - $ref: '#/components/schemas/IncidentSeverityEnum'
+          title: Schweregrad
+        pickup_time:
+          type: string
+          format: time
+          nullable: true
+          title: Abholzeit
+        picked_up_by:
+          type: integer
+          nullable: true
+          title: Abgeholt von
+          description: Kontaktperson die das Kind abgeholt hat.
+        pickup_notes:
+          type: string
+          title: Abhol-Notizen
+      required:
+      - date
+      - group
+      - id
+      - student
+    DailyProtocolCreateRequest:
+      type: object
+      description: Write serializer for creating/updating a DailyProtocol.
+      properties:
+        student:
+          type: integer
+          title: Schueler/in
+        date:
+          type: string
+          format: date
+          title: Datum
+        group:
+          type: integer
+          title: Hauptgruppe
+          description: Die Stammgruppe des Schuelers.
+        effective_group:
+          type: integer
+          nullable: true
+          title: Tatsaechliche Gruppe
+          description: Falls der Schueler an diesem Tag die Gruppe gewechselt hat.
+        transfer:
+          type: integer
+          nullable: true
+          title: Gruppenwechsel
+          description: Verknuepfung zum Gruppenwechsel, falls vorhanden.
+        school_year:
+          type: integer
+          nullable: true
+          title: Schuljahr
+        arrival_time:
+          type: string
+          format: time
+          nullable: true
+          title: Ankunftszeit
+        arrival_notes:
+          type: string
+          title: Ankunft-Notizen
+          description: z.B. von wem gebracht, Besonderheiten bei Ankunft.
+        incidents:
+          type: string
+          title: Besondere Vorkommnisse
+        incident_severity:
+          allOf:
+          - $ref: '#/components/schemas/IncidentSeverityEnum'
+          title: Schweregrad
+        pickup_time:
+          type: string
+          format: time
+          nullable: true
+          title: Abholzeit
+        picked_up_by:
+          type: integer
+          nullable: true
+          title: Abgeholt von
+          description: Kontaktperson die das Kind abgeholt hat.
+        pickup_notes:
+          type: string
+          title: Abhol-Notizen
+      required:
+      - date
+      - group
+      - student
     DashboardStatsResponse:
       type: object
       properties:
@@ -7648,6 +8247,16 @@ components:
       - name
       - school_year
       - start_date
+    IncidentSeverityEnum:
+      enum:
+      - normal
+      - important
+      - urgent
+      type: string
+      description: |-
+        * `normal` - Normal
+        * `important` - Wichtig
+        * `urgent` - Dringend
     LeaveRequestApproval:
       type: object
       description: Serializer for approve/reject actions on leave requests.
@@ -8459,6 +9068,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/AutonomousDay'
+    PaginatedDailyProtocolList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/DailyProtocol'
     PaginatedGroupListList:
       type: object
       required:
@@ -8997,6 +9629,64 @@ components:
           type: string
           title: Beschreibung
           description: Optionale Beschreibung oder Begründung
+    PatchedDailyProtocolCreateRequest:
+      type: object
+      description: Write serializer for creating/updating a DailyProtocol.
+      properties:
+        student:
+          type: integer
+          title: Schueler/in
+        date:
+          type: string
+          format: date
+          title: Datum
+        group:
+          type: integer
+          title: Hauptgruppe
+          description: Die Stammgruppe des Schuelers.
+        effective_group:
+          type: integer
+          nullable: true
+          title: Tatsaechliche Gruppe
+          description: Falls der Schueler an diesem Tag die Gruppe gewechselt hat.
+        transfer:
+          type: integer
+          nullable: true
+          title: Gruppenwechsel
+          description: Verknuepfung zum Gruppenwechsel, falls vorhanden.
+        school_year:
+          type: integer
+          nullable: true
+          title: Schuljahr
+        arrival_time:
+          type: string
+          format: time
+          nullable: true
+          title: Ankunftszeit
+        arrival_notes:
+          type: string
+          title: Ankunft-Notizen
+          description: z.B. von wem gebracht, Besonderheiten bei Ankunft.
+        incidents:
+          type: string
+          title: Besondere Vorkommnisse
+        incident_severity:
+          allOf:
+          - $ref: '#/components/schemas/IncidentSeverityEnum'
+          title: Schweregrad
+        pickup_time:
+          type: string
+          format: time
+          nullable: true
+          title: Abholzeit
+        picked_up_by:
+          type: integer
+          nullable: true
+          title: Abgeholt von
+          description: Kontaktperson die das Kind abgeholt hat.
+        pickup_notes:
+          type: string
+          title: Abhol-Notizen
     PatchedGroupCreateRequest:
       type: object
       description: Serializer for creating/updating groups.
@@ -12255,6 +12945,8 @@ tags:
   description: Kontaktpersonen & Abholberechtigte
 - name: Schulkalender
   description: Ferien & schulautonome Tage
+- name: Tagesprotokoll
+  description: Tägliche Schülerprotokolle (Ankunft, Vorkommnisse, Abholung)
 - name: WeeklyPlans
   description: Wochenpläne & Tagesaktivitäten
 - name: Admin

@@ -44,6 +44,7 @@ TRACKED_MODELS = [
     "groups.StudentContact",
     "groups.HolidayPeriod",
     "groups.AutonomousDay",
+    "groups.DailyProtocol",
     "system.SystemSetting",
 ]
 
