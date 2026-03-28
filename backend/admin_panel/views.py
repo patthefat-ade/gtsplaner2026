@@ -148,6 +148,10 @@ class OrganizationSerializer(serializers.ModelSerializer):
     """Serializer for organizations."""
 
     location_count = serializers.SerializerMethodField()
+    parent_name = serializers.CharField(
+        source="parent.name", read_only=True, default=None
+    )
+    children_count = serializers.SerializerMethodField()
 
     class Meta:
         model = Organization
@@ -155,6 +159,10 @@ class OrganizationSerializer(serializers.ModelSerializer):
             "id",
             "name",
             "description",
+            "org_type",
+            "parent",
+            "parent_name",
+            "children_count",
             "email",
             "phone",
             "website",
@@ -167,10 +175,27 @@ class OrganizationSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
         ]
-        read_only_fields = ["id", "created_at", "updated_at", "location_count"]
+        read_only_fields = ["id", "created_at", "updated_at", "location_count", "parent_name", "children_count"]
 
     def get_location_count(self, obj: Organization) -> int:
         return obj.locations.count()
+
+    def get_children_count(self, obj: Organization) -> int:
+        return obj.children.filter(is_deleted=False).count()
+
+    def validate(self, attrs):
+        org_type = attrs.get("org_type", getattr(self.instance, "org_type", None))
+        parent = attrs.get("parent", getattr(self.instance, "parent", None))
+
+        if org_type == "sub_tenant" and not parent:
+            raise serializers.ValidationError(
+                {"parent": "Untermandanten muessen einem Hauptmandanten zugeordnet werden."}
+            )
+        if org_type == "main_tenant" and parent:
+            raise serializers.ValidationError(
+                {"parent": "Hauptmandanten duerfen keinen uebergeordneten Mandanten haben."}
+            )
+        return attrs
 
 
 @extend_schema_view(

@@ -44,6 +44,16 @@ class User(AbstractUser):
         default=Role.EDUCATOR,
         verbose_name="Rolle",
     )
+    organization = models.ForeignKey(
+        "Organization",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="users_direct",
+        verbose_name="Organisation",
+        help_text="Direkte Organisationszuordnung (primaer fuer Admin-Rolle). "
+        "Fuer Educators/LocationManager wird die Organisation ueber den Standort aufgeloest.",
+    )
     location = models.ForeignKey(
         "Location",
         on_delete=models.SET_NULL,
@@ -89,6 +99,7 @@ class User(AbstractUser):
         indexes = [
             models.Index(fields=["role"]),
             models.Index(fields=["location"]),
+            models.Index(fields=["organization"]),
         ]
 
     def __str__(self) -> str:

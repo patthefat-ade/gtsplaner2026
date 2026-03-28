@@ -114,9 +114,11 @@ class SchoolYearViewSet(TenantViewSetMixin, viewsets.ModelViewSet):
         ]
 
     def perform_create(self, serializer):
+        location = serializer.validated_data.get("location") or self.request.user.location
+        organization = self.request.tenant or (location.organization if location else None)
         serializer.save(
-            location=self.request.user.location,
-            organization=self.request.tenant,
+            location=location,
+            organization=organization,
         )
 
     def perform_destroy(self, instance):
@@ -215,9 +217,19 @@ class GroupViewSet(TenantViewSetMixin, viewsets.ModelViewSet):
         ]
 
     def perform_create(self, serializer):
+        # Use location from request body if provided (for admins without location),
+        # otherwise fall back to user's location
+        location = serializer.validated_data.get("location") or self.request.user.location
+        if not location:
+            from rest_framework.exceptions import ValidationError
+            raise ValidationError(
+                {"location": "Standort ist erforderlich. Bitte waehlen Sie einen Standort aus."}
+            )
+        # Determine organization from the location
+        organization = self.request.tenant or location.organization
         serializer.save(
-            location=self.request.user.location,
-            organization=self.request.tenant,
+            location=location,
+            organization=organization,
         )
 
     def perform_destroy(self, instance):

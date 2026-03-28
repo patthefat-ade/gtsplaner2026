@@ -9,6 +9,7 @@ import {
   useDeleteGroup,
   useSchoolYears,
 } from "@/hooks/use-groups";
+import { useLocations } from "@/hooks/use-locations";
 import { useDebounce } from "@/hooks/use-debounce";
 import { useToast } from "@/components/ui/toast";
 import { PageHeader } from "@/components/common/page-header";
@@ -76,6 +77,10 @@ export default function GroupsListPage() {
 
   const { data, isLoading, error, refetch } = useGroups(params);
   const { data: schoolYearsData } = useSchoolYears({ page_size: 100 });
+  const { data: locationsData } = useLocations({ page_size: 200 });
+  const locations = locationsData?.results ?? [];
+  const { hasRole } = usePermissions();
+  const isAdmin = hasRole("admin") || hasRole("super_admin");
 
   const createMutation = useCreateGroup();
   const updateMutation = useUpdateGroup();
@@ -305,6 +310,8 @@ export default function GroupsListPage() {
         onOpenChange={setFormOpen}
         group={editGroup}
         schoolYears={schoolYearsData?.results || []}
+        locations={locations}
+        showLocationField={isAdmin}
         onSubmit={handleSubmit}
         isLoading={createMutation.isPending || updateMutation.isPending}
       />

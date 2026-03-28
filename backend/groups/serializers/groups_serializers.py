@@ -4,6 +4,7 @@ Serializers for Groups models: SchoolYear, Semester, Group, GroupMember, Student
 
 from rest_framework import serializers
 
+from core.models import Location
 from groups.models import Group, GroupMember, SchoolYear, Semester, Student
 
 
@@ -294,10 +295,17 @@ class GroupDetailSerializer(serializers.ModelSerializer):
 class GroupCreateSerializer(serializers.ModelSerializer):
     """Serializer for creating/updating groups."""
 
+    location = serializers.PrimaryKeyRelatedField(
+        queryset=Location.objects.filter(is_active=True),
+        required=False,
+        help_text="Standort-ID (erforderlich fuer Admins ohne eigenen Standort)",
+    )
+
     class Meta:
         model = Group
         fields = [
             "id",
+            "location",
             "school_year",
             "name",
             "description",

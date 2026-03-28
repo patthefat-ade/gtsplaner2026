@@ -25,7 +25,10 @@ export interface User {
   last_name: string;
   role: UserRole;
   role_display?: string;
+  organization: number | null;
+  organization_detail?: { id: number; name: string } | null;
   location: number | null;
+  location_detail?: { id: number; name: string; city: string } | null;
   location_name?: string;
   phone: string;
   profile_picture: string | null;

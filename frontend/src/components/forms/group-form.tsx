@@ -31,7 +31,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Loader2 } from "lucide-react";
-import type { Group, SchoolYear, UserCompact } from "@/types/models";
+import type { Group, SchoolYear, UserCompact, Location } from "@/types/models";
 
 interface GroupFormProps {
   open: boolean;
@@ -39,6 +39,8 @@ interface GroupFormProps {
   group?: Group | null;
   schoolYears: SchoolYear[];
   users?: UserCompact[];
+  locations?: Location[];
+  showLocationField?: boolean;
   onSubmit: (data: GroupFormData) => Promise<void>;
   isLoading?: boolean;
 }
@@ -49,6 +51,8 @@ export function GroupForm({
   group,
   schoolYears,
   users = [],
+  locations = [],
+  showLocationField = false,
   onSubmit,
   isLoading = false,
 }: GroupFormProps) {
@@ -58,6 +62,7 @@ export function GroupForm({
     resolver: zodResolver(groupSchema),
     defaultValues: {
       name: group?.name || "",
+      location: group?.location || 0,
       school_year: group?.school_year || 0,
       group_leader: group?.group_leader || undefined,
       description: group?.description || "",
@@ -70,6 +75,7 @@ export function GroupForm({
     if (open) {
       form.reset({
         name: group?.name || "",
+        location: group?.location || 0,
         school_year: group?.school_year || 0,
         group_leader: group?.group_leader || undefined,
         description: group?.description || "",
@@ -125,6 +131,37 @@ export function GroupForm({
                 </FormItem>
               )}
             />
+
+            {/* Location dropdown for admins who need to select a location */}
+            {showLocationField && locations.length > 0 && (
+              <FormField
+                control={form.control}
+                name="location"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Standort *</FormLabel>
+                    <Select
+                      onValueChange={(val) => field.onChange(Number(val))}
+                      defaultValue={field.value ? String(field.value) : undefined}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Standort wählen" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {locations.map((loc) => (
+                          <SelectItem key={loc.id} value={String(loc.id)}>
+                            {loc.name} ({loc.city})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
 
             <FormField
               control={form.control}

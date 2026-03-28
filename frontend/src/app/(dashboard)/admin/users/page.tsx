@@ -6,6 +6,8 @@ import {
   useCreateUser,
   useUpdateUser,
   useDeleteUser,
+  useLocations,
+  useOrganizations,
 } from "@/hooks/use-admin";
 import { useDebounce } from "@/hooks/use-debounce";
 import { useToast } from "@/components/ui/toast";
@@ -87,6 +89,12 @@ export default function UsersPage() {
   if (roleFilter !== "all") params.role = roleFilter;
 
   const { data, isLoading, error, refetch } = useUsers(params);
+
+  // Load locations and organizations for the user form
+  const { data: locationsData } = useLocations({ page_size: 200 });
+  const { data: orgsData } = useOrganizations({ page_size: 200 });
+  const locations = locationsData?.results ?? [];
+  const organizations = orgsData?.results ?? [];
 
   const createMutation = useCreateUser();
   const updateMutation = useUpdateUser();
@@ -209,6 +217,9 @@ export default function UsersPage() {
                   <TableHead>E-Mail</TableHead>
                   <TableHead>Rolle</TableHead>
                   <TableHead className="hidden md:table-cell">
+                    Organisation
+                  </TableHead>
+                  <TableHead className="hidden md:table-cell">
                     Standort
                   </TableHead>
                   <TableHead>Status</TableHead>
@@ -232,7 +243,10 @@ export default function UsersPage() {
                       </Badge>
                     </TableCell>
                     <TableCell className="hidden md:table-cell">
-                      {u.location_name || "–"}
+                      {u.organization_detail?.name || "–"}
+                    </TableCell>
+                    <TableCell className="hidden md:table-cell">
+                      {u.location_detail?.name || u.location_name || "–"}
                     </TableCell>
                     <TableCell>
                       <Badge
@@ -312,6 +326,8 @@ export default function UsersPage() {
         open={formOpen}
         onOpenChange={setFormOpen}
         user={editUser}
+        locations={locations}
+        organizations={organizations}
         onSubmit={handleSubmit}
         isLoading={createMutation.isPending || updateMutation.isPending}
       />

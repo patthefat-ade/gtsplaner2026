@@ -10,16 +10,24 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Loader2 } from "lucide-react";
-import type { Location, LocationCreate } from "@/types/models";
+import type { Location, LocationCreate, Organization } from "@/types/models";
 
 interface LocationFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   location: Location | null;
+  organizations?: Organization[];
   onSubmit: (data: LocationCreate) => Promise<void>;
   isLoading: boolean;
 }
@@ -28,12 +36,14 @@ export function LocationFormDialog({
   open,
   onOpenChange,
   location,
+  organizations = [],
   onSubmit,
   isLoading,
 }: LocationFormDialogProps) {
   const isEdit = !!location;
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
+  const [organization, setOrganization] = useState<number>(0);
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [street, setStreet] = useState("");
@@ -44,6 +54,7 @@ export function LocationFormDialog({
     if (open) {
       setName(location?.name || "");
       setDescription(location?.description || "");
+      setOrganization(location?.organization || 0);
       setEmail(location?.email || "");
       setPhone(location?.phone || "");
       setStreet(location?.street || "");
@@ -62,7 +73,7 @@ export function LocationFormDialog({
       street,
       city,
       postal_code: postalCode,
-      organization: location?.organization || 0,
+      organization,
     });
   };
 
@@ -85,6 +96,28 @@ export function LocationFormDialog({
               required
             />
           </div>
+
+          {/* Organization dropdown */}
+          {organizations.length > 0 && (
+            <div>
+              <Label htmlFor="loc-org">Organisation (Mandant) *</Label>
+              <Select
+                value={organization ? String(organization) : ""}
+                onValueChange={(v) => setOrganization(Number(v))}
+              >
+                <SelectTrigger id="loc-org">
+                  <SelectValue placeholder="Organisation wählen" />
+                </SelectTrigger>
+                <SelectContent>
+                  {organizations.map((org) => (
+                    <SelectItem key={org.id} value={String(org.id)}>
+                      {org.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           <div>
             <Label htmlFor="loc-desc">Beschreibung</Label>
@@ -158,7 +191,7 @@ export function LocationFormDialog({
             >
               Abbrechen
             </Button>
-            <Button type="submit" disabled={isLoading || !name}>
+            <Button type="submit" disabled={isLoading || !name || !organization}>
               {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {isEdit ? "Speichern" : "Erstellen"}
             </Button>

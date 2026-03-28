@@ -3,6 +3,8 @@
 import { useState, useMemo } from "react";
 import Link from "next/link";
 import { useWeeklyPlans, useDeleteWeeklyPlan, useExportPdf, useDuplicateWeeklyPlan } from "@/hooks/use-weeklyplans";
+import { useLocations } from "@/hooks/use-locations";
+import { useGroups } from "@/hooks/use-groups";
 import { usePermissions } from "@/hooks/use-permissions";
 import { useToast } from "@/components/ui/toast";
 import { PageHeader } from "@/components/common/page-header";
@@ -53,24 +55,43 @@ import {
   Trash2,
   Filter,
   Eye,
+  X,
 } from "lucide-react";
 import type { WeeklyPlan } from "@/types/models";
 
 export default function WeeklyPlansPage() {
-  const { hasPermission } = usePermissions();
+  const { hasPermission, hasRole } = usePermissions();
   const canManage = hasPermission("manage_weeklyplans");
+  const isAdminOrAbove = hasRole("admin") || hasRole("super_admin") || hasRole("location_manager");
 
   // Filters
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [locationFilter, setLocationFilter] = useState<string>("all");
+  const [groupFilter, setGroupFilter] = useState<string>("all");
   const [showFilters, setShowFilters] = useState(false);
 
-  // Data
-  const { data, isLoading } = useWeeklyPlans({
+  // Load locations and groups for filter dropdowns
+  const { data: locationsData } = useLocations({ page_size: 200 });
+  const locations = locationsData?.results ?? [];
+
+  // Load groups, optionally filtered by selected location
+  const groupParams: Record<string, string | number> = { page_size: 200 };
+  if (locationFilter !== "all") groupParams.location = locationFilter;
+  const { data: groupsData } = useGroups(groupParams);
+  const groups = groupsData?.results ?? [];
+
+  // Build API query params
+  const queryParams: Record<string, string | number | boolean | undefined> = {
     is_template: false,
     status: statusFilter !== "all" ? statusFilter : undefined,
     search: search || undefined,
-  });
+    location: locationFilter !== "all" ? locationFilter : undefined,
+    group: groupFilter !== "all" ? groupFilter : undefined,
+  };
+
+  // Data
+  const { data, isLoading } = useWeeklyPlans(queryParams);
   const toast = useToast();
   const deleteMutation = useDeleteWeeklyPlan();
   const exportPdf = useExportPdf();
@@ -80,6 +101,15 @@ export default function WeeklyPlansPage() {
   const [deleteTarget, setDeleteTarget] = useState<WeeklyPlan | null>(null);
 
   const plans = data?.results ?? [];
+
+  const hasActiveFilters =
+    statusFilter !== "all" || locationFilter !== "all" || groupFilter !== "all";
+
+  const clearFilters = () => {
+    setStatusFilter("all");
+    setLocationFilter("all");
+    setGroupFilter("all");
+  };
 
   // Group plans by week for better overview
   const sortedPlans = useMemo(() => {
@@ -152,17 +182,29 @@ export default function WeeklyPlansPage() {
               />
             </div>
             <Button
-              variant="outline"
+              variant={showFilters ? "secondary" : "outline"}
               size="sm"
               onClick={() => setShowFilters(!showFilters)}
             >
               <Filter className="mr-2 h-4 w-4" />
               Filter
             </Button>
+            {hasActiveFilters && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={clearFilters}
+                className="text-muted-foreground"
+              >
+                <X className="mr-1 h-3 w-3" />
+                Filter zurücksetzen
+              </Button>
+            )}
           </div>
 
           {showFilters && (
             <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
+              {/* Status Filter */}
               <div>
                 <label className="mb-1 block text-sm font-medium">Status</label>
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
@@ -176,6 +218,52 @@ export default function WeeklyPlansPage() {
                   </SelectContent>
                 </Select>
               </div>
+
+              {/* Location Filter - visible for location_manager+ */}
+              {isAdminOrAbove && locations.length > 0 && (
+                <div>
+                  <label className="mb-1 block text-sm font-medium">Standort</label>
+                  <Select
+                    value={locationFilter}
+                    onValueChange={(v) => {
+                      setLocationFilter(v);
+                      setGroupFilter("all"); // Reset group when location changes
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Alle Standorte" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Alle Standorte</SelectItem>
+                      {locations.map((loc) => (
+                        <SelectItem key={loc.id} value={String(loc.id)}>
+                          {loc.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
+              {/* Group Filter */}
+              {groups.length > 0 && (
+                <div>
+                  <label className="mb-1 block text-sm font-medium">Gruppe</label>
+                  <Select value={groupFilter} onValueChange={setGroupFilter}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Alle Gruppen" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Alle Gruppen</SelectItem>
+                      {groups.map((g) => (
+                        <SelectItem key={g.id} value={String(g.id)}>
+                          {g.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
             </div>
           )}
         </CardContent>

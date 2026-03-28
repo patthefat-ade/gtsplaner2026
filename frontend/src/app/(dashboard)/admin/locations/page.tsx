@@ -430,6 +430,7 @@ export default function LocationsPage() {
             open={formOpen}
             onOpenChange={setFormOpen}
             location={editLocation}
+            organizations={organizations}
             onSubmit={handleSubmit}
             isLoading={createMutation.isPending || updateMutation.isPending}
           />

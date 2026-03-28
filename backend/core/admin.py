@@ -52,19 +52,19 @@ export_user_data.short_description = "DSGVO: Datenexport (Auskunftsanfrage)"
 class UserAdmin(BaseUserAdmin, ModelAdmin):
     """Admin configuration for the custom User model."""
 
-    list_display = ("username", "email", "first_name", "last_name", "role", "location", "is_active", "is_anonymized_display")
-    list_filter = ("role", "is_active", "is_deleted", "location")
+    list_display = ("username", "email", "first_name", "last_name", "role", "organization", "location", "is_active", "is_anonymized_display")
+    list_filter = ("role", "is_active", "is_deleted", "organization", "location")
     search_fields = ("username", "email", "first_name", "last_name")
     ordering = ("last_name", "first_name")
     actions = [anonymize_users, export_user_data]
 
     fieldsets = BaseUserAdmin.fieldsets + (
-        ("Kassenbuch", {"fields": ("role", "location", "phone", "profile_picture", "is_deleted")}),
+        ("Kassenbuch", {"fields": ("role", "organization", "location", "phone", "profile_picture", "is_deleted")}),
         ("Zwei-Faktor-Authentifizierung", {"fields": ("is_2fa_enabled", "totp_secret")}),
         ("DSGVO", {"fields": ("anonymized_at", "has_accepted_terms", "terms_accepted_at")}),
     )
     add_fieldsets = BaseUserAdmin.add_fieldsets + (
-        ("Kassenbuch", {"fields": ("role", "location", "first_name", "last_name", "email")}),
+        ("Kassenbuch", {"fields": ("role", "organization", "location", "first_name", "last_name", "email")}),
     )
     readonly_fields = ("anonymized_at", "terms_accepted_at")
 
@@ -77,8 +77,8 @@ class UserAdmin(BaseUserAdmin, ModelAdmin):
 class OrganizationAdmin(ModelAdmin):
     """Admin configuration for Organization model."""
 
-    list_display = ("name", "city", "email", "is_active")
-    list_filter = ("is_active", "is_deleted")
+    list_display = ("name", "org_type", "parent", "city", "email", "is_active")
+    list_filter = ("is_active", "is_deleted", "org_type", "parent")
     search_fields = ("name", "city", "email")
 
 

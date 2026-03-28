@@ -21,6 +21,13 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Table,
   TableBody,
   TableCell,
@@ -47,7 +54,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { formatDate } from "@/lib/format";
 import { DEFAULT_PAGE_SIZE } from "@/lib/constants";
-import type { Organization } from "@/types/models";
+import type { Organization, OrganizationType } from "@/types/models";
 import {
   Plus,
   Building2,
@@ -61,23 +68,34 @@ import {
   Loader2,
 } from "lucide-react";
 
+const ORG_TYPE_LABELS: Record<OrganizationType, string> = {
+  main_tenant: "Hauptmandant",
+  sub_tenant: "Untermandant",
+};
+
 /* ───── Organization Form Dialog ───── */
 function OrganizationFormDialog({
   open,
   onOpenChange,
   organization,
+  organizations,
   onSubmit,
   isLoading,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   organization: Organization | null;
+  organizations: Organization[];
   onSubmit: (data: Partial<Organization>) => Promise<void>;
   isLoading: boolean;
 }) {
   const isEdit = !!organization;
   const [name, setName] = useState(organization?.name || "");
   const [description, setDescription] = useState(organization?.description || "");
+  const [orgType, setOrgType] = useState<OrganizationType>(
+    organization?.org_type || "sub_tenant"
+  );
+  const [parent, setParent] = useState<number | null>(organization?.parent || null);
   const [email, setEmail] = useState(organization?.email || "");
   const [phone, setPhone] = useState(organization?.phone || "");
   const [website, setWebsite] = useState(organization?.website || "");
@@ -87,11 +105,18 @@ function OrganizationFormDialog({
   const [country, setCountry] = useState(organization?.country || "AT");
   const [isActive, setIsActive] = useState(organization?.is_active ?? true);
 
+  // Available parent organizations (only main tenants, excluding self)
+  const parentOptions = organizations.filter(
+    (o) => o.org_type === "main_tenant" && o.id !== organization?.id
+  );
+
   // Reset form when dialog opens
   React.useEffect(() => {
     if (open) {
       setName(organization?.name || "");
       setDescription(organization?.description || "");
+      setOrgType(organization?.org_type || "sub_tenant");
+      setParent(organization?.parent || null);
       setEmail(organization?.email || "");
       setPhone(organization?.phone || "");
       setWebsite(organization?.website || "");
@@ -103,11 +128,20 @@ function OrganizationFormDialog({
     }
   }, [open, organization]);
 
+  // Clear parent when switching to main_tenant
+  React.useEffect(() => {
+    if (orgType === "main_tenant") {
+      setParent(null);
+    }
+  }, [orgType]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     await onSubmit({
       name,
       description,
+      org_type: orgType,
+      parent: orgType === "sub_tenant" ? parent : null,
       email,
       phone,
       website,
@@ -137,6 +171,45 @@ function OrganizationFormDialog({
               placeholder="Organisationsname"
               required
             />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="org-type">Mandantentyp *</Label>
+              <Select
+                value={orgType}
+                onValueChange={(v) => setOrgType(v as OrganizationType)}
+              >
+                <SelectTrigger id="org-type">
+                  <SelectValue placeholder="Typ wählen" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="main_tenant">Hauptmandant</SelectItem>
+                  <SelectItem value="sub_tenant">Untermandant</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {orgType === "sub_tenant" && (
+              <div>
+                <Label htmlFor="org-parent">Übergeordneter Mandant *</Label>
+                <Select
+                  value={parent ? String(parent) : ""}
+                  onValueChange={(v) => setParent(v ? Number(v) : null)}
+                >
+                  <SelectTrigger id="org-parent">
+                    <SelectValue placeholder="Hauptmandant wählen" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {parentOptions.map((p) => (
+                      <SelectItem key={p.id} value={String(p.id)}>
+                        {p.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
           </div>
 
           <div>
@@ -261,6 +334,7 @@ export default function OrganizationsPage() {
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebounce(search, 300);
+  const [typeFilter, setTypeFilter] = useState<string>("all");
 
   const [formOpen, setFormOpen] = useState(false);
   const [editOrg, setEditOrg] = useState<Organization | null>(null);
@@ -269,8 +343,14 @@ export default function OrganizationsPage() {
 
   const params: Record<string, string | number> = { page, page_size: pageSize };
   if (debouncedSearch) params.search = debouncedSearch;
+  if (typeFilter !== "all") params.org_type = typeFilter;
 
   const { data, isLoading, error, refetch } = useOrganizations(params);
+
+  // Load all organizations for parent dropdown in form
+  const { data: allOrgsData } = useOrganizations({ page_size: 200 });
+  const allOrganizations = allOrgsData?.results ?? [];
+
   const createMutation = useCreateOrganization();
   const updateMutation = useUpdateOrganization();
   const deleteMutation = useDeleteOrganization();
@@ -332,7 +412,7 @@ export default function OrganizationsPage() {
     <div className="space-y-6">
       <PageHeader
         title="Organisationen"
-        description="Verwalte alle Organisationen im System."
+        description="Verwalte alle Organisationen (Mandanten) im System."
       >
         <Button onClick={handleCreate}>
           <Plus className="mr-2 h-4 w-4" />
@@ -340,20 +420,38 @@ export default function OrganizationsPage() {
         </Button>
       </PageHeader>
 
-      {/* Search */}
+      {/* Search & Filter */}
       <Card>
         <CardContent className="pt-6">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              placeholder="Organisation suchen..."
-              value={search}
-              onChange={(e) => {
-                setSearch(e.target.value);
+          <div className="flex flex-col gap-4 sm:flex-row">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder="Organisation suchen..."
+                value={search}
+                onChange={(e) => {
+                  setSearch(e.target.value);
+                  setPage(1);
+                }}
+                className="pl-9"
+              />
+            </div>
+            <Select
+              value={typeFilter}
+              onValueChange={(v) => {
+                setTypeFilter(v);
                 setPage(1);
               }}
-              className="pl-9"
-            />
+            >
+              <SelectTrigger className="w-full sm:w-[200px]">
+                <SelectValue placeholder="Mandantentyp" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Alle Typen</SelectItem>
+                <SelectItem value="main_tenant">Hauptmandanten</SelectItem>
+                <SelectItem value="sub_tenant">Untermandanten</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </CardContent>
       </Card>
@@ -365,8 +463,9 @@ export default function OrganizationsPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Name</TableHead>
+                  <TableHead>Typ</TableHead>
+                  <TableHead className="hidden md:table-cell">Übergeordnet</TableHead>
                   <TableHead className="hidden md:table-cell">E-Mail</TableHead>
-                  <TableHead className="hidden md:table-cell">Telefon</TableHead>
                   <TableHead className="hidden lg:table-cell">Stadt</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="hidden lg:table-cell">Erstellt am</TableHead>
@@ -382,21 +481,21 @@ export default function OrganizationsPage() {
                         {org.name}
                       </div>
                     </TableCell>
+                    <TableCell>
+                      <Badge
+                        variant={org.org_type === "main_tenant" ? "default" : "outline"}
+                      >
+                        {ORG_TYPE_LABELS[org.org_type] || org.org_type}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="hidden md:table-cell">
+                      {org.parent_name || "–"}
+                    </TableCell>
                     <TableCell className="hidden md:table-cell">
                       {org.email ? (
                         <span className="flex items-center gap-1 text-sm">
                           <Mail className="h-3 w-3" />
                           {org.email}
-                        </span>
-                      ) : (
-                        "–"
-                      )}
-                    </TableCell>
-                    <TableCell className="hidden md:table-cell">
-                      {org.phone ? (
-                        <span className="flex items-center gap-1 text-sm">
-                          <Phone className="h-3 w-3" />
-                          {org.phone}
                         </span>
                       ) : (
                         "–"
@@ -486,6 +585,7 @@ export default function OrganizationsPage() {
         open={formOpen}
         onOpenChange={setFormOpen}
         organization={editOrg}
+        organizations={allOrganizations}
         onSubmit={handleSubmit}
         isLoading={createMutation.isPending || updateMutation.isPending}
       />

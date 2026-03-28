@@ -112,6 +112,10 @@ class TransactionExportView(ExportMixin, APIView):
             OpenApiParameter(name="status", description="Status-Filter", type=str),
             OpenApiParameter(name="group_id", description="Gruppen-Filter", type=int),
         ],
+        responses={
+            (200, "text/csv"): bytes,
+            (200, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"): bytes,
+        },
         tags=["Export"],
     )
     def get(self, request):
@@ -191,8 +195,8 @@ class TimeEntryExportView(ExportMixin, APIView):
     permission_classes = [IsAuthenticated, IsLocationManagerOrAbove]
 
     @extend_schema(
-        summary="Zeiteinträge exportieren",
-        description="Exportiert Zeiteinträge als CSV oder Excel-Datei.",
+        summary="Zeiteintraege exportieren",
+        description="Exportiert Zeiteintraege als CSV oder Excel-Datei.",
         parameters=[
             OpenApiParameter(name="export_format", description="Export-Format", enum=["csv", "xlsx"], default="csv"),
             OpenApiParameter(name="start_date", description="Startdatum (YYYY-MM-DD)", type=str),
@@ -200,6 +204,10 @@ class TimeEntryExportView(ExportMixin, APIView):
             OpenApiParameter(name="user_id", description="Benutzer-Filter", type=int),
             OpenApiParameter(name="group_id", description="Gruppen-Filter", type=int),
         ],
+        responses={
+            (200, "text/csv"): bytes,
+            (200, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"): bytes,
+        },
         tags=["Export"],
     )
     def get(self, request):
@@ -275,14 +283,18 @@ class LeaveRequestExportView(ExportMixin, APIView):
     permission_classes = [IsAuthenticated, IsLocationManagerOrAbove]
 
     @extend_schema(
-        summary="Urlaubsanträge exportieren",
-        description="Exportiert Urlaubsanträge als CSV oder Excel-Datei.",
+        summary="Urlaubsantraege exportieren",
+        description="Exportiert Urlaubsantraege als CSV oder Excel-Datei.",
         parameters=[
             OpenApiParameter(name="export_format", description="Export-Format", enum=["csv", "xlsx"], default="csv"),
             OpenApiParameter(name="start_date", description="Startdatum (YYYY-MM-DD)", type=str),
             OpenApiParameter(name="end_date", description="Enddatum (YYYY-MM-DD)", type=str),
             OpenApiParameter(name="status", description="Status-Filter", type=str),
         ],
+        responses={
+            (200, "text/csv"): bytes,
+            (200, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"): bytes,
+        },
         tags=["Export"],
     )
     def get(self, request):

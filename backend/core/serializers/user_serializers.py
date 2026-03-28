@@ -29,6 +29,9 @@ class UserProfileSerializer(serializers.ModelSerializer):
     """Serializer for the authenticated user's profile (GET /api/v1/auth/me/)."""
 
     location_detail = LocationMinimalSerializer(source="location", read_only=True)
+    organization_detail = OrganizationMinimalSerializer(
+        source="organization", read_only=True
+    )
     full_name = serializers.SerializerMethodField()
     role_display = serializers.CharField(source="get_role_display", read_only=True)
 
@@ -43,6 +46,8 @@ class UserProfileSerializer(serializers.ModelSerializer):
             "full_name",
             "role",
             "role_display",
+            "organization",
+            "organization_detail",
             "location",
             "location_detail",
             "phone",
@@ -59,6 +64,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
             "username",
             "email",
             "role",
+            "organization",
             "is_active",
             "last_login",
             "date_joined",
@@ -92,6 +98,9 @@ class UserListSerializer(serializers.ModelSerializer):
     """Serializer for listing users (admin view)."""
 
     location_detail = LocationMinimalSerializer(source="location", read_only=True)
+    organization_detail = OrganizationMinimalSerializer(
+        source="organization", read_only=True
+    )
     full_name = serializers.SerializerMethodField()
     role_display = serializers.CharField(source="get_role_display", read_only=True)
 
@@ -106,6 +115,8 @@ class UserListSerializer(serializers.ModelSerializer):
             "full_name",
             "role",
             "role_display",
+            "organization",
+            "organization_detail",
             "location",
             "location_detail",
             "phone",
@@ -134,11 +145,30 @@ class UserCreateSerializer(serializers.ModelSerializer):
             "last_name",
             "password",
             "role",
+            "organization",
             "location",
             "phone",
             "is_active",
         ]
         read_only_fields = ["id"]
+
+    def validate(self, attrs):
+        """Ensure Admin/SuperAdmin users have an organization assigned."""
+        role = attrs.get("role", "educator")
+        organization = attrs.get("organization")
+        location = attrs.get("location")
+
+        # Admins should have an organization
+        if role in ("admin", "super_admin") and not organization and not location:
+            raise serializers.ValidationError(
+                {"organization": "Admin-Benutzer muessen einer Organisation zugewiesen werden."}
+            )
+
+        # Auto-set organization from location if not provided
+        if not organization and location:
+            attrs["organization"] = location.organization
+
+        return attrs
 
     def create(self, validated_data):
         password = validated_data.pop("password")
@@ -158,6 +188,7 @@ class UserUpdateSerializer(serializers.ModelSerializer):
             "last_name",
             "email",
             "role",
+            "organization",
             "location",
             "phone",
             "is_active",
@@ -168,6 +199,9 @@ class UserDetailSerializer(serializers.ModelSerializer):
     """Serializer for user detail view (admin)."""
 
     location_detail = LocationMinimalSerializer(source="location", read_only=True)
+    organization_detail = OrganizationMinimalSerializer(
+        source="organization", read_only=True
+    )
     full_name = serializers.SerializerMethodField()
     role_display = serializers.CharField(source="get_role_display", read_only=True)
 
@@ -182,6 +216,8 @@ class UserDetailSerializer(serializers.ModelSerializer):
             "full_name",
             "role",
             "role_display",
+            "organization",
+            "organization_detail",
             "location",
             "location_detail",
             "phone",

@@ -53,12 +53,14 @@ def ensure_tenant_context(request):
     if user is None or not getattr(user, "is_authenticated", False):
         return
 
-    # Get user's organization via location
-    location = getattr(user, "location", None)
-    if location and hasattr(location, "organization"):
-        organization = location.organization
-    else:
-        organization = None
+    # Get user's organization:
+    # 1. Primary: direct organization FK on User (for Admins)
+    # 2. Fallback: via user.location.organization (for Educators/LocationManagers)
+    organization = getattr(user, "organization", None)
+    if organization is None:
+        location = getattr(user, "location", None)
+        if location and hasattr(location, "organization"):
+            organization = location.organization
 
     request.tenant = organization
     request.tenant_id = organization.id if organization else None

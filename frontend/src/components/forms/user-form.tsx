@@ -31,7 +31,7 @@ import {
 } from "@/components/ui/dialog";
 import { Loader2 } from "lucide-react";
 import { ROLE_LABELS } from "@/lib/constants";
-import type { User, Location } from "@/types/models";
+import type { User, Location, Organization } from "@/types/models";
 
 // Unified schema that works for both create and edit
 const userFormSchema = z.object({
@@ -45,6 +45,7 @@ const userFormSchema = z.object({
   role: z.enum(["educator", "location_manager", "admin", "super_admin"], {
     error: "Rolle ist erforderlich",
   }),
+  organization: z.number().optional(),
   location: z.number().optional(),
   password: z.string().optional(),
   password_confirm: z.string().optional(),
@@ -58,6 +59,7 @@ interface UserFormProps {
   onOpenChange: (open: boolean) => void;
   user?: User | null;
   locations?: Location[];
+  organizations?: Organization[];
   onSubmit: (data: Record<string, unknown>) => Promise<void>;
   isLoading?: boolean;
 }
@@ -67,6 +69,7 @@ export function UserForm({
   onOpenChange,
   user,
   locations = [],
+  organizations = [],
   onSubmit,
   isLoading = false,
 }: UserFormProps) {
@@ -81,12 +84,25 @@ export function UserForm({
       first_name: user?.first_name || "",
       last_name: user?.last_name || "",
       role: (user?.role as UserFormData["role"]) || "educator",
+      organization: user?.organization || undefined,
       location: user?.location || undefined,
       password: "",
       password_confirm: "",
       is_active: user?.is_active ?? true,
     },
   });
+
+  const selectedRole = form.watch("role");
+  const selectedOrg = form.watch("organization");
+
+  // Filter locations by selected organization
+  const filteredLocations = React.useMemo(() => {
+    if (!selectedOrg) return locations;
+    return locations.filter((loc) => loc.organization === selectedOrg);
+  }, [locations, selectedOrg]);
+
+  // Show organization dropdown for admin/super_admin roles
+  const showOrgField = selectedRole === "admin" || selectedRole === "super_admin";
 
   React.useEffect(() => {
     if (open) {
@@ -97,6 +113,7 @@ export function UserForm({
         first_name: user?.first_name || "",
         last_name: user?.last_name || "",
         role: (user?.role as UserFormData["role"]) || "educator",
+        organization: user?.organization || undefined,
         location: user?.location || undefined,
         password: "",
         password_confirm: "",
@@ -135,6 +152,7 @@ export function UserForm({
       role: data.role,
       is_active: data.is_active,
     };
+    if (data.organization) submitData.organization = data.organization;
     if (data.location) submitData.location = data.location;
     if (!isEdit && data.password) submitData.password = data.password;
 
@@ -243,26 +261,60 @@ export function UserForm({
               )}
             />
 
-            <div className="grid grid-cols-2 gap-4">
+            <FormField
+              control={form.control}
+              name="role"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Rolle</FormLabel>
+                  <Select
+                    onValueChange={field.onChange}
+                    defaultValue={field.value}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Rolle wählen" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {Object.entries(ROLE_LABELS).map(([value, label]) => (
+                        <SelectItem key={value} value={value}>
+                          {label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {/* Organization dropdown – shown for Admin/SuperAdmin roles */}
+            {organizations.length > 0 && showOrgField && (
               <FormField
                 control={form.control}
-                name="role"
+                name="organization"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Rolle</FormLabel>
+                    <FormLabel>Organisation (Mandant)</FormLabel>
                     <Select
-                      onValueChange={field.onChange}
-                      defaultValue={field.value}
+                      onValueChange={(val) =>
+                        field.onChange(val === "0" ? undefined : Number(val))
+                      }
+                      defaultValue={
+                        field.value ? String(field.value) : undefined
+                      }
                     >
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="Rolle wählen" />
+                          <SelectValue placeholder="Organisation wählen" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {Object.entries(ROLE_LABELS).map(([value, label]) => (
-                          <SelectItem key={value} value={value}>
-                            {label}
+                        <SelectItem value="0">Keine Organisation</SelectItem>
+                        {organizations.map((org) => (
+                          <SelectItem key={org.id} value={String(org.id)}>
+                            {org.name}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -271,42 +323,43 @@ export function UserForm({
                   </FormItem>
                 )}
               />
+            )}
 
-              {locations.length > 0 && (
-                <FormField
-                  control={form.control}
-                  name="location"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Standort (optional)</FormLabel>
-                      <Select
-                        onValueChange={(val) =>
-                          field.onChange(val === "0" ? undefined : Number(val))
-                        }
-                        defaultValue={
-                          field.value ? String(field.value) : undefined
-                        }
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Standort wählen" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="0">Kein Standort</SelectItem>
-                          {locations.map((loc) => (
-                            <SelectItem key={loc.id} value={String(loc.id)}>
-                              {loc.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              )}
-            </div>
+            {/* Location dropdown – always shown when locations available */}
+            {(locations.length > 0 || filteredLocations.length > 0) && (
+              <FormField
+                control={form.control}
+                name="location"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Standort (optional)</FormLabel>
+                    <Select
+                      onValueChange={(val) =>
+                        field.onChange(val === "0" ? undefined : Number(val))
+                      }
+                      defaultValue={
+                        field.value ? String(field.value) : undefined
+                      }
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Standort wählen" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="0">Kein Standort</SelectItem>
+                        {filteredLocations.map((loc) => (
+                          <SelectItem key={loc.id} value={String(loc.id)}>
+                            {loc.name} ({loc.city})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
 
             {!isEdit && (
               <div className="grid grid-cols-2 gap-4">

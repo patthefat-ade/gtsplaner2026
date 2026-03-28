@@ -1042,9 +1042,14 @@ class Command(BaseCommand):
         """Create or update a single user and assign to Django Group."""
         is_superuser = data.pop("is_superuser", False)
         location = data.pop("location")
+        organization = data.pop("organization", None)
         group_name = data.pop("group_name")
         username = data["username"]
         email = data["email"]
+
+        # Auto-set organization from location if not provided
+        if organization is None and location:
+            organization = location.organization
 
         user, created = User.objects.update_or_create(
             username=username,
@@ -1053,6 +1058,7 @@ class Command(BaseCommand):
                 "is_superuser": is_superuser,
                 "is_active": True,
                 "has_accepted_terms": True,
+                "organization": organization,
                 "location": location,
             },
         )

@@ -13,6 +13,7 @@ Provides endpoints for:
 import logging
 
 from django.http import HttpResponse
+from drf_spectacular.utils import extend_schema, inline_serializer
 from rest_framework import serializers, status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -36,6 +37,20 @@ class AnonymizeUserView(APIView):
 
     permission_classes = [IsAuthenticated, IsSuperAdmin]
 
+    @extend_schema(
+        request=None,
+        responses={
+            200: inline_serializer(
+                "AnonymizeUserResponse",
+                fields={
+                    "status": serializers.CharField(),
+                    "anonymized_fields": serializers.ListField(child=serializers.CharField()),
+                },
+            )
+        },
+        summary="Benutzer anonymisieren",
+        description="Pseudoanonymisiert die personenbezogenen Daten eines Benutzers (DSGVO Art. 17).",
+    )
     def post(self, request, user_id):
         try:
             user = User.objects.get(pk=user_id)
@@ -65,6 +80,20 @@ class AnonymizeStudentView(APIView):
 
     permission_classes = [IsAuthenticated, IsSuperAdmin]
 
+    @extend_schema(
+        request=None,
+        responses={
+            200: inline_serializer(
+                "AnonymizeStudentResponse",
+                fields={
+                    "status": serializers.CharField(),
+                    "anonymized_fields": serializers.ListField(child=serializers.CharField()),
+                },
+            )
+        },
+        summary="Schueler:in anonymisieren",
+        description="Pseudoanonymisiert die personenbezogenen Daten eines Schuelers/einer Schuelerin (DSGVO Art. 17).",
+    )
     def post(self, request, student_id):
         try:
             student = Student.objects.get(pk=student_id)
@@ -88,6 +117,13 @@ class ExportUserDataView(APIView):
 
     permission_classes = [IsAuthenticated, IsSuperAdmin]
 
+    @extend_schema(
+        responses={
+            (200, "application/zip"): bytes,
+        },
+        summary="Benutzerdaten exportieren",
+        description="Exportiert alle Daten eines Benutzers als ZIP-Datei (DSGVO Art. 15 Auskunftsrecht).",
+    )
     def get(self, request, user_id):
         try:
             user = User.objects.get(pk=user_id)
@@ -120,6 +156,13 @@ class ExportStudentDataView(APIView):
 
     permission_classes = [IsAuthenticated, IsSuperAdmin]
 
+    @extend_schema(
+        responses={
+            (200, "application/zip"): bytes,
+        },
+        summary="Schuelerdaten exportieren",
+        description="Exportiert alle Daten eines Schuelers/einer Schuelerin als ZIP-Datei (DSGVO Art. 15 Auskunftsrecht).",
+    )
     def get(self, request, student_id):
         try:
             student = Student.objects.select_related("group").get(pk=student_id)
@@ -152,6 +195,22 @@ class GDPRRetentionStatsView(APIView):
 
     permission_classes = [IsAuthenticated, IsSuperAdmin]
 
+    @extend_schema(
+        responses={
+            200: inline_serializer(
+                "GDPRRetentionStatsResponse",
+                fields={
+                    "total_users": serializers.IntegerField(),
+                    "anonymized_users": serializers.IntegerField(),
+                    "total_students": serializers.IntegerField(),
+                    "anonymized_students": serializers.IntegerField(),
+                    "retention_years": serializers.IntegerField(),
+                },
+            )
+        },
+        summary="DSGVO-Statistiken abrufen",
+        description="Liefert Statistiken zu Datenaufbewahrung und Anonymisierung.",
+    )
     def get(self, request):
         stats = GDPRService.get_retention_stats()
         return Response(stats, status=status.HTTP_200_OK)
@@ -167,6 +226,19 @@ class GDPRRetentionConfigView(APIView):
 
     permission_classes = [IsAuthenticated, IsSuperAdmin]
 
+    @extend_schema(
+        responses={
+            200: inline_serializer(
+                "GDPRRetentionConfigResponse",
+                fields={
+                    "data_retention_years": serializers.IntegerField(),
+                    "description": serializers.CharField(),
+                },
+            )
+        },
+        summary="Aufbewahrungskonfiguration abrufen",
+        description="Liefert die aktuelle DSGVO-Aufbewahrungsfrist-Konfiguration.",
+    )
     def get(self, request):
         from system.models import SystemSetting
 
@@ -182,6 +254,26 @@ class GDPRRetentionConfigView(APIView):
                 "description": "Standard-Aufbewahrungsfrist (nicht konfiguriert)",
             })
 
+    @extend_schema(
+        request=inline_serializer(
+            "GDPRRetentionConfigUpdateRequest",
+            fields={
+                "data_retention_years": serializers.IntegerField(min_value=1, max_value=30),
+            },
+        ),
+        responses={
+            200: inline_serializer(
+                "GDPRRetentionConfigUpdateResponse",
+                fields={
+                    "data_retention_years": serializers.IntegerField(),
+                    "description": serializers.CharField(),
+                    "status": serializers.CharField(),
+                },
+            )
+        },
+        summary="Aufbewahrungskonfiguration aktualisieren",
+        description="Aktualisiert die DSGVO-Aufbewahrungsfrist in Jahren (1-30).",
+    )
     def put(self, request):
         from system.models import AuditLog, SystemSetting
 

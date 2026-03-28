@@ -10,7 +10,8 @@ Returns aggregated statistics based on the user's tenant context:
 
 from django.db.models import Count, Sum, Q
 from django.utils import timezone
-from rest_framework import status
+from drf_spectacular.utils import extend_schema, inline_serializer
+from rest_framework import serializers, status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -37,6 +38,29 @@ class DashboardStatsView(APIView):
 
     permission_classes = [IsAuthenticated]
 
+    @extend_schema(
+        responses={
+            200: inline_serializer(
+                "DashboardStatsResponse",
+                fields={
+                    "role": serializers.CharField(),
+                    "locations_count": serializers.IntegerField(),
+                    "groups_count": serializers.IntegerField(),
+                    "students_count": serializers.IntegerField(),
+                    "transactions_count": serializers.IntegerField(),
+                    "time_entries_count": serializers.IntegerField(),
+                    "weeklyplans_count": serializers.IntegerField(),
+                    "educators_count": serializers.IntegerField(),
+                    "pending_leave_requests": serializers.IntegerField(),
+                    "pending_transactions": serializers.IntegerField(),
+                    "total_income": serializers.FloatField(),
+                    "total_expense": serializers.FloatField(),
+                },
+            )
+        },
+        summary="Dashboard-Statistiken abrufen",
+        description="Liefert aggregierte Statistiken basierend auf dem Tenant-Kontext des Benutzers.",
+    )
     def get(self, request):
         ensure_tenant_context(request)
 

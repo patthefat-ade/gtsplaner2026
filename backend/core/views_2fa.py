@@ -62,6 +62,7 @@ class TwoFactorSetupView(APIView):
     """
 
     permission_classes = [permissions.IsAuthenticated]
+    serializer_class = TwoFactorSetupSerializer
 
     @extend_schema(
         tags=["Auth – 2FA"],
