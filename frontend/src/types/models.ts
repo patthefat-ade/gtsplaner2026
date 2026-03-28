@@ -576,3 +576,95 @@ export interface Attendance {
   created_at: string;
   updated_at: string;
 }
+
+/* ───── Group Transfers ──────────────────────────────────────────────────── */
+
+export type GroupTransferStatus =
+  | "pending"
+  | "confirmed"
+  | "rejected"
+  | "completed"
+  | "cancelled";
+
+export interface GroupTransfer {
+  id: number;
+  student: number;
+  student_name: string;
+  source_group: number;
+  source_group_name: string;
+  target_group: number;
+  target_group_name: string;
+  transfer_date: string;
+  start_time: string;
+  end_time: string | null;
+  reason: string;
+  notes: string;
+  status: GroupTransferStatus;
+  status_display: string;
+  requested_by: number;
+  requested_by_name: string;
+  confirmed_by: number | null;
+  confirmed_by_name: string;
+  confirmed_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface GroupTransferCreate {
+  student: number;
+  source_group: number;
+  target_group: number;
+  transfer_date: string;
+  start_time: string;
+  end_time?: string;
+  reason?: string;
+  notes?: string;
+}
+
+/* ───── Student Contacts ─────────────────────────────────────────────────── */
+
+export type StudentContactRelationship =
+  | "parent"
+  | "uncle"
+  | "aunt"
+  | "grandparent"
+  | "relative"
+  | "authorized";
+
+export const RELATIONSHIP_LABELS: Record<StudentContactRelationship, string> = {
+  parent: "Elternteil",
+  uncle: "Onkel",
+  aunt: "Tante",
+  grandparent: "Oma/Opa",
+  relative: "Verwandter",
+  authorized: "Abholberechtigte Person",
+};
+
+export interface StudentContact {
+  id: number;
+  student: number;
+  student_name: string;
+  is_primary: boolean;
+  relationship: StudentContactRelationship;
+  relationship_display: string;
+  first_name: string;
+  last_name: string;
+  phone: string;
+  email: string;
+  whatsapp_available: boolean;
+  notes: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface StudentContactCreate {
+  student: number;
+  is_primary: boolean;
+  relationship: StudentContactRelationship;
+  first_name: string;
+  last_name: string;
+  phone?: string;
+  email?: string;
+  whatsapp_available?: boolean;
+  notes?: string;
+}
