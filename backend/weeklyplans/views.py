@@ -413,9 +413,22 @@ class WeeklyPlanViewSet(ExportMixin, TenantViewSetMixin, viewsets.ModelViewSet):
         )
 
         try:
-            from weasyprint import HTML
+            from xhtml2pdf import pisa
+            from io import BytesIO
 
-            pdf_bytes = HTML(string=html_string).write_pdf()
+            result_buffer = BytesIO()
+            pisa_status = pisa.CreatePDF(
+                html_string,
+                dest=result_buffer,
+                encoding="utf-8",
+            )
+            if pisa_status.err:
+                return HttpResponse(
+                    "PDF-Generierung fehlgeschlagen",
+                    status=500,
+                    content_type="text/plain",
+                )
+            pdf_bytes = result_buffer.getvalue()
         except ImportError:
             # Fallback: return HTML
             return HttpResponse(html_string, content_type="text/html")
