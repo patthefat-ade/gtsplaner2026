@@ -5069,6 +5069,42 @@ paths:
               schema:
                 $ref: '#/components/schemas/WeeklyPlanList'
           description: ''
+  /api/v1/weeklyplans/{id}/duplicate-entry/:
+    post:
+      operationId: weeklyplans_duplicate_entry_create
+      description: |-
+        Duplicate a single entry within the same weekly plan to a different day.
+        Expects: { "entry_id": <int>, "target_day": <int 0-4> }
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: Ein eindeutiger Ganzzahl-Wert, der Wochenplan identifiziert.
+        required: true
+      tags:
+      - weeklyplans
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WeeklyPlanListRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/WeeklyPlanListRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/WeeklyPlanListRequest'
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WeeklyPlanList'
+          description: ''
   /api/v1/weeklyplans/{id}/pdf/:
     get:
       operationId: weeklyplans_pdf_retrieve
