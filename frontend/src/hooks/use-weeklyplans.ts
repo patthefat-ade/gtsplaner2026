@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import type { WeeklyPlan, WeeklyPlanCreate, PaginatedResponse } from "@/types/models";
 
-const BASE = "/api/v1/weeklyplans";
+const BASE = "/weeklyplans";
 
 interface WeeklyPlanFilters {
   group?: number;
