@@ -311,6 +311,8 @@ class WeeklyPlanViewSet(ExportMixin, TenantViewSetMixin, viewsets.ModelViewSet):
         from reportlab.lib.pagesizes import A4, landscape
         from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
         from reportlab.lib.units import cm, mm
+        from reportlab.pdfbase import pdfmetrics
+        from reportlab.pdfbase.ttfonts import TTFont
         from reportlab.platypus import (
             Image,
             Paragraph,
@@ -319,6 +321,22 @@ class WeeklyPlanViewSet(ExportMixin, TenantViewSetMixin, viewsets.ModelViewSet):
             Table,
             TableStyle,
         )
+
+        # Register DejaVu fonts for full Unicode/Umlaut support
+        font_dir = os.path.join(os.path.dirname(__file__), "fonts")
+        if os.path.exists(os.path.join(font_dir, "DejaVuSans.ttf")):
+            if "DejaVuSans" not in pdfmetrics.getRegisteredFontNames():
+                pdfmetrics.registerFont(
+                    TTFont("DejaVuSans", os.path.join(font_dir, "DejaVuSans.ttf"))
+                )
+                pdfmetrics.registerFont(
+                    TTFont("DejaVuSans-Bold", os.path.join(font_dir, "DejaVuSans-Bold.ttf"))
+                )
+            FONT_NAME = "DejaVuSans"
+            FONT_BOLD = "DejaVuSans-Bold"
+        else:
+            FONT_NAME = "Helvetica"
+            FONT_BOLD = "Helvetica-Bold"
 
         plan = self.get_object()
         entries = plan.entries.all().order_by("day_of_week", "start_time")
@@ -380,6 +398,7 @@ class WeeklyPlanViewSet(ExportMixin, TenantViewSetMixin, viewsets.ModelViewSet):
         style_title = ParagraphStyle(
             "PlanTitle",
             parent=styles["Heading1"],
+            fontName=FONT_BOLD,
             fontSize=14,
             textColor=brand_dark,
             spaceAfter=2,
@@ -387,18 +406,21 @@ class WeeklyPlanViewSet(ExportMixin, TenantViewSetMixin, viewsets.ModelViewSet):
         style_subtitle = ParagraphStyle(
             "PlanSubtitle",
             parent=styles["Normal"],
+            fontName=FONT_NAME,
             fontSize=8,
             textColor=brand_gray,
         )
         style_meta = ParagraphStyle(
             "Meta",
             parent=styles["Normal"],
+            fontName=FONT_NAME,
             fontSize=8,
             textColor=brand_gray,
         )
         style_cell = ParagraphStyle(
             "Cell",
             parent=styles["Normal"],
+            fontName=FONT_NAME,
             fontSize=7,
             leading=9,
         )
@@ -407,17 +429,19 @@ class WeeklyPlanViewSet(ExportMixin, TenantViewSetMixin, viewsets.ModelViewSet):
             parent=styles["Normal"],
             fontSize=7,
             leading=9,
-            fontName="Helvetica-Bold",
+            fontName=FONT_BOLD,
         )
         style_theme = ParagraphStyle(
             "Theme",
             parent=styles["Normal"],
+            fontName=FONT_NAME,
             fontSize=8,
             textColor=colors.HexColor("#92400E"),
         )
         style_footer = ParagraphStyle(
             "Footer",
             parent=styles["Normal"],
+            fontName=FONT_NAME,
             fontSize=6,
             textColor=colors.HexColor("#94a3b8"),
         )
@@ -583,7 +607,7 @@ class WeeklyPlanViewSet(ExportMixin, TenantViewSetMixin, viewsets.ModelViewSet):
             ("BACKGROUND", (0, 0), (0, 0), colors.HexColor("#f1f5f9")),
             ("BACKGROUND", (1, 0), (-1, 0), brand_yellow),
             ("TEXTCOLOR", (1, 0), (-1, 0), colors.black),
-            ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+            ("FONTNAME", (0, 0), (-1, 0), FONT_BOLD),
             ("FONTSIZE", (0, 0), (-1, 0), 7),
             ("ALIGN", (0, 0), (-1, 0), "CENTER"),
             # Time column
@@ -654,7 +678,7 @@ class WeeklyPlanViewSet(ExportMixin, TenantViewSetMixin, viewsets.ModelViewSet):
                     [
                         ("BACKGROUND", (0, 0), (-1, 0), brand_yellow),
                         ("TEXTCOLOR", (0, 0), (-1, 0), colors.black),
-                        ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+                        ("FONTNAME", (0, 0), (-1, 0), FONT_BOLD),
                         ("FONTSIZE", (0, 0), (-1, -1), 7),
                         ("ALIGN", (0, 0), (-1, 0), "CENTER"),
                         ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#d1d5db")),
