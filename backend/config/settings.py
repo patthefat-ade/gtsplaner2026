@@ -285,6 +285,8 @@ SPECTACULAR_SETTINGS = {
         {"name": "Finance", "description": "Kassenbuch & Transaktionen"},
         {"name": "TimeTracking", "description": "Zeiterfassung & Arbeitszeiten"},
         {"name": "Groups", "description": "Gruppen- & Schülerverwaltung"},
+        {"name": "Gruppenwechsel", "description": "Temporäre Gruppenwechsel & Bestätigungsworkflow"},
+        {"name": "Kontaktpersonen", "description": "Kontaktpersonen & Abholberechtigte"},
         {"name": "WeeklyPlans", "description": "Wochenpläne & Tagesaktivitäten"},
         {"name": "Admin", "description": "Admin-Funktionen & Systemverwaltung"},
         {"name": "System", "description": "Systemeinstellungen & Audit-Log"},
@@ -298,6 +300,8 @@ SPECTACULAR_SETTINGS = {
         # Resolve enum naming collisions for 'role' fields
         "UserRoleEnum": "core.models.User.Role",
         "GroupMemberRoleEnum": "groups.models.GroupMember.MemberRole",
+        "GroupTransferStatusEnum": "groups.models_transfer.GroupTransfer.Status",
+        "StudentContactRelationshipEnum": "groups.models_contacts.StudentContact.Relationship",
         # Resolve TransactionType duplicate naming
         "TransactionTypeEnum": "finance.models.Transaction.TransactionType",
     },

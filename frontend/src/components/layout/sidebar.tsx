@@ -23,6 +23,8 @@ import {
   CalendarDays,
   BookTemplate,
   ClipboardCheck,
+  ArrowLeftRight,
+  Contact,
   type LucideIcon,
 } from "lucide-react";
 import {
@@ -121,6 +123,18 @@ const navigation: NavSection[] = [
         icon: ClipboardCheck,
         // Educators can record attendance for their groups
         permission: "view_own_groups",
+      },
+      {
+        title: "Gruppenwechsel",
+        href: "/groups/transfers",
+        icon: ArrowLeftRight,
+        permission: "view_own_groups",
+      },
+      {
+        title: "Kontaktpersonen",
+        href: "/groups/contacts",
+        icon: Contact,
+        permission: "view_students",
       },
     ],
   },

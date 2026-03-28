@@ -340,5 +340,7 @@ class Student(TenantModel):
         super().save(*args, **kwargs)
 
 
-# Import Attendance model so it's discoverable by Django
+# Import related models so they're discoverable by Django
 from groups.models_attendance import Attendance  # noqa: E402, F401
+from groups.models_transfer import GroupTransfer  # noqa: E402, F401
+from groups.models_contacts import StudentContact  # noqa: E402, F401
