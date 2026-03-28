@@ -12,8 +12,8 @@ from groups.models import Group, GroupMember, SchoolYear, Semester, Student
 # Nested / Compact Serializers
 # ---------------------------------------------------------------------------
 
-class UserCompactSerializer(serializers.Serializer):
-    """Compact user representation for nested display."""
+class GroupUserCompactSerializer(serializers.Serializer):
+    """Compact user representation for nested display in groups."""
 
     id = serializers.IntegerField(read_only=True)
     first_name = serializers.CharField(read_only=True)
@@ -236,7 +236,7 @@ class GroupListSerializer(serializers.ModelSerializer):
 
     location_name = serializers.CharField(source="location.name", read_only=True)
     school_year_name = serializers.CharField(source="school_year.name", read_only=True)
-    leader = UserCompactSerializer(read_only=True)
+    leader = GroupUserCompactSerializer(read_only=True)
     member_count = serializers.IntegerField(source="members.count", read_only=True)
     student_count = serializers.IntegerField(source="students.count", read_only=True)
 
@@ -266,7 +266,7 @@ class GroupDetailSerializer(serializers.ModelSerializer):
 
     location_name = serializers.CharField(source="location.name", read_only=True)
     school_year_name = serializers.CharField(source="school_year.name", read_only=True)
-    leader = UserCompactSerializer(read_only=True)
+    leader = GroupUserCompactSerializer(read_only=True)
     members = GroupMemberSerializer(many=True, read_only=True)
     students = StudentListSerializer(many=True, read_only=True)
 

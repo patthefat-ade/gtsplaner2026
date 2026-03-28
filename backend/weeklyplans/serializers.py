@@ -18,7 +18,7 @@ class WeeklyPlanEntrySerializer(serializers.ModelSerializer):
             "activity", "description", "color", "category", "sort_order",
         ]
 
-    def get_day_name(self, obj):
+    def get_day_name(self, obj) -> str:
         return dict(WeeklyPlanEntry.DAY_CHOICES).get(obj.day_of_week, "")
 
 
@@ -42,7 +42,7 @@ class DailyActivitySerializer(serializers.ModelSerializer):
         model = DailyActivity
         fields = ["id", "day_of_week", "day_name", "content"]
 
-    def get_day_name(self, obj):
+    def get_day_name(self, obj) -> str:
         return dict(DailyActivity.DAY_CHOICES).get(obj.day_of_week, "")
 
 
@@ -61,6 +61,7 @@ class WeeklyPlanListSerializer(serializers.ModelSerializer):
     location_name = serializers.SerializerMethodField()
     created_by_name = serializers.SerializerMethodField()
     calendar_week = serializers.IntegerField(read_only=True)
+    week_end_date = serializers.DateField(read_only=True)
     entry_count = serializers.SerializerMethodField()
     school_year_name = serializers.SerializerMethodField()
     weekly_theme_preview = serializers.SerializerMethodField()
@@ -69,32 +70,32 @@ class WeeklyPlanListSerializer(serializers.ModelSerializer):
         model = WeeklyPlan
         fields = [
             "id", "group", "group_name", "location_name",
-            "week_start_date", "calendar_week", "title",
+            "week_start_date", "week_end_date", "calendar_week", "title",
             "weekly_theme_preview", "school_year_name",
             "status", "is_template", "template_name",
             "created_by", "created_by_name", "entry_count",
             "created_at", "updated_at",
         ]
 
-    def get_location_name(self, obj):
+    def get_location_name(self, obj) -> str:
         if obj.group and obj.group.location:
             return obj.group.location.name
         return ""
 
-    def get_created_by_name(self, obj):
+    def get_created_by_name(self, obj) -> str:
         if obj.created_by:
             return f"{obj.created_by.first_name} {obj.created_by.last_name}".strip()
         return ""
 
-    def get_entry_count(self, obj):
+    def get_entry_count(self, obj) -> int:
         return obj.entries.count()
 
-    def get_school_year_name(self, obj):
+    def get_school_year_name(self, obj) -> str:
         if obj.school_year:
             return str(obj.school_year)
         return ""
 
-    def get_weekly_theme_preview(self, obj):
+    def get_weekly_theme_preview(self, obj) -> str:
         """Return first 100 chars of weekly_theme, stripped of HTML tags."""
         if not obj.weekly_theme:
             return ""
@@ -128,22 +129,22 @@ class WeeklyPlanDetailSerializer(serializers.ModelSerializer):
             "created_at", "updated_at",
         ]
 
-    def get_location_name(self, obj):
+    def get_location_name(self, obj) -> str:
         if obj.group and obj.group.location:
             return obj.group.location.name
         return ""
 
-    def get_created_by_name(self, obj):
+    def get_created_by_name(self, obj) -> str:
         if obj.created_by:
             return f"{obj.created_by.first_name} {obj.created_by.last_name}".strip()
         return ""
 
-    def get_school_year_name(self, obj):
+    def get_school_year_name(self, obj) -> str:
         if obj.school_year:
             return str(obj.school_year)
         return ""
 
-    def get_leader_name(self, obj):
+    def get_leader_name(self, obj) -> str:
         """Return the group leader name if available."""
         if obj.group and hasattr(obj.group, "leader") and obj.group.leader:
             leader = obj.group.leader

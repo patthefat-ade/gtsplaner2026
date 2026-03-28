@@ -14,7 +14,7 @@ from finance.models import Receipt, Transaction, TransactionCategory
 # Nested / Compact Serializers (for embedding in other responses)
 # ---------------------------------------------------------------------------
 
-class UserCompactSerializer(serializers.Serializer):
+class FinanceUserCompactSerializer(serializers.Serializer):
     """Compact user representation for nested display."""
 
     id = serializers.IntegerField(read_only=True)
@@ -93,7 +93,7 @@ class TransactionCategoryCreateSerializer(serializers.ModelSerializer):
 class ReceiptSerializer(serializers.ModelSerializer):
     """Serializer for receipt display."""
 
-    uploaded_by = UserCompactSerializer(read_only=True)
+    uploaded_by = FinanceUserCompactSerializer(read_only=True)
     file_url = serializers.SerializerMethodField()
 
     class Meta:
@@ -143,8 +143,8 @@ class TransactionListSerializer(serializers.ModelSerializer):
     category_name = serializers.CharField(
         source="category.name", read_only=True, default=None
     )
-    created_by = UserCompactSerializer(read_only=True)
-    approved_by = UserCompactSerializer(read_only=True)
+    created_by = FinanceUserCompactSerializer(read_only=True)
+    approved_by = FinanceUserCompactSerializer(read_only=True)
     receipt_count = serializers.IntegerField(
         source="receipts.count", read_only=True
     )
@@ -186,8 +186,8 @@ class TransactionDetailSerializer(serializers.ModelSerializer):
     category_name = serializers.CharField(
         source="category.name", read_only=True, default=None
     )
-    created_by = UserCompactSerializer(read_only=True)
-    approved_by = UserCompactSerializer(read_only=True)
+    created_by = FinanceUserCompactSerializer(read_only=True)
+    approved_by = FinanceUserCompactSerializer(read_only=True)
     receipts = ReceiptSerializer(many=True, read_only=True)
 
     class Meta:

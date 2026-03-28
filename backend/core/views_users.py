@@ -67,6 +67,9 @@ class UserViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated, IsAdminOrAbove]
 
     def get_queryset(self):
+        if getattr(self, "swagger_fake_view", False):
+            return User.objects.none()
+
         # Ensure tenant context is resolved (lazy resolution for JWT auth)
         ensure_tenant_context(self.request)
 

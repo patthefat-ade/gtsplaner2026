@@ -1,9 +1,9 @@
 openapi: 3.0.3
 info:
-  title: Kassenbuch App v2 API
-  version: 2.0.0
-  description: REST API für die Kassenbuch App v2 – Verwaltung von Klassenkassen für
-    Freizeitpädagoginnen. Django + Next.js Headless Architecture.
+  title: GTS Planer API
+  version: 2.4.0
+  description: REST API für den GTS Planer – Verwaltung von Ganztagsschul-Gruppen,
+    Wochenplänen, Finanzen und Zeiterfassung. Django + Next.js Headless Architecture.
 paths:
   /api/health/:
     get:
@@ -541,7 +541,8 @@ paths:
       - in: path
         name: id
         schema:
-          type: string
+          type: integer
+        description: Ein eindeutiger Ganzzahl-Wert, der Systemeinstellung identifiziert.
         required: true
       tags:
       - Admin
@@ -564,7 +565,8 @@ paths:
       - in: path
         name: id
         schema:
-          type: string
+          type: integer
+        description: Ein eindeutiger Ganzzahl-Wert, der Systemeinstellung identifiziert.
         required: true
       tags:
       - Admin
@@ -599,7 +601,8 @@ paths:
       - in: path
         name: id
         schema:
-          type: string
+          type: integer
+        description: Ein eindeutiger Ganzzahl-Wert, der Systemeinstellung identifiziert.
         required: true
       tags:
       - Admin
@@ -633,7 +636,8 @@ paths:
       - in: path
         name: id
         schema:
-          type: string
+          type: integer
+        description: Ein eindeutiger Ganzzahl-Wert, der Systemeinstellung identifiziert.
         required: true
       tags:
       - Admin
@@ -4537,6 +4541,14 @@ paths:
         - Other roles: no access (empty queryset)
       summary: Benutzer auflisten
       parameters:
+      - in: query
+        name: is_active
+        schema:
+          type: boolean
+      - in: query
+        name: location_id
+        schema:
+          type: number
       - name: ordering
         required: false
         in: query
@@ -4549,6 +4561,21 @@ paths:
         description: Eine Seitenzahl in der paginierten Ergebnismenge.
         schema:
           type: integer
+      - in: query
+        name: role
+        schema:
+          type: string
+          title: Rolle
+          enum:
+          - admin
+          - educator
+          - location_manager
+          - super_admin
+        description: |-
+          * `educator` - Pädagogin
+          * `location_manager` - Standortleitung
+          * `admin` - Admin
+          * `super_admin` - Super Admin
       - name: search
         required: false
         in: query
@@ -4618,7 +4645,8 @@ paths:
       - in: path
         name: id
         schema:
-          type: string
+          type: integer
+        description: Ein eindeutiger Ganzzahl-Wert, der Benutzer identifiziert.
         required: true
       tags:
       - Users
@@ -4647,7 +4675,8 @@ paths:
       - in: path
         name: id
         schema:
-          type: string
+          type: integer
+        description: Ein eindeutiger Ganzzahl-Wert, der Benutzer identifiziert.
         required: true
       tags:
       - Users
@@ -4687,7 +4716,8 @@ paths:
       - in: path
         name: id
         schema:
-          type: string
+          type: integer
+        description: Ein eindeutiger Ganzzahl-Wert, der Benutzer identifiziert.
         required: true
       tags:
       - Users
@@ -4727,7 +4757,8 @@ paths:
       - in: path
         name: id
         schema:
-          type: string
+          type: integer
+        description: Ein eindeutiger Ganzzahl-Wert, der Benutzer identifiziert.
         required: true
       tags:
       - Users
@@ -5158,7 +5189,7 @@ components:
           format: date
           title: Datum
         status:
-          $ref: '#/components/schemas/Status005Enum'
+          $ref: '#/components/schemas/AttendanceStatusEnum'
         status_display:
           type: string
           readOnly: true
@@ -5172,6 +5203,7 @@ components:
           title: Erfasst von
         recorded_by_name:
           type: string
+          nullable: true
           readOnly: true
         student_name:
           type: string
@@ -5210,7 +5242,7 @@ components:
           format: date
           title: Datum
         status:
-          $ref: '#/components/schemas/Status005Enum'
+          $ref: '#/components/schemas/AttendanceStatusEnum'
         notes:
           type: string
           title: Notizen
@@ -5233,7 +5265,7 @@ components:
           format: date
           title: Datum
         status:
-          $ref: '#/components/schemas/Status005Enum'
+          $ref: '#/components/schemas/AttendanceStatusEnum'
         notes:
           type: string
           title: Notizen
@@ -5256,7 +5288,7 @@ components:
           format: date
           title: Datum
         status:
-          $ref: '#/components/schemas/Status005Enum'
+          $ref: '#/components/schemas/AttendanceStatusEnum'
         notes:
           type: string
           title: Notizen
@@ -5264,6 +5296,18 @@ components:
       - date
       - group
       - student
+    AttendanceStatusEnum:
+      enum:
+      - present
+      - absent
+      - sick
+      - excused
+      type: string
+      description: |-
+        * `present` - Anwesend
+        * `absent` - Abwesend
+        * `sick` - Krank
+        * `excused` - Beurlaubt
     AuditLog:
       type: object
       description: Serializer for audit log entries.
@@ -5335,7 +5379,7 @@ components:
         student_id:
           type: integer
         status:
-          $ref: '#/components/schemas/Status005Enum'
+          $ref: '#/components/schemas/AttendanceStatusEnum'
         notes:
           type: string
           default: ''
@@ -5349,7 +5393,7 @@ components:
         student_id:
           type: integer
         status:
-          $ref: '#/components/schemas/Status005Enum'
+          $ref: '#/components/schemas/AttendanceStatusEnum'
         notes:
           type: string
           default: ''
@@ -5398,14 +5442,6 @@ components:
         * `sozial` - Soziales Lernen
         * `ruhe` - Ruhezeit
         * `sonstiges` - Sonstiges
-    CategoryTypeEnum:
-      enum:
-      - income
-      - expense
-      type: string
-      description: |-
-        * `income` - Einnahme
-        * `expense` - Ausgabe
     DailyActivity:
       type: object
       description: Serializer for daily activity descriptions.
@@ -5522,6 +5558,23 @@ components:
         * `2` - Mittwoch
         * `3` - Donnerstag
         * `4` - Freitag
+    FinanceUserCompact:
+      type: object
+      description: Compact user representation for nested display.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        first_name:
+          type: string
+          readOnly: true
+        last_name:
+          type: string
+          readOnly: true
+      required:
+      - first_name
+      - id
+      - last_name
     GDPRRetentionConfigResponse:
       type: object
       properties:
@@ -5657,7 +5710,7 @@ components:
           title: Beschreibung
         leader:
           allOf:
-          - $ref: '#/components/schemas/UserCompact'
+          - $ref: '#/components/schemas/GroupUserCompact'
           readOnly: true
         members:
           type: array
@@ -5733,7 +5786,7 @@ components:
           title: Beschreibung
         leader:
           allOf:
-          - $ref: '#/components/schemas/UserCompact'
+          - $ref: '#/components/schemas/GroupUserCompact'
           readOnly: true
         member_count:
           type: integer
@@ -5822,7 +5875,7 @@ components:
           readOnly: true
         role:
           allOf:
-          - $ref: '#/components/schemas/Role380Enum'
+          - $ref: '#/components/schemas/GroupMemberRoleEnum'
           title: Rolle in Gruppe
         is_active:
           type: boolean
@@ -5859,7 +5912,7 @@ components:
           title: Benutzer
         role:
           allOf:
-          - $ref: '#/components/schemas/Role380Enum'
+          - $ref: '#/components/schemas/GroupMemberRoleEnum'
           title: Rolle in Gruppe
       required:
       - group
@@ -5877,11 +5930,42 @@ components:
           title: Benutzer
         role:
           allOf:
-          - $ref: '#/components/schemas/Role380Enum'
+          - $ref: '#/components/schemas/GroupMemberRoleEnum'
           title: Rolle in Gruppe
       required:
       - group
       - user
+    GroupMemberRoleEnum:
+      enum:
+      - educator
+      - assistant
+      - substitute
+      type: string
+      description: |-
+        * `educator` - Paedagogin
+        * `assistant` - Assistenz
+        * `substitute` - Vertretung
+    GroupUserCompact:
+      type: object
+      description: Compact user representation for nested display in groups.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        first_name:
+          type: string
+          readOnly: true
+        last_name:
+          type: string
+          readOnly: true
+        role:
+          type: string
+          readOnly: true
+      required:
+      - first_name
+      - id
+      - last_name
+      - role
     HealthCheckResponse:
       type: object
       properties:
@@ -5993,7 +6077,7 @@ components:
           title: Begruendung
         status:
           allOf:
-          - $ref: '#/components/schemas/LeaveRequestListStatusEnum'
+          - $ref: '#/components/schemas/LeaveRequestStatusEnum'
           readOnly: true
         approved_by:
           allOf:
@@ -6048,7 +6132,7 @@ components:
       - end_date
       - reason
       - start_date
-    LeaveRequestListStatusEnum:
+    LeaveRequestStatusEnum:
       enum:
       - draft
       - pending
@@ -6295,16 +6379,17 @@ components:
           title: Telefon
           maxLength: 255
         groups:
-          type: string
+          type: array
+          items: {}
           readOnly: true
         group_count:
-          type: string
+          type: integer
           readOnly: true
         student_count:
-          type: string
+          type: integer
           readOnly: true
         educator_count:
-          type: string
+          type: integer
           readOnly: true
         is_active:
           type: boolean
@@ -6360,13 +6445,13 @@ components:
           title: PLZ
           maxLength: 20
         group_count:
-          type: string
+          type: integer
           readOnly: true
         student_count:
-          type: string
+          type: integer
           readOnly: true
         educator_count:
-          type: string
+          type: integer
           readOnly: true
         is_active:
           type: boolean
@@ -7126,7 +7211,7 @@ components:
           format: date
           title: Datum
         status:
-          $ref: '#/components/schemas/Status005Enum'
+          $ref: '#/components/schemas/AttendanceStatusEnum'
         notes:
           type: string
           title: Notizen
@@ -7166,7 +7251,7 @@ components:
           title: Benutzer
         role:
           allOf:
-          - $ref: '#/components/schemas/Role380Enum'
+          - $ref: '#/components/schemas/GroupMemberRoleEnum'
           title: Rolle in Gruppe
     PatchedLeaveRequestCreateRequest:
       type: object
@@ -7464,7 +7549,7 @@ components:
           title: Beschreibung
         category_type:
           allOf:
-          - $ref: '#/components/schemas/CategoryTypeEnum'
+          - $ref: '#/components/schemas/TransactionTypeEnum'
           title: Kategorie-Typ
         color:
           type: string
@@ -7554,7 +7639,7 @@ components:
           maxLength: 254
         role:
           allOf:
-          - $ref: '#/components/schemas/Role08eEnum'
+          - $ref: '#/components/schemas/UserRoleEnum'
           title: Rolle
         organization:
           type: integer
@@ -7611,7 +7696,7 @@ components:
           title: Schuljahr
           description: Zugehöriges Schuljahr
         status:
-          $ref: '#/components/schemas/Status90cEnum'
+          $ref: '#/components/schemas/WeeklyPlanStatusEnum'
         is_template:
           type: boolean
           title: Ist Vorlage
@@ -7691,7 +7776,7 @@ components:
           description: MIME-Type (z.B. image/jpeg, application/pdf)
         uploaded_by:
           allOf:
-          - $ref: '#/components/schemas/UserCompact'
+          - $ref: '#/components/schemas/FinanceUserCompact'
           readOnly: true
         description:
           type: string
@@ -7709,28 +7794,6 @@ components:
       - file_url
       - id
       - uploaded_by
-    Role08eEnum:
-      enum:
-      - educator
-      - location_manager
-      - admin
-      - super_admin
-      type: string
-      description: |-
-        * `educator` - Pädagogin
-        * `location_manager` - Standortleitung
-        * `admin` - Admin
-        * `super_admin` - Super Admin
-    Role380Enum:
-      enum:
-      - educator
-      - assistant
-      - substitute
-      type: string
-      description: |-
-        * `educator` - Paedagogin
-        * `assistant` - Assistenz
-        * `substitute` - Vertretung
     SchoolYearCreate:
       type: object
       description: Serializer for creating/updating school years.
@@ -7927,38 +7990,6 @@ components:
       - name
       - school_year
       - start_date
-    Status005Enum:
-      enum:
-      - present
-      - absent
-      - sick
-      - excused
-      type: string
-      description: |-
-        * `present` - Anwesend
-        * `absent` - Abwesend
-        * `sick` - Krank
-        * `excused` - Beurlaubt
-    Status90cEnum:
-      enum:
-      - draft
-      - published
-      type: string
-      description: |-
-        * `draft` - Entwurf
-        * `published` - Veröffentlicht
-    StatusF9bEnum:
-      enum:
-      - draft
-      - pending
-      - approved
-      - rejected
-      type: string
-      description: |-
-        * `draft` - Entwurf
-        * `pending` - Ausstehend
-        * `approved` - Genehmigt
-        * `rejected` - Abgelehnt
     StudentCreate:
       type: object
       description: Serializer for creating/updating students.
@@ -8433,7 +8464,7 @@ components:
           title: Beschreibung
         category_type:
           allOf:
-          - $ref: '#/components/schemas/CategoryTypeEnum'
+          - $ref: '#/components/schemas/TransactionTypeEnum'
           title: Kategorie-Typ
         color:
           type: string
@@ -8464,7 +8495,7 @@ components:
           title: Beschreibung
         category_type:
           allOf:
-          - $ref: '#/components/schemas/CategoryTypeEnum'
+          - $ref: '#/components/schemas/TransactionTypeEnum'
           title: Kategorie-Typ
         color:
           type: string
@@ -8497,7 +8528,7 @@ components:
           title: Beschreibung
         category_type:
           allOf:
-          - $ref: '#/components/schemas/CategoryTypeEnum'
+          - $ref: '#/components/schemas/TransactionTypeEnum'
           title: Kategorie-Typ
         color:
           type: string
@@ -8658,15 +8689,15 @@ components:
           title: Transaktionszeit
         status:
           allOf:
-          - $ref: '#/components/schemas/StatusF9bEnum'
+          - $ref: '#/components/schemas/TransactionStatusEnum'
           readOnly: true
         created_by:
           allOf:
-          - $ref: '#/components/schemas/UserCompact'
+          - $ref: '#/components/schemas/FinanceUserCompact'
           readOnly: true
         approved_by:
           allOf:
-          - $ref: '#/components/schemas/UserCompact'
+          - $ref: '#/components/schemas/FinanceUserCompact'
           readOnly: true
         approved_at:
           type: string
@@ -8755,15 +8786,15 @@ components:
           title: Transaktionszeit
         status:
           allOf:
-          - $ref: '#/components/schemas/StatusF9bEnum'
+          - $ref: '#/components/schemas/TransactionStatusEnum'
           readOnly: true
         created_by:
           allOf:
-          - $ref: '#/components/schemas/UserCompact'
+          - $ref: '#/components/schemas/FinanceUserCompact'
           readOnly: true
         approved_by:
           allOf:
-          - $ref: '#/components/schemas/UserCompact'
+          - $ref: '#/components/schemas/FinanceUserCompact'
           readOnly: true
         approved_at:
           type: string
@@ -8834,6 +8865,18 @@ components:
       - group
       - transaction_date
       - transaction_type
+    TransactionStatusEnum:
+      enum:
+      - draft
+      - pending
+      - approved
+      - rejected
+      type: string
+      description: |-
+        * `draft` - Entwurf
+        * `pending` - Ausstehend
+        * `approved` - Genehmigt
+        * `rejected` - Abgelehnt
     TransactionTypeEnum:
       enum:
       - income
@@ -8965,23 +9008,6 @@ components:
           maxLength: 6
       required:
       - code
-    UserCompact:
-      type: object
-      description: Compact user representation for nested display.
-      properties:
-        id:
-          type: integer
-          readOnly: true
-        first_name:
-          type: string
-          readOnly: true
-        last_name:
-          type: string
-          readOnly: true
-      required:
-      - first_name
-      - id
-      - last_name
     UserCreate:
       type: object
       description: Serializer for creating a new user (admin only).
@@ -9011,7 +9037,7 @@ components:
           maxLength: 150
         role:
           allOf:
-          - $ref: '#/components/schemas/Role08eEnum'
+          - $ref: '#/components/schemas/UserRoleEnum'
           title: Rolle
         organization:
           type: integer
@@ -9068,7 +9094,7 @@ components:
           minLength: 8
         role:
           allOf:
-          - $ref: '#/components/schemas/Role08eEnum'
+          - $ref: '#/components/schemas/UserRoleEnum'
           title: Rolle
         organization:
           type: integer
@@ -9125,7 +9151,7 @@ components:
           readOnly: true
         role:
           allOf:
-          - $ref: '#/components/schemas/Role08eEnum'
+          - $ref: '#/components/schemas/UserRoleEnum'
           readOnly: true
           title: Rolle
         role_display:
@@ -9236,7 +9262,7 @@ components:
           readOnly: true
         role:
           allOf:
-          - $ref: '#/components/schemas/Role08eEnum'
+          - $ref: '#/components/schemas/UserRoleEnum'
           readOnly: true
           title: Rolle
         role_display:
@@ -9333,7 +9359,7 @@ components:
           readOnly: true
         role:
           allOf:
-          - $ref: '#/components/schemas/Role08eEnum'
+          - $ref: '#/components/schemas/UserRoleEnum'
           readOnly: true
           title: Rolle
         role_display:
@@ -9418,6 +9444,18 @@ components:
       - role_display
       - terms_accepted_at
       - username
+    UserRoleEnum:
+      enum:
+      - educator
+      - location_manager
+      - admin
+      - super_admin
+      type: string
+      description: |-
+        * `educator` - Pädagogin
+        * `location_manager` - Standortleitung
+        * `admin` - Admin
+        * `super_admin` - Super Admin
     UserUpdate:
       type: object
       description: Serializer for updating a user (admin only).
@@ -9437,7 +9475,7 @@ components:
           maxLength: 254
         role:
           allOf:
-          - $ref: '#/components/schemas/Role08eEnum'
+          - $ref: '#/components/schemas/UserRoleEnum'
           title: Rolle
         organization:
           type: integer
@@ -9479,7 +9517,7 @@ components:
           maxLength: 254
         role:
           allOf:
-          - $ref: '#/components/schemas/Role08eEnum'
+          - $ref: '#/components/schemas/UserRoleEnum'
           title: Rolle
         organization:
           type: integer
@@ -9539,7 +9577,7 @@ components:
           title: Schuljahr
           description: Zugehöriges Schuljahr
         status:
-          $ref: '#/components/schemas/Status90cEnum'
+          $ref: '#/components/schemas/WeeklyPlanStatusEnum'
         is_template:
           type: boolean
           title: Ist Vorlage
@@ -9593,7 +9631,7 @@ components:
           title: Schuljahr
           description: Zugehöriges Schuljahr
         status:
-          $ref: '#/components/schemas/Status90cEnum'
+          $ref: '#/components/schemas/WeeklyPlanStatusEnum'
         is_template:
           type: boolean
           title: Ist Vorlage
@@ -9665,9 +9703,10 @@ components:
           readOnly: true
         leader_name:
           type: string
+          description: Return the group leader name if available.
           readOnly: true
         status:
-          $ref: '#/components/schemas/Status90cEnum'
+          $ref: '#/components/schemas/WeeklyPlanStatusEnum'
         is_template:
           type: boolean
           title: Ist Vorlage
@@ -9896,6 +9935,10 @@ components:
           nullable: true
           title: Wochenbeginn (Montag)
           description: Montag der Kalenderwoche (leer bei Vorlagen)
+        week_end_date:
+          type: string
+          format: date
+          readOnly: true
         calendar_week:
           type: integer
           readOnly: true
@@ -9906,12 +9949,13 @@ components:
           maxLength: 255
         weekly_theme_preview:
           type: string
+          description: Return first 100 chars of weekly_theme, stripped of HTML tags.
           readOnly: true
         school_year_name:
           type: string
           readOnly: true
         status:
-          $ref: '#/components/schemas/Status90cEnum'
+          $ref: '#/components/schemas/WeeklyPlanStatusEnum'
         is_template:
           type: boolean
           title: Ist Vorlage
@@ -9929,7 +9973,7 @@ components:
           type: string
           readOnly: true
         entry_count:
-          type: string
+          type: integer
           readOnly: true
         created_at:
           type: string
@@ -9951,6 +9995,7 @@ components:
       - location_name
       - school_year_name
       - updated_at
+      - week_end_date
       - weekly_theme_preview
     WeeklyPlanListRequest:
       type: object
@@ -9973,7 +10018,7 @@ components:
           description: Optionaler Titel (z.B. 'Projektwoche Natur')
           maxLength: 255
         status:
-          $ref: '#/components/schemas/Status90cEnum'
+          $ref: '#/components/schemas/WeeklyPlanStatusEnum'
         is_template:
           type: boolean
           title: Ist Vorlage
@@ -9987,6 +10032,14 @@ components:
           type: integer
           nullable: true
           title: Erstellt von
+    WeeklyPlanStatusEnum:
+      enum:
+      - draft
+      - published
+      type: string
+      description: |-
+        * `draft` - Entwurf
+        * `published` - Veröffentlicht
     WorkingHoursLimit:
       type: object
       description: Serializer for working hours limits.
@@ -10101,6 +10154,8 @@ tags:
   description: Zeiterfassung & Arbeitszeiten
 - name: Groups
   description: Gruppen- & Schülerverwaltung
+- name: WeeklyPlans
+  description: Wochenpläne & Tagesaktivitäten
 - name: Admin
   description: Admin-Funktionen & Systemverwaltung
 - name: System

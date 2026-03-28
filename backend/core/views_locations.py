@@ -61,18 +61,18 @@ class LocationGroupCompactSerializer(serializers.Serializer):
     member_count = serializers.SerializerMethodField()
     is_active = serializers.BooleanField(read_only=True)
 
-    def get_leader_name(self, obj):
+    def get_leader_name(self, obj) -> str | None:
         if obj.leader:
             return f"{obj.leader.first_name} {obj.leader.last_name}"
         return None
 
-    def get_leader_id(self, obj):
+    def get_leader_id(self, obj) -> int | None:
         return obj.leader_id
 
-    def get_student_count(self, obj):
+    def get_student_count(self, obj) -> int:
         return obj.students.filter(is_deleted=False).count()
 
-    def get_member_count(self, obj):
+    def get_member_count(self, obj) -> int:
         return obj.members.filter(is_active=True).count()
 
 
@@ -111,15 +111,15 @@ class LocationListSerializer(serializers.ModelSerializer):
             "educator_count",
         ]
 
-    def get_group_count(self, obj):
+    def get_group_count(self, obj) -> int:
         return Group.objects.filter(location=obj, is_active=True).count()
 
-    def get_student_count(self, obj):
+    def get_student_count(self, obj) -> int:
         return Student.objects.filter(
             group__location=obj, is_deleted=False
         ).count()
 
-    def get_educator_count(self, obj):
+    def get_educator_count(self, obj) -> int:
         return User.objects.filter(
             location=obj, is_deleted=False, is_active=True
         ).exclude(role=User.Role.LOCATION_MANAGER).count()
@@ -169,21 +169,21 @@ class LocationDetailSerializer(serializers.ModelSerializer):
             "educator_count",
         ]
 
-    def get_groups(self, obj):
+    def get_groups(self, obj) -> list:
         groups = Group.objects.filter(
             location=obj, is_active=True
         ).select_related("leader")
         return LocationGroupCompactSerializer(groups, many=True).data
 
-    def get_group_count(self, obj):
+    def get_group_count(self, obj) -> int:
         return Group.objects.filter(location=obj, is_active=True).count()
 
-    def get_student_count(self, obj):
+    def get_student_count(self, obj) -> int:
         return Student.objects.filter(
             group__location=obj, is_deleted=False
         ).count()
 
-    def get_educator_count(self, obj):
+    def get_educator_count(self, obj) -> int:
         return User.objects.filter(
             location=obj, is_deleted=False, is_active=True
         ).exclude(role=User.Role.LOCATION_MANAGER).count()

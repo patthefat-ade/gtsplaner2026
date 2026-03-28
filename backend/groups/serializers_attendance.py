@@ -45,12 +45,12 @@ class AttendanceSerializer(serializers.ModelSerializer):
             "updated_at",
         ]
 
-    def get_student_name(self, obj):
+    def get_student_name(self, obj) -> str:
         if obj.student:
             return f"{obj.student.first_name or ''} {obj.student.last_name or ''}".strip()
         return ""
 
-    def get_recorded_by_name(self, obj):
+    def get_recorded_by_name(self, obj) -> str | None:
         if obj.recorded_by:
             return f"{obj.recorded_by.first_name} {obj.recorded_by.last_name}".strip()
         return None
