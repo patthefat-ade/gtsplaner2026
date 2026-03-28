@@ -66,6 +66,10 @@ class TransactionFilter(django_filters.FilterSet):
     end_date = django_filters.DateFilter(
         field_name="transaction_date", lookup_expr="lte"
     )
+    school_year_id = django_filters.NumberFilter(
+        field_name="school_year_id",
+        label="Schuljahr-ID",
+    )
 
     class Meta:
         model = Transaction
@@ -73,6 +77,7 @@ class TransactionFilter(django_filters.FilterSet):
             "group_id",
             "category_id",
             "location_id",
+            "school_year_id",
             "status",
             "transaction_type",
             "start_date",
