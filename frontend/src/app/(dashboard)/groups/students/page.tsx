@@ -47,8 +47,15 @@ import {
   Pencil,
   Trash2,
   Search,
+  Contact,
+  Phone,
+  Mail,
+  Star,
+  MessageCircle,
 } from "lucide-react";
 import { usePermissions } from "@/hooks/use-permissions";
+import { useContacts } from "@/hooks/use-contacts";
+import Link from "next/link";
 
 export default function StudentsPage() {
   const toast = useToast();
@@ -186,6 +193,9 @@ export default function StudentsPage() {
                     Gruppe
                   </TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead className="hidden lg:table-cell">
+                    Kontakte
+                  </TableHead>
                   <TableHead className="w-[50px]" />
                 </TableRow>
               </TableHeader>
@@ -210,6 +220,15 @@ export default function StudentsPage() {
                       >
                         {student.is_active ? "Aktiv" : "Inaktiv"}
                       </Badge>
+                    </TableCell>
+                    <TableCell className="hidden lg:table-cell">
+                      <Link
+                        href={`/groups/contacts?search=${encodeURIComponent(student.first_name + " " + student.last_name)}`}
+                        className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+                      >
+                        <Contact className="h-3.5 w-3.5" />
+                        Kontakte
+                      </Link>
                     </TableCell>
                     <TableCell>
                       <DropdownMenu>
