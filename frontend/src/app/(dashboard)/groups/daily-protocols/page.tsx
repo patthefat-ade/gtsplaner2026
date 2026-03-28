@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import {
   useDailyProtocols,
   useBulkProtocols,
@@ -152,37 +152,58 @@ export default function DailyProtocolsPage() {
   const { data: groupsData } = useGroups();
   const groups = groupsData?.results ?? [];
 
-  const { data: studentsData } = useStudents(
-    selectedGroup ? { group: Number(selectedGroup) } : undefined
+  // Stable filter objects using useMemo to prevent infinite re-renders
+  const studentFilters = useMemo(
+    () => (selectedGroup ? { group: Number(selectedGroup) } : undefined),
+    [selectedGroup]
   );
-  const students = studentsData?.results ?? [];
+  const { data: studentsData } = useStudents(studentFilters);
+  const students = useMemo(() => studentsData?.results ?? [], [studentsData]);
 
   // Load contacts for pickup dropdown
-  const { data: contactsData } = useContacts(
-    selectedGroup ? {} : undefined
+  const contactFilters = useMemo(
+    () => (selectedGroup ? {} : undefined),
+    [selectedGroup]
   );
-  const allContacts: StudentContact[] = (contactsData?.results ?? []) as StudentContact[];
+  const { data: contactsData } = useContacts(contactFilters);
+  const allContacts: StudentContact[] = useMemo(
+    () => (contactsData?.results ?? []) as StudentContact[],
+    [contactsData]
+  );
 
-  // Load existing protocols for selected group+date
+  // Load existing protocols for selected group+date – stable filter object
+  const existingFilters = useMemo(
+    () =>
+      selectedGroup && selectedDate
+        ? { group_id: Number(selectedGroup), date: selectedDate }
+        : undefined,
+    [selectedGroup, selectedDate]
+  );
   const { data: existingData, isLoading: existingLoading } = useDailyProtocols(
-    selectedGroup && selectedDate
-      ? { group_id: Number(selectedGroup), date: selectedDate }
-      : {}
+    existingFilters ?? {}
   );
-  const existingProtocols = existingData?.results ?? [];
+  const existingProtocols = useMemo(
+    () => existingData?.results ?? [],
+    [existingData]
+  );
 
-  // List data
-  const listFilters: Record<string, string | number> = {};
-  if (filterGroup && filterGroup !== "all") listFilters.group_id = Number(filterGroup);
-  if (filterDate) listFilters.date = filterDate;
-  if (filterSeverity && filterSeverity !== "all") listFilters.incident_severity = filterSeverity;
-  listFilters.page = listPage;
+  // List data – stable filter object
+  const listFilters = useMemo(() => {
+    const f: Record<string, string | number> = {};
+    if (filterGroup && filterGroup !== "all")
+      f.group_id = Number(filterGroup);
+    if (filterDate) f.date = filterDate;
+    if (filterSeverity && filterSeverity !== "all")
+      f.incident_severity = filterSeverity;
+    f.page = listPage;
+    return f;
+  }, [filterGroup, filterDate, filterSeverity, listPage]);
 
   const {
     data: listData,
     isLoading: listLoading,
     error: listError,
-  } = useDailyProtocols(activeTab === "liste" ? listFilters : {});
+  } = useDailyProtocols(activeTab === "liste" ? listFilters : undefined);
 
   // Mutations
   const bulkMutation = useBulkProtocols();
@@ -190,6 +211,11 @@ export default function DailyProtocolsPage() {
   const deleteMutation = useDeleteProtocol();
 
   // Build rows when students or existing protocols change
+  // Use JSON serialization for stable comparison
+  const existingProtocolsJson = JSON.stringify(
+    existingProtocols.map((p) => p.id)
+  );
+
   useEffect(() => {
     if (!students.length) {
       setRows([]);
@@ -211,7 +237,8 @@ export default function DailyProtocolsPage() {
       };
     });
     setRows(newRows);
-  }, [students, existingProtocols]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [students, existingProtocolsJson]);
 
   // Auto-select first group for educator
   useEffect(() => {
@@ -222,11 +249,14 @@ export default function DailyProtocolsPage() {
 
   /* ─── Handlers ───────────────────────────────────────────────────── */
 
-  function updateRow(idx: number, field: keyof ProtocolRow, value: string | number | null) {
-    setRows((prev) =>
-      prev.map((r, i) => (i === idx ? { ...r, [field]: value } : r))
-    );
-  }
+  const updateRow = useCallback(
+    (idx: number, field: keyof ProtocolRow, value: string | number | null) => {
+      setRows((prev) =>
+        prev.map((r, i) => (i === idx ? { ...r, [field]: value } : r))
+      );
+    },
+    []
+  );
 
   async function handleBulkSave() {
     if (!selectedGroup || !selectedDate) return;
@@ -290,7 +320,11 @@ export default function DailyProtocolsPage() {
           pickup_notes: editForm.pickup_notes,
         },
       });
-      toast({ type: "success", title: "Aktualisiert", description: "Protokoll wurde gespeichert." });
+      toast({
+        type: "success",
+        title: "Aktualisiert",
+        description: "Protokoll wurde gespeichert.",
+      });
       setEditDialog(false);
     } catch {
       toast({
@@ -305,7 +339,11 @@ export default function DailyProtocolsPage() {
     if (!deleteId) return;
     try {
       await deleteMutation.mutateAsync(deleteId);
-      toast({ type: "success", title: "Gelöscht", description: "Protokoll wurde entfernt." });
+      toast({
+        type: "success",
+        title: "Gelöscht",
+        description: "Protokoll wurde entfernt.",
+      });
       setDeleteId(null);
     } catch {
       toast({
@@ -317,9 +355,12 @@ export default function DailyProtocolsPage() {
   }
 
   // Get contacts for a specific student
-  function getStudentContacts(studentId: number) {
-    return allContacts.filter((c) => c.student === studentId);
-  }
+  const getStudentContacts = useCallback(
+    (studentId: number) => {
+      return allContacts.filter((c) => c.student === studentId);
+    },
+    [allContacts]
+  );
 
   const selectedGroupName = groups.find(
     (g) => g.id === Number(selectedGroup)
@@ -440,7 +481,10 @@ export default function DailyProtocolsPage() {
                         <User className="h-4 w-4 text-muted-foreground" />
                         <span className="font-medium">{row.student_name}</span>
                         {row.existing_id && (
-                          <Badge variant="outline" className="text-green-500 border-green-500 text-xs">
+                          <Badge
+                            variant="outline"
+                            className="text-green-500 border-green-500 text-xs"
+                          >
                             Bereits erfasst
                           </Badge>
                         )}
@@ -520,13 +564,13 @@ export default function DailyProtocolsPage() {
                             value={
                               row.picked_up_by_id
                                 ? String(row.picked_up_by_id)
-                                : ""
+                                : "none"
                             }
                             onValueChange={(v) =>
                               updateRow(
                                 idx,
                                 "picked_up_by_id",
-                                v ? Number(v) : null
+                                v !== "none" ? Number(v) : null
                               )
                             }
                           >
@@ -534,17 +578,15 @@ export default function DailyProtocolsPage() {
                               <SelectValue placeholder="Kontaktperson wählen" />
                             </SelectTrigger>
                             <SelectContent>
+                              <SelectItem value="none">
+                                – Nicht ausgewählt –
+                              </SelectItem>
                               {studentContacts.map((c) => (
                                 <SelectItem key={c.id} value={String(c.id)}>
                                   {c.first_name} {c.last_name} (
                                   {c.relationship_display})
                                 </SelectItem>
                               ))}
-                              {studentContacts.length === 0 && (
-                                <SelectItem value="none" disabled>
-                                  Keine Kontakte hinterlegt
-                                </SelectItem>
-                              )}
                             </SelectContent>
                           </Select>
                         </div>
