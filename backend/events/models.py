@@ -182,17 +182,6 @@ class Event(TenantModel):
         super().save(*args, **kwargs)
 
     @property
-    def participant_count(self) -> int:
-        return self.participants.filter(is_deleted=False).count()
-
-    @property
-    def consent_count(self) -> int:
-        return self.participants.filter(
-            is_deleted=False,
-            consent_status="granted",
-        ).count()
-
-    @property
     def total_cost(self) -> float:
         """Sum of all linked approved transactions."""
         from django.db.models import Sum as DSum

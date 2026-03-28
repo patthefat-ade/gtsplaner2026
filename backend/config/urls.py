@@ -26,39 +26,6 @@ def health_check(request):
     return JsonResponse({"status": "ok", "service": "gtsplaner-backend"})
 
 
-def debug_events(request):
-    """Temporary debug endpoint for events 500 error."""
-    import traceback
-    try:
-        from events.models import Event
-        # Test basic query
-        count = Event.objects.count()
-        # Test annotated query
-        from django.db.models import Count, Q
-        qs = Event.objects.annotate(
-            participant_count=Count(
-                "participants",
-                filter=Q(participants__is_deleted=False),
-                distinct=True,
-            ),
-        )
-        annotated_count = qs.count()
-        first = None
-        if annotated_count > 0:
-            first = str(qs.first().title)
-        return JsonResponse({
-            "status": "ok",
-            "count": count,
-            "annotated_count": annotated_count,
-            "first": first,
-        })
-    except Exception as e:
-        return JsonResponse({
-            "status": "error",
-            "error": str(e),
-            "traceback": traceback.format_exc(),
-        }, status=500)
-
 
 def root_view(request):
     """Root endpoint – confirms the API is running."""
@@ -87,7 +54,6 @@ urlpatterns = [
     path("", root_view, name="root"),
     # Health Check (used by DigitalOcean)
     path("api/health-check/", health_check, name="health-check"),
-    path("api/debug-events/", debug_events, name="debug-events"),
     # Django Admin Password Reset (must be before admin/ to be resolved)
     path(
         "admin/password_reset/",
