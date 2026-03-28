@@ -5,6 +5,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from core.mixins import TenantViewSetMixin
+from core.mixins_export import ExportMixin
 from groups.models import Group, Student
 from groups.models_protocol import DailyProtocol
 from groups.models_transfer import GroupTransfer
@@ -46,7 +47,9 @@ class DailyProtocolFilter(django_filters.FilterSet):
         return queryset.filter(incidents="")
 
 
-class DailyProtocolViewSet(TenantViewSetMixin, viewsets.ModelViewSet):
+class DailyProtocolViewSet(
+    ExportMixin, TenantViewSetMixin, viewsets.ModelViewSet
+):
     """
     ViewSet for DailyProtocol CRUD operations.
 
@@ -54,6 +57,7 @@ class DailyProtocolViewSet(TenantViewSetMixin, viewsets.ModelViewSet):
     - Standard CRUD (list, create, retrieve, update, destroy)
     - Bulk create/update for a group on a specific date
     - By-student endpoint for protocol history
+    - XLSX and PDF export
     """
 
     queryset = DailyProtocol.objects.filter(is_deleted=False).select_related(
@@ -69,6 +73,43 @@ class DailyProtocolViewSet(TenantViewSetMixin, viewsets.ModelViewSet):
     search_fields = []
     ordering_fields = ["date", "arrival_time", "pickup_time", "incident_severity"]
     ordering = ["-date"]
+
+    # Export-Konfiguration
+    export_fields = [
+        {"key": "date", "label": "Datum", "width": 12},
+        {"key": "student.first_name", "label": "Vorname", "width": 15},
+        {"key": "student.last_name", "label": "Nachname", "width": 15},
+        {"key": "group.name", "label": "Gruppe", "width": 18},
+        {"key": "arrival_time", "label": "Ankunft", "width": 10},
+        {"key": "arrival_notes", "label": "Ankunft-Notizen", "width": 25},
+        {"key": "incidents", "label": "Vorkommnisse", "width": 30},
+        {"key": "incident_severity", "label": "Schweregrad", "width": 12},
+        {"key": "pickup_time", "label": "Abholung", "width": 10},
+        {"key": "picked_up_by.first_name", "label": "Abgeholt von", "width": 18},
+        {"key": "pickup_notes", "label": "Abhol-Notizen", "width": 25},
+        {"key": "recorded_by.get_full_name", "label": "Erfasst von", "width": 18},
+    ]
+    export_filename = "tagesprotokolle"
+    export_title = "Tagesprotokolle"
+
+    def get_export_queryset(self, request):
+        """Override to use the filtered queryset with select_related."""
+        qs = super().get_export_queryset(request)
+        return qs.order_by("-date", "student__last_name")
+
+    def get_row_data(self, obj, fields):
+        """Override to handle severity display value."""
+        row = super().get_row_data(obj, fields)
+        # Replace severity code with display value
+        severity_map = {
+            "normal": "Normal",
+            "important": "Wichtig",
+            "urgent": "Dringend",
+        }
+        for i, field in enumerate(fields):
+            if field["key"] == "incident_severity":
+                row[i] = severity_map.get(row[i], row[i])
+        return row
 
     def get_serializer_class(self):
         if self.action in ["create", "update", "partial_update"]:
