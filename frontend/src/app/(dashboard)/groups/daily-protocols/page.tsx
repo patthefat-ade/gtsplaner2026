@@ -127,9 +127,9 @@ export default function DailyProtocolsPage() {
   const [rows, setRows] = useState<ProtocolRow[]>([]);
 
   // Listenansicht state
-  const [filterGroup, setFilterGroup] = useState<string>("");
+  const [filterGroup, setFilterGroup] = useState<string>("all");
   const [filterDate, setFilterDate] = useState(todayStr());
-  const [filterSeverity, setFilterSeverity] = useState<string>("");
+  const [filterSeverity, setFilterSeverity] = useState<string>("all");
   const [listPage, setListPage] = useState(1);
 
   // Edit dialog
@@ -173,9 +173,9 @@ export default function DailyProtocolsPage() {
 
   // List data
   const listFilters: Record<string, string | number> = {};
-  if (filterGroup) listFilters.group_id = Number(filterGroup);
+  if (filterGroup && filterGroup !== "all") listFilters.group_id = Number(filterGroup);
   if (filterDate) listFilters.date = filterDate;
-  if (filterSeverity) listFilters.incident_severity = filterSeverity;
+  if (filterSeverity && filterSeverity !== "all") listFilters.incident_severity = filterSeverity;
   listFilters.page = listPage;
 
   const {
@@ -541,7 +541,7 @@ export default function DailyProtocolsPage() {
                                 </SelectItem>
                               ))}
                               {studentContacts.length === 0 && (
-                                <SelectItem value="" disabled>
+                                <SelectItem value="none" disabled>
                                   Keine Kontakte hinterlegt
                                 </SelectItem>
                               )}
@@ -586,7 +586,7 @@ export default function DailyProtocolsPage() {
                       <SelectValue placeholder="Alle Gruppen" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Alle Gruppen</SelectItem>
+                      <SelectItem value="all">Alle Gruppen</SelectItem>
                       {groups.map((g) => (
                         <SelectItem key={g.id} value={String(g.id)}>
                           {g.name}
@@ -620,7 +620,7 @@ export default function DailyProtocolsPage() {
                       <SelectValue placeholder="Alle" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Alle</SelectItem>
+                      <SelectItem value="all">Alle</SelectItem>
                       <SelectItem value="normal">Normal</SelectItem>
                       <SelectItem value="important">Wichtig</SelectItem>
                       <SelectItem value="urgent">Dringend</SelectItem>
