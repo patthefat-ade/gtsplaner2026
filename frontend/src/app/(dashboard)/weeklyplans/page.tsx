@@ -58,6 +58,9 @@ import {
   X,
 } from "lucide-react";
 import type { WeeklyPlan } from "@/types/models";
+import { ExportButtons } from "@/components/common/export-buttons";
+import { Pagination } from "@/components/common/pagination";
+import { DEFAULT_PAGE_SIZE } from "@/lib/constants";
 
 export default function WeeklyPlansPage() {
   const { hasPermission, hasRole } = usePermissions();
@@ -70,6 +73,8 @@ export default function WeeklyPlansPage() {
   const [locationFilter, setLocationFilter] = useState<string>("all");
   const [groupFilter, setGroupFilter] = useState<string>("all");
   const [showFilters, setShowFilters] = useState(false);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
 
   // Load locations and groups for filter dropdowns
   const { data: locationsData } = useLocations({ page_size: 200 });
@@ -88,6 +93,8 @@ export default function WeeklyPlansPage() {
     search: search || undefined,
     location: locationFilter !== "all" ? locationFilter : undefined,
     group: groupFilter !== "all" ? groupFilter : undefined,
+    page,
+    page_size: pageSize,
   };
 
   // Data
@@ -158,14 +165,26 @@ export default function WeeklyPlansPage() {
         title="Wochenpläne"
         description="Wochenpläne für Ihre Gruppen verwalten und einsehen"
       >
-        {canManage && (
-          <Button asChild>
-            <Link href="/weeklyplans/new">
-              <Plus className="mr-2 h-4 w-4" />
-              Neuer Wochenplan
-            </Link>
-          </Button>
-        )}
+        <div className="flex gap-2">
+          <ExportButtons
+            basePath="/weeklyplans"
+            params={{
+              is_template: false,
+              status: statusFilter !== "all" ? statusFilter : undefined,
+              location: locationFilter !== "all" ? locationFilter : undefined,
+              group: groupFilter !== "all" ? groupFilter : undefined,
+              search: search || undefined,
+            }}
+          />
+          {canManage && (
+            <Button asChild>
+              <Link href="/weeklyplans/new">
+                <Plus className="mr-2 h-4 w-4" />
+                Neuer Wochenplan
+              </Link>
+            </Button>
+          )}
+        </div>
       </PageHeader>
 
       {/* Filters */}
@@ -411,6 +430,19 @@ export default function WeeklyPlansPage() {
             </Table>
           )}
         </CardContent>
+        {data && data.count > 0 && (
+          <Pagination
+            currentPage={data.current_page ?? page}
+            totalPages={data.total_pages ?? Math.ceil(data.count / pageSize)}
+            totalItems={data.count}
+            pageSize={data.page_size ?? pageSize}
+            onPageChange={setPage}
+            onPageSizeChange={(s) => {
+              setPageSize(s);
+              setPage(1);
+            }}
+          />
+        )}
       </Card>
 
       {/* Delete Dialog */}

@@ -15,6 +15,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from core.mixins import TenantViewSetMixin
+from core.mixins_export import ExportMixin
 from core.permissions import (
     GROUP_HIERARCHY,
     GROUP_LOCATION_MANAGER,
@@ -62,7 +63,7 @@ class WeeklyPlanFilter(django_filters.FilterSet):
 # ---------------------------------------------------------------------------
 # WeeklyPlan ViewSet
 # ---------------------------------------------------------------------------
-class WeeklyPlanViewSet(TenantViewSetMixin, viewsets.ModelViewSet):
+class WeeklyPlanViewSet(ExportMixin, TenantViewSetMixin, viewsets.ModelViewSet):
     """
     CRUD for weekly plans with tenant isolation and role-based visibility.
 
@@ -76,6 +77,37 @@ class WeeklyPlanViewSet(TenantViewSetMixin, viewsets.ModelViewSet):
     search_fields = ["title", "template_name", "group__name"]
     ordering_fields = ["week_start_date", "created_at", "title"]
     ordering = ["-week_start_date", "-created_at"]
+
+    # Export-Konfiguration
+    export_fields = [
+        {"key": "id", "label": "ID", "width": 8},
+        {"key": "group.name", "label": "Gruppe", "width": 20},
+        {"key": "week_start_date", "label": "Wochenbeginn", "width": 14},
+        {"key": "calendar_week", "label": "KW", "width": 6},
+        {"key": "title", "label": "Titel", "width": 25},
+        {"key": "weekly_theme", "label": "Wochenthema", "width": 30},
+        {"key": "status", "label": "Status", "width": 12},
+        {"key": "is_template", "label": "Vorlage", "width": 10},
+        {"key": "created_by.get_full_name", "label": "Erstellt von", "width": 18},
+        {"key": "created_at", "label": "Erstellt am", "width": 14},
+    ]
+    export_filename = "wochenplaene"
+    export_title = "Wochenpl\u00e4ne"
+
+    def get_row_data(self, obj, fields):
+        """Override to handle status display and boolean values."""
+        row = super().get_row_data(obj, fields)
+        status_map = {"draft": "Entwurf", "published": "Ver\u00f6ffentlicht"}
+        for i, field in enumerate(fields):
+            if field["key"] == "status":
+                row[i] = status_map.get(row[i], row[i])
+            elif field["key"] == "is_template":
+                row[i] = "Ja" if row[i] else "Nein"
+            elif field["key"] == "weekly_theme" and row[i]:
+                # Strip HTML tags for export
+                import re
+                row[i] = re.sub(r"<[^>]+>", "", str(row[i])).strip()
+        return row
 
     def get_queryset(self):
         if getattr(self, "swagger_fake_view", False):

@@ -13,6 +13,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from core.mixins import TenantViewSetMixin
+from core.mixins_export import ExportMixin
 from core.permissions import (
     IsEducator,
     IsLocationManagerOrAbove,
@@ -333,7 +334,7 @@ class GroupMemberViewSet(TenantViewSetMixin, viewsets.ModelViewSet):
 # Student ViewSet
 # ---------------------------------------------------------------------------
 
-class StudentViewSet(TenantViewSetMixin, viewsets.ModelViewSet):
+class StudentViewSet(ExportMixin, TenantViewSetMixin, viewsets.ModelViewSet):
     """
     CRUD for students.
 
@@ -349,6 +350,31 @@ class StudentViewSet(TenantViewSetMixin, viewsets.ModelViewSet):
     search_fields = []
     ordering_fields = ["created_at"]
     ordering = ["id"]
+
+    # Export-Konfiguration
+    export_fields = [
+        {"key": "id", "label": "ID", "width": 8},
+        {"key": "first_name", "label": "Vorname", "width": 18},
+        {"key": "last_name", "label": "Nachname", "width": 18},
+        {"key": "date_of_birth", "label": "Geburtsdatum", "width": 14},
+        {"key": "group.name", "label": "Gruppe", "width": 20},
+        {"key": "email", "label": "E-Mail", "width": 25},
+        {"key": "phone", "label": "Telefon", "width": 18},
+        {"key": "street", "label": "Strasse", "width": 22},
+        {"key": "postal_code", "label": "PLZ", "width": 8},
+        {"key": "city", "label": "Stadt", "width": 15},
+        {"key": "is_active", "label": "Aktiv", "width": 8},
+    ]
+    export_filename = "schueler"
+    export_title = "Sch\u00fclerliste"
+
+    def get_row_data(self, obj, fields):
+        """Override to handle boolean display for is_active."""
+        row = super().get_row_data(obj, fields)
+        for i, field in enumerate(fields):
+            if field["key"] == "is_active":
+                row[i] = "Ja" if row[i] else "Nein"
+        return row
 
     def get_queryset(self):
         if getattr(self, "swagger_fake_view", False):

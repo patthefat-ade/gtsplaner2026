@@ -62,7 +62,10 @@ import {
   Edit,
   Clock,
   User,
+  Download,
 } from "lucide-react";
+import { ExportButtons } from "@/components/common/export-buttons";
+import { Pagination } from "@/components/common/pagination";
 import type {
   DailyProtocol,
   IncidentSeverity,
@@ -669,6 +672,16 @@ export default function DailyProtocolsPage() {
                     </SelectContent>
                   </Select>
                 </div>
+                <div className="ml-auto self-end">
+                  <ExportButtons
+                    basePath="/groups/daily-protocols"
+                    params={{
+                      group_id: filterGroup !== "all" ? filterGroup : undefined,
+                      date: filterDate || undefined,
+                      incident_severity: filterSeverity !== "all" ? filterSeverity : undefined,
+                    }}
+                  />
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -778,30 +791,14 @@ export default function DailyProtocolsPage() {
                 </CardContent>
               </Card>
 
-              {listData.count > 20 && (
-                <div className="flex justify-center">
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      disabled={listPage <= 1}
-                      onClick={() => setListPage((p) => p - 1)}
-                    >
-                      Zurück
-                    </Button>
-                    <span className="flex items-center text-sm text-muted-foreground px-2">
-                      Seite {listPage} von {Math.ceil(listData.count / 20)}
-                    </span>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      disabled={!listData.next}
-                      onClick={() => setListPage((p) => p + 1)}
-                    >
-                      Weiter
-                    </Button>
-                  </div>
-                </div>
+              {listData.count > 0 && (
+                <Pagination
+                  currentPage={listData.current_page ?? listPage}
+                  totalPages={listData.total_pages ?? Math.ceil(listData.count / 25)}
+                  totalItems={listData.count}
+                  pageSize={listData.page_size ?? 25}
+                  onPageChange={setListPage}
+                />
               )}
             </>
           )}

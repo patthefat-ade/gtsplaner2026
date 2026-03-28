@@ -15,6 +15,7 @@ interface WeeklyPlanFilters {
   week_start_date_before?: string;
   search?: string;
   page?: number;
+  page_size?: number;
 }
 
 // ── List ────────────────────────────────────────────────────────────────────
@@ -29,6 +30,7 @@ export function useWeeklyPlans(filters: WeeklyPlanFilters = {}) {
   if (filters.week_start_date_before) params.set("week_start_date_before", filters.week_start_date_before);
   if (filters.search) params.set("search", filters.search);
   if (filters.page) params.set("page", String(filters.page));
+  if (filters.page_size) params.set("page_size", String(filters.page_size));
 
   const qs = params.toString();
   const url = qs ? `${BASE}/?${qs}` : `${BASE}/`;

@@ -13,6 +13,7 @@ import { useToast } from "@/components/ui/toast";
 import { PageHeader } from "@/components/common/page-header";
 import { EmptyState } from "@/components/common/empty-state";
 import { Pagination } from "@/components/common/pagination";
+import { ExportButtons } from "@/components/common/export-buttons";
 import { ConfirmDialog } from "@/components/common/confirm-dialog";
 import { QueryError } from "@/components/common/error-boundary";
 import { PageSkeleton } from "@/components/common/skeleton-loaders";
@@ -144,7 +145,7 @@ export default function StudentsPage() {
   if (error) return <QueryError error={error} onRetry={() => refetch()} />;
   if (isLoading) return <PageSkeleton rows={6} columns={5} />;
 
-  const totalPages = data ? Math.ceil(data.count / pageSize) : 0;
+  const totalPages = data?.total_pages ?? (data ? Math.ceil(data.count / pageSize) : 0);
 
   return (
     <div className="space-y-6">
@@ -152,12 +153,18 @@ export default function StudentsPage() {
         title="Kinder"
         description="Verwalte alle Kinder und deren Gruppenzuordnung."
       >
-        {canCreate("student") && (
-          <Button onClick={handleCreate}>
-            <Plus className="mr-2 h-4 w-4" />
-            Neues Kind
-          </Button>
-        )}
+        <div className="flex gap-2">
+          <ExportButtons
+            basePath="/groups/students"
+            params={debouncedSearch ? { search: debouncedSearch } : {}}
+          />
+          {canCreate("student") && (
+            <Button onClick={handleCreate}>
+              <Plus className="mr-2 h-4 w-4" />
+              Neues Kind
+            </Button>
+          )}
+        </div>
       </PageHeader>
 
       {/* Search */}
