@@ -1121,8 +1121,8 @@ class Command(BaseCommand):
                         "organization": org,
                         "max_hours_per_week": Decimal("40.00"),
                         "max_hours_per_day": Decimal("10.00"),
-                        "break_after_hours": Decimal("6.00"),
-                        "break_duration_minutes": 30,
+                        "min_break_after_hours": Decimal("6.00"),
+                        "min_break_duration_minutes": 30,
                     },
                 )
                 total_limits += 1
