@@ -587,7 +587,6 @@ export default function NewWeeklyPlanPage() {
                 type="button"
                 size="sm"
                 variant="default"
-                className="bg-green-600 hover:bg-green-700"
                 onClick={addTimeSlot}
               >
                 <Plus className="mr-1 h-4 w-4" />
@@ -779,7 +778,6 @@ export default function NewWeeklyPlanPage() {
           <Button
             type="submit"
             disabled={createMutation.isPending || !title || !groupId}
-            className="bg-green-600 hover:bg-green-700"
           >
             <Save className="mr-2 h-4 w-4" />
             {createMutation.isPending
