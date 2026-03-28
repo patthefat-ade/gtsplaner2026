@@ -85,6 +85,7 @@ INSTALLED_APPS = [
     "timetracking.apps.TimetrackingConfig",
     "groups.apps.GroupsConfig",
     "weeklyplans.apps.WeeklyplansConfig",
+    "events.apps.EventsConfig",
     "admin_panel.apps.AdminPanelConfig",
     "system.apps.SystemConfig",
 ]

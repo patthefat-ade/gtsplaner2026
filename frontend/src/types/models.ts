@@ -770,3 +770,127 @@ export interface BulkDailyProtocolPayload {
   school_year_id?: number | null;
   records: BulkDailyProtocolRecord[];
 }
+
+/* ───── Events / Veranstaltungen ─────────────────────────────────────────── */
+
+export type EventType = "excursion" | "celebration" | "workshop" | "sports" | "cultural" | "other";
+export type EventStatus = "draft" | "planned" | "confirmed" | "in_progress" | "completed" | "cancelled";
+export type ConsentStatus = "pending" | "granted" | "denied" | "not_required";
+export type AttendanceEventStatus = "registered" | "attended" | "absent" | "cancelled";
+
+export const EVENT_TYPE_LABELS: Record<EventType, string> = {
+  excursion: "Ausflug",
+  celebration: "Feier",
+  workshop: "Workshop",
+  sports: "Sport",
+  cultural: "Kulturell",
+  other: "Sonstiges",
+};
+
+export const EVENT_STATUS_LABELS: Record<EventStatus, string> = {
+  draft: "Entwurf",
+  planned: "Geplant",
+  confirmed: "Bestätigt",
+  in_progress: "Laufend",
+  completed: "Abgeschlossen",
+  cancelled: "Abgesagt",
+};
+
+export const CONSENT_STATUS_LABELS: Record<ConsentStatus, string> = {
+  pending: "Ausstehend",
+  granted: "Erteilt",
+  denied: "Verweigert",
+  not_required: "Nicht erforderlich",
+};
+
+export interface Event {
+  id: number;
+  title: string;
+  description: string;
+  event_type: EventType;
+  status: EventStatus;
+  start_date: string;
+  end_date: string | null;
+  start_time: string | null;
+  end_time: string | null;
+  venue: string;
+  meeting_point: string;
+  requires_consent: boolean;
+  consent_deadline: string | null;
+  estimated_cost: string | null;
+  total_cost: string | null;
+  max_participants: number | null;
+  notes: string;
+  location: number;
+  location_name?: string;
+  school_year: number | null;
+  school_year_name?: string;
+  groups: number[];
+  group_names?: string[];
+  created_by: number;
+  created_by_name?: string;
+  participant_count?: number;
+  consent_count?: number;
+  transactions?: Transaction[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface EventCreate {
+  title: string;
+  description?: string;
+  event_type: EventType;
+  status?: EventStatus;
+  start_date: string;
+  end_date?: string;
+  start_time?: string;
+  end_time?: string;
+  venue?: string;
+  meeting_point?: string;
+  requires_consent?: boolean;
+  consent_deadline?: string;
+  estimated_cost?: number;
+  max_participants?: number;
+  notes?: string;
+  location: number;
+  school_year?: number;
+  groups?: number[];
+}
+
+export interface EventParticipant {
+  id: number;
+  event: number;
+  student: number;
+  student_name: string;
+  student_group_name?: string;
+  consent_status: ConsentStatus;
+  consent_date: string | null;
+  consent_given_by: string;
+  consent_notes: string;
+  attendance_status: AttendanceEventStatus;
+  notes: string;
+}
+
+export interface EventStats {
+  total_participants: number;
+  consent_granted: number;
+  consent_denied: number;
+  consent_pending: number;
+  attended: number;
+  consent_rate: number;
+  attendance_rate: number;
+  total_cost: string | null;
+}
+
+/* ───── Finance Monthly Summary ──────────────────────────────────────────── */
+
+export interface MonthlyFinanceSummary {
+  month: string;
+  month_label: string;
+  income: number;
+  expenses: number;
+  net: number;
+  transaction_count: number;
+  opening_balance: number;
+  closing_balance: number;
+}
