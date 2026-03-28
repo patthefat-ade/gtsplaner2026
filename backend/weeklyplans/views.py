@@ -165,6 +165,59 @@ class WeeklyPlanViewSet(TenantViewSetMixin, viewsets.ModelViewSet):
         serializer = WeeklyPlanDetailSerializer(new_plan)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
+    @action(detail=True, methods=["post"], url_path="duplicate-entry")
+    def duplicate_entry(self, request, pk=None):
+        """
+        Duplicate a single entry within the same weekly plan to a different day.
+        Expects: { "entry_id": <int>, "target_day": <int 0-4> }
+        """
+        plan = self.get_object()
+        entry_id = request.data.get("entry_id")
+        target_day = request.data.get("target_day")
+
+        if entry_id is None or target_day is None:
+            return Response(
+                {"detail": "entry_id und target_day sind erforderlich."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            target_day = int(target_day)
+        except (ValueError, TypeError):
+            return Response(
+                {"detail": "target_day muss eine Zahl zwischen 0 und 4 sein."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if target_day not in range(5):
+            return Response(
+                {"detail": "target_day muss zwischen 0 (Montag) und 4 (Freitag) liegen."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            source_entry = plan.entries.get(id=entry_id)
+        except WeeklyPlanEntry.DoesNotExist:
+            return Response(
+                {"detail": "Eintrag nicht gefunden."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        new_entry = WeeklyPlanEntry.objects.create(
+            weekly_plan=plan,
+            day_of_week=target_day,
+            start_time=source_entry.start_time,
+            end_time=source_entry.end_time,
+            activity=source_entry.activity,
+            description=source_entry.description,
+            color=source_entry.color,
+            category=source_entry.category,
+            sort_order=source_entry.sort_order,
+        )
+
+        serializer = WeeklyPlanDetailSerializer(plan)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
     @action(detail=True, methods=["post"], url_path="create-from-template")
     def create_from_template(self, request, pk=None):
         """
