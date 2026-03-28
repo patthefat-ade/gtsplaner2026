@@ -472,14 +472,22 @@ class TransactionViewSet(ExportMixin, TenantViewSetMixin, viewsets.ModelViewSet)
         for m in range(1, 13):
             income = income_map.get(m, 0.0)
             expense = expense_map.get(m, 0.0)
+            month_opening = float(running_balance)
             running_balance += Decimal(str(income)) - Decimal(str(expense))
+            # Count transactions for this month
+            month_txn_count = qs.filter(transaction_date__month=m).count()
             months.append({
                 "month": m,
                 "month_name": month_names[m - 1],
+                "month_label": month_names[m - 1],
                 "income": round(income, 2),
                 "expense": round(expense, 2),
+                "expenses": round(expense, 2),
                 "net": round(income - expense, 2),
                 "running_balance": round(float(running_balance), 2),
+                "opening_balance": round(month_opening, 2),
+                "closing_balance": round(float(running_balance), 2),
+                "transaction_count": month_txn_count,
             })
 
         # Totals
@@ -491,6 +499,7 @@ class TransactionViewSet(ExportMixin, TenantViewSetMixin, viewsets.ModelViewSet)
             "opening_balance": round(float(opening_balance), 2),
             "total_income": round(total_income, 2),
             "total_expense": round(total_expense, 2),
+            "total_expenses": round(total_expense, 2),
             "net_result": round(total_income - total_expense, 2),
             "closing_balance": round(float(running_balance), 2),
             "months": months,
