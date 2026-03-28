@@ -1,12 +1,15 @@
 /**
  * Generische Export-Funktionen fuer XLSX und PDF Downloads.
  *
- * Nutzt die ExportMixin-Endpunkte des Backends:
- *   GET /api/v1/<resource>/export-xlsx/?<filter_params>
- *   GET /api/v1/<resource>/export-pdf/?<filter_params>
+ * Nutzt direkte URL-Navigation (window.open) statt Blob-Downloads,
+ * damit der Browser den Download nativ handhabt.
+ * Der JWT-Token wird als Query-Parameter uebergeben, da der Browser
+ * bei window.open() keine Authorization-Header senden kann.
+ *
+ * Backend-Endpunkte:
+ *   GET /api/v1/<resource>/export-xlsx/?token=<jwt>&<filter_params>
+ *   GET /api/v1/<resource>/export-pdf/?token=<jwt>&<filter_params>
  */
-
-import { api } from "@/lib/api";
 
 export type ExportFormat = "xlsx" | "pdf";
 
@@ -17,61 +20,63 @@ interface ExportOptions {
   format: ExportFormat;
   /** Optionale Filter-Parameter */
   params?: Record<string, string | number | boolean | undefined>;
-  /** Optionaler Dateiname (ohne Erweiterung) */
-  filename?: string;
 }
 
 /**
- * Laedt eine Export-Datei (XLSX oder PDF) vom Backend herunter
- * und triggert den Browser-Download.
+ * Oeffnet eine Export-URL direkt im Browser.
+ * Der JWT-Token wird als Query-Parameter angehaengt,
+ * sodass der Browser den Download nativ handhabt.
  */
-export async function downloadExport({
+export function downloadExport({
   basePath,
   format,
   params = {},
-  filename,
-}: ExportOptions): Promise<void> {
+}: ExportOptions): void {
+  const token = typeof window !== "undefined"
+    ? localStorage.getItem("access_token")
+    : null;
+
+  if (!token) {
+    throw new Error("Nicht authentifiziert. Bitte erneut anmelden.");
+  }
+
+  const apiBase = process.env.NEXT_PUBLIC_API_URL || "/api/v1";
+
   // Build query string from params
   const searchParams = new URLSearchParams();
+  searchParams.set("token", token);
+
   Object.entries(params).forEach(([key, value]) => {
     if (value !== undefined && value !== "" && value !== "all") {
       searchParams.set(key, String(value));
     }
   });
 
-  const qs = searchParams.toString();
-  const url = `${basePath}/export-${format}/${qs ? `?${qs}` : ""}`;
+  const url = `${apiBase}${basePath}/export-${format}/?${searchParams.toString()}`;
 
-  const contentType =
-    format === "xlsx"
-      ? "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-      : "application/pdf";
+  // Open in new window - browser handles the download natively
+  window.open(url, "_blank");
+}
 
-  const response = await api.get(url, {
-    responseType: "blob",
-  });
+/**
+ * Oeffnet eine einzelne Ressourcen-Export-URL direkt im Browser.
+ * Fuer Detail-Exporte wie z.B. einzelne Wochenplan-PDFs.
+ *
+ * @param url - Relativer API-Pfad, z.B. "/weeklyplans/123/pdf/"
+ */
+export function downloadDirectUrl(url: string): void {
+  const token = typeof window !== "undefined"
+    ? localStorage.getItem("access_token")
+    : null;
 
-  const blob = new Blob([response.data], { type: contentType });
-  const blobUrl = window.URL.createObjectURL(blob);
-
-  // Extract filename from Content-Disposition header or use provided/default
-  let downloadFilename = filename
-    ? `${filename}.${format}`
-    : `export.${format}`;
-
-  const disposition = response.headers["content-disposition"];
-  if (disposition) {
-    const match = disposition.match(/filename="?([^"]+)"?/);
-    if (match?.[1]) {
-      downloadFilename = match[1];
-    }
+  if (!token) {
+    throw new Error("Nicht authentifiziert. Bitte erneut anmelden.");
   }
 
-  const link = document.createElement("a");
-  link.href = blobUrl;
-  link.download = downloadFilename;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  window.URL.revokeObjectURL(blobUrl);
+  const apiBase = process.env.NEXT_PUBLIC_API_URL || "/api/v1";
+  const separator = url.includes("?") ? "&" : "?";
+  const fullUrl = `${apiBase}${url}${separator}token=${token}`;
+
+  // Open in new window - browser handles the download natively
+  window.open(fullUrl, "_blank");
 }
