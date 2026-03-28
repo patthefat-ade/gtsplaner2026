@@ -25,6 +25,7 @@ import {
   ClipboardCheck,
   ArrowLeftRight,
   Contact,
+  School,
   type LucideIcon,
 } from "lucide-react";
 import {
@@ -135,6 +136,12 @@ const navigation: NavSection[] = [
         href: "/groups/contacts",
         icon: Contact,
         permission: "view_students",
+      },
+      {
+        title: "Schuljahre",
+        href: "/groups/school-years",
+        icon: School,
+        permission: "view_own_groups",
       },
     ],
   },

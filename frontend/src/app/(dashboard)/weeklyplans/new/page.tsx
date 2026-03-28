@@ -4,8 +4,9 @@ import { useState, useEffect, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import dynamic from "next/dynamic";
+import { useAuth } from "@/hooks/use-auth";
 import { useCreateWeeklyPlan } from "@/hooks/use-weeklyplans";
-import { useGroups } from "@/hooks/use-groups";
+import { useGroups, useSchoolYears } from "@/hooks/use-groups";
 import { useToast } from "@/components/ui/toast";
 import { Breadcrumbs } from "@/components/common/breadcrumbs";
 import { Button } from "@/components/ui/button";
@@ -29,8 +30,13 @@ import {
   Clock,
   CalendarDays,
   X,
+  Copy,
 } from "lucide-react";
-import type { DayOfWeek, WeeklyPlanEntry } from "@/types/models";
+import {
+  type DayOfWeek,
+  type WeeklyPlanEntry,
+  ENTRY_CATEGORIES,
+} from "@/types/models";
 
 // Dynamic import for RichTextEditor (SSR-incompatible)
 const RichTextEditor = dynamic(
@@ -52,41 +58,73 @@ interface TimeSlot {
   id: string;
   start_time: string;
   end_time: string;
-  cells: Record<number, string>; // day_of_week -> activity HTML
+  cells: Record<number, { activity: string; category: string }>;
 }
 
 const DAY_LABELS = ["Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag"];
+
+function getCategoryColor(category: string): string {
+  return ENTRY_CATEGORIES.find((c) => c.value === category)?.color ?? "#78716C";
+}
+
+function getCategoryLabel(category: string): string {
+  return ENTRY_CATEGORIES.find((c) => c.value === category)?.label ?? category;
+}
 
 const DEFAULT_TIME_SLOTS: Omit<TimeSlot, "id">[] = [
   {
     start_time: "11:20",
     end_time: "12:10",
-    cells: { 0: "Kinder kommen", 1: "Kinder kommen", 2: "Kinder kommen", 3: "Kinder kommen", 4: "Kinder kommen" },
+    cells: {
+      0: { activity: "Kinder kommen", category: "sonstiges" },
+      1: { activity: "Kinder kommen", category: "sonstiges" },
+      2: { activity: "Kinder kommen", category: "sonstiges" },
+      3: { activity: "Kinder kommen", category: "sonstiges" },
+      4: { activity: "Kinder kommen", category: "sonstiges" },
+    },
   },
   {
     start_time: "12:20",
     end_time: "13:00",
-    cells: { 0: "Mittagessen", 1: "Mittagessen", 2: "Mittagessen", 3: "Mittagessen", 4: "Mittagessen" },
+    cells: {
+      0: { activity: "Mittagessen", category: "essen" },
+      1: { activity: "Mittagessen", category: "essen" },
+      2: { activity: "Mittagessen", category: "essen" },
+      3: { activity: "Mittagessen", category: "essen" },
+      4: { activity: "Mittagessen", category: "essen" },
+    },
   },
   {
     start_time: "13:10",
     end_time: "14:00",
-    cells: { 0: "Lernstunde", 1: "Lernstunde", 2: "Lernstunde", 3: "Lernstunde", 4: "Lernstunde" },
+    cells: {
+      0: { activity: "Lernstunde", category: "lernen" },
+      1: { activity: "Lernstunde", category: "lernen" },
+      2: { activity: "Lernstunde", category: "lernen" },
+      3: { activity: "Lernstunde", category: "lernen" },
+      4: { activity: "Lernstunde", category: "lernen" },
+    },
   },
   {
     start_time: "14:30",
     end_time: "15:00",
-    cells: { 0: "Jausenzeit", 1: "Jausenzeit", 2: "Jausenzeit", 3: "Jausenzeit", 4: "Jausenzeit" },
+    cells: {
+      0: { activity: "Jausenzeit", category: "essen" },
+      1: { activity: "Jausenzeit", category: "essen" },
+      2: { activity: "Jausenzeit", category: "essen" },
+      3: { activity: "Jausenzeit", category: "essen" },
+      4: { activity: "Jausenzeit", category: "essen" },
+    },
   },
   {
     start_time: "15:00",
     end_time: "16:15",
     cells: {
-      0: "Betreute Freizeit\nBegrüßung gemeinsamer Kreis",
-      1: "Betreute Freizeit\nBegrüßung gemeinsamer Kreis",
-      2: "Betreute Freizeit\nBegrüßung gemeinsamer Kreis",
-      3: "Betreute Freizeit\nBegrüßung gemeinsamer Kreis",
-      4: "Betreute Freizeit\nBegrüßung gemeinsamer Kreis",
+      0: { activity: "Betreute Freizeit\nBegrüßung gemeinsamer Kreis", category: "freizeit" },
+      1: { activity: "Betreute Freizeit\nBegrüßung gemeinsamer Kreis", category: "freizeit" },
+      2: { activity: "Betreute Freizeit\nBegrüßung gemeinsamer Kreis", category: "freizeit" },
+      3: { activity: "Betreute Freizeit\nBegrüßung gemeinsamer Kreis", category: "freizeit" },
+      4: { activity: "Betreute Freizeit\nBegrüßung gemeinsamer Kreis", category: "freizeit" },
     },
   },
 ];
@@ -111,12 +149,6 @@ function getWeekEndDate(startDate: string): string {
   return d.toISOString().split("T")[0];
 }
 
-function formatDate(dateStr: string): string {
-  if (!dateStr) return "";
-  const d = new Date(dateStr);
-  return d.toLocaleDateString("de-AT", { day: "2-digit", month: "2-digit", year: "numeric" });
-}
-
 // ── Component ──────────────────────────────────────────────────────────────
 
 export default function NewWeeklyPlanPage() {
@@ -124,17 +156,20 @@ export default function NewWeeklyPlanPage() {
   const searchParams = useSearchParams();
   const isTemplate = searchParams.get("template") === "true";
 
+  const { user } = useAuth();
   const toast = useToast();
   const createMutation = useCreateWeeklyPlan();
   const { data: groupsData, isLoading: loadingGroups } = useGroups({
     page_size: 200,
   });
+  const { data: schoolYearsData } = useSchoolYears({ page_size: 50 });
 
   // ── Form state ─────────────────────────────────────────────────────────
   const [title, setTitle] = useState("");
   const [templateName, setTemplateName] = useState("");
   const [weeklyTheme, setWeeklyTheme] = useState("");
   const [groupId, setGroupId] = useState("");
+  const [schoolYearId, setSchoolYearId] = useState("");
   const [weekStartDate, setWeekStartDate] = useState(() => {
     const today = new Date();
     const monday = new Date(today);
@@ -153,11 +188,46 @@ export default function NewWeeklyPlanPage() {
     4: "",
   });
 
+  // ── Auto-select group based on user's location ─────────────────────────
+  const userGroups = useMemo(() => {
+    if (!groupsData?.results || !user) return [];
+    // Filter groups by user's location
+    if (user.location) {
+      return groupsData.results.filter((g) => g.location === user.location);
+    }
+    return groupsData.results;
+  }, [groupsData, user]);
+
+  // Auto-select first group if user has only one group
+  useEffect(() => {
+    if (!groupId && userGroups.length === 1) {
+      setGroupId(String(userGroups[0].id));
+    }
+  }, [userGroups, groupId]);
+
+  // Auto-select active school year when group changes
+  useEffect(() => {
+    if (groupId && schoolYearsData?.results) {
+      const group = groupsData?.results?.find((g) => g.id === Number(groupId));
+      if (group?.school_year) {
+        setSchoolYearId(String(group.school_year));
+      } else {
+        const active = schoolYearsData.results.find((sy) => sy.is_active);
+        if (active) setSchoolYearId(String(active.id));
+      }
+    }
+  }, [groupId, schoolYearsData, groupsData]);
+
   // ── Derived data ───────────────────────────────────────────────────────
   const selectedGroup = useMemo(() => {
     if (!groupId || !groupsData?.results) return null;
     return groupsData.results.find((g) => g.id === Number(groupId)) ?? null;
   }, [groupId, groupsData]);
+
+  const selectedSchoolYear = useMemo(() => {
+    if (!schoolYearId || !schoolYearsData?.results) return null;
+    return schoolYearsData.results.find((sy) => sy.id === Number(schoolYearId)) ?? null;
+  }, [schoolYearId, schoolYearsData]);
 
   const calendarWeek = useMemo(() => getCalendarWeek(weekStartDate), [weekStartDate]);
   const weekEndDate = useMemo(() => getWeekEndDate(weekStartDate), [weekStartDate]);
@@ -179,7 +249,13 @@ export default function NewWeeklyPlanPage() {
         id: generateId(),
         start_time: lastSlot?.end_time || "16:00",
         end_time: "17:00",
-        cells: { 0: "", 1: "", 2: "", 3: "", 4: "" },
+        cells: {
+          0: { activity: "", category: "sonstiges" },
+          1: { activity: "", category: "sonstiges" },
+          2: { activity: "", category: "sonstiges" },
+          3: { activity: "", category: "sonstiges" },
+          4: { activity: "", category: "sonstiges" },
+        },
       },
     ]);
   };
@@ -194,10 +270,32 @@ export default function NewWeeklyPlanPage() {
     );
   };
 
-  const updateSlotCell = (slotId: string, day: number, html: string) => {
+  const updateSlotCell = (slotId: string, day: number, activity: string) => {
     setTimeSlots(
       timeSlots.map((s) =>
-        s.id === slotId ? { ...s, cells: { ...s.cells, [day]: html } } : s
+        s.id === slotId
+          ? { ...s, cells: { ...s.cells, [day]: { ...s.cells[day], activity } } }
+          : s
+      )
+    );
+  };
+
+  const updateSlotCategory = (slotId: string, day: number, category: string) => {
+    setTimeSlots(
+      timeSlots.map((s) =>
+        s.id === slotId
+          ? { ...s, cells: { ...s.cells, [day]: { ...s.cells[day], category } } }
+          : s
+      )
+    );
+  };
+
+  const duplicateCell = (slotId: string, sourceDay: number, targetDay: number) => {
+    setTimeSlots(
+      timeSlots.map((s) =>
+        s.id === slotId
+          ? { ...s, cells: { ...s.cells, [targetDay]: { ...s.cells[sourceDay] } } }
+          : s
       )
     );
   };
@@ -212,7 +310,8 @@ export default function NewWeeklyPlanPage() {
     const entries: Omit<WeeklyPlanEntry, "id" | "day_name">[] = [];
     timeSlots.forEach((slot, sortOrder) => {
       for (let day = 0; day < 5; day++) {
-        const activity = slot.cells[day] || "";
+        const cell = slot.cells[day];
+        const activity = cell?.activity || "";
         if (activity) {
           entries.push({
             day_of_week: day as DayOfWeek,
@@ -220,8 +319,8 @@ export default function NewWeeklyPlanPage() {
             end_time: slot.end_time,
             activity,
             description: "",
-            color: "",
-            category: "sonstiges",
+            color: getCategoryColor(cell.category),
+            category: cell.category || "sonstiges",
             sort_order: sortOrder,
           });
         }
@@ -245,6 +344,7 @@ export default function NewWeeklyPlanPage() {
         status: "draft",
         is_template: asTemplate,
         template_name: asTemplate ? templateName || title : undefined,
+        school_year: schoolYearId ? Number(schoolYearId) : undefined,
         entries,
         daily_activities: dailyActs,
       });
@@ -304,7 +404,7 @@ export default function NewWeeklyPlanPage() {
                       <SelectValue placeholder="Gruppe auswählen..." />
                     </SelectTrigger>
                     <SelectContent>
-                      {groupsData?.results?.map((group) => (
+                      {userGroups.map((group) => (
                         <SelectItem key={group.id} value={String(group.id)}>
                           {group.name}
                           {group.location_name && ` (${group.location_name})`}
@@ -319,10 +419,27 @@ export default function NewWeeklyPlanPage() {
               <div>
                 <Label>Volksschule (Standort)</Label>
                 <Input
-                  value={selectedGroup?.location_name || "–"}
+                  value={selectedGroup?.location_name || user?.location_detail?.name || "–"}
                   readOnly
                   className="bg-muted"
                 />
+              </div>
+
+              {/* Schuljahr */}
+              <div>
+                <Label>Schuljahr</Label>
+                <Select value={schoolYearId} onValueChange={setSchoolYearId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Schuljahr auswählen..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {schoolYearsData?.results?.map((sy) => (
+                      <SelectItem key={sy.id} value={String(sy.id)}>
+                        {sy.name} {sy.is_active && "(aktiv)"}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               {/* Kalenderwoche */}
@@ -335,12 +452,6 @@ export default function NewWeeklyPlanPage() {
                     className="bg-muted"
                   />
                 </div>
-              </div>
-
-              {/* Schuljahr */}
-              <div>
-                <Label>Schuljahr</Label>
-                <Input value="2025/2026" readOnly className="bg-muted" />
               </div>
 
               {/* Datum von */}
@@ -394,7 +505,9 @@ export default function NewWeeklyPlanPage() {
                   value={
                     selectedGroup?.leader
                       ? `${selectedGroup.leader.first_name} ${selectedGroup.leader.last_name}`.trim()
-                      : selectedGroup?.group_leader_name || "–"
+                      : selectedGroup?.group_leader_name || user
+                        ? `${user?.first_name ?? ""} ${user?.last_name ?? ""}`.trim()
+                        : "–"
                   }
                   readOnly
                   className="bg-muted"
@@ -445,6 +558,23 @@ export default function NewWeeklyPlanPage() {
           </CardContent>
         </Card>
 
+        {/* ── Kategorie-Legende ───────────────────────────────────────── */}
+        <Card className="mt-6">
+          <CardContent className="pt-6">
+            <div className="flex flex-wrap gap-3">
+              {ENTRY_CATEGORIES.map((cat) => (
+                <div key={cat.value} className="flex items-center gap-1.5">
+                  <div
+                    className="h-3 w-3 rounded-full"
+                    style={{ backgroundColor: cat.color }}
+                  />
+                  <span className="text-xs text-muted-foreground">{cat.label}</span>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
         {/* ── Wochenplan-Tabelle ───────────────────────────────────────── */}
         <Card className="mt-6">
           <CardHeader>
@@ -466,7 +596,7 @@ export default function NewWeeklyPlanPage() {
             </CardTitle>
             <p className="text-sm text-muted-foreground">
               Die Standardzeiten sind vorausgefüllt, können aber angepasst
-              werden.
+              werden. Klicken Sie auf eine Kategorie, um sie zu ändern.
             </p>
           </CardHeader>
           <CardContent className="overflow-x-auto">
@@ -527,21 +657,65 @@ export default function NewWeeklyPlanPage() {
                         className="h-8 text-xs"
                       />
                     </td>
-                    {[0, 1, 2, 3, 4].map((day) => (
-                      <td
-                        key={day}
-                        className="border border-border p-1"
-                        style={{ minWidth: "140px" }}
-                      >
-                        <CellRichTextEditor
-                          content={slot.cells[day] || ""}
-                          onChange={(html) =>
-                            updateSlotCell(slot.id, day, html)
-                          }
-                          placeholder="Aktivität..."
-                        />
-                      </td>
-                    ))}
+                    {[0, 1, 2, 3, 4].map((day) => {
+                      const cell = slot.cells[day] || { activity: "", category: "sonstiges" };
+                      const catColor = getCategoryColor(cell.category);
+                      return (
+                        <td
+                          key={day}
+                          className="border border-border p-1"
+                          style={{
+                            minWidth: "160px",
+                            backgroundColor: `${catColor}10`,
+                            borderLeft: `3px solid ${catColor}`,
+                          }}
+                        >
+                          {/* Category selector */}
+                          <div className="mb-1 flex items-center justify-between gap-1">
+                            <select
+                              value={cell.category}
+                              onChange={(e) =>
+                                updateSlotCategory(slot.id, day, e.target.value)
+                              }
+                              className="h-5 w-full rounded border-0 bg-transparent px-0 text-[10px] font-medium focus:outline-none focus:ring-0"
+                              style={{ color: catColor }}
+                            >
+                              {ENTRY_CATEGORIES.map((cat) => (
+                                <option key={cat.value} value={cat.value}>
+                                  {cat.label}
+                                </option>
+                              ))}
+                            </select>
+                            {/* Duplicate cell button */}
+                            {cell.activity && (
+                              <div className="group relative">
+                                <button
+                                  type="button"
+                                  className="flex h-4 w-4 items-center justify-center rounded text-muted-foreground opacity-50 hover:opacity-100"
+                                  title="Zelle duplizieren"
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    // Duplicate to next day
+                                    const nextDay = day < 4 ? day + 1 : 0;
+                                    duplicateCell(slot.id, day, nextDay);
+                                    toast.success(`Zelle nach ${DAY_LABELS[nextDay]} dupliziert`);
+                                  }}
+                                >
+                                  <Copy className="h-3 w-3" />
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                          <CellRichTextEditor
+                            content={cell.activity}
+                            onChange={(html) =>
+                              updateSlotCell(slot.id, day, html)
+                            }
+                            placeholder="Aktivität..."
+                          />
+                        </td>
+                      );
+                    })}
                     <td className="border border-border p-1 text-center">
                       <Button
                         type="button"
