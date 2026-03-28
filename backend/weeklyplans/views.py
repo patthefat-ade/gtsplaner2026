@@ -22,7 +22,7 @@ from core.permissions import (
     get_user_hierarchy_level,
     require_permission,
 )
-from weeklyplans.models import WeeklyPlan, WeeklyPlanEntry
+from weeklyplans.models import DailyActivity, WeeklyPlan, WeeklyPlanEntry
 from weeklyplans.serializers import (
     WeeklyPlanCreateUpdateSerializer,
     WeeklyPlanDetailSerializer,
@@ -273,12 +273,54 @@ class WeeklyPlanViewSet(TenantViewSetMixin, viewsets.ModelViewSet):
         else:
             week_dates = ["", "", "", "", ""]
 
+        # Daily activities
+        daily_activities = {}
+        for da in plan.daily_activities.all().order_by("day_of_week"):
+            daily_activities[da.day_of_week] = da.content
+
+        # Leader name
+        leader_name = ""
+        if plan.group and hasattr(plan.group, "leader") and plan.group.leader:
+            leader = plan.group.leader
+            leader_name = f"{leader.first_name} {leader.last_name}".strip()
+
+        # School year
+        school_year_name = str(plan.school_year) if plan.school_year else "2025/2026"
+
+        # Logo as base64
+        import base64
+        import os
+        logo_path = os.path.join(
+            os.path.dirname(__file__),
+            "templates", "weeklyplans", "hilfswerk_logo.jpg"
+        )
+        logo_base64 = ""
+        if os.path.exists(logo_path):
+            with open(logo_path, "rb") as f:
+                logo_base64 = base64.b64encode(f.read()).decode()
+
+        # Week end date
+        week_end_date = ""
+        if plan.week_start_date:
+            week_end_date = (plan.week_start_date + datetime.timedelta(days=4)).strftime("%d.%m.%Y")
+
+        # Build ordered list for template (Mon-Fri)
+        daily_activities_list = [
+            daily_activities.get(i, "") for i in range(5)
+        ]
+        has_daily_activities = any(daily_activities_list)
+
         context = {
             "plan": plan,
             "grid": grid,
             "days": days,
             "week_dates": week_dates,
             "calendar_week": plan.calendar_week or "",
+            "daily_activities_list": daily_activities_list if has_daily_activities else None,
+            "leader_name": leader_name,
+            "school_year_name": school_year_name,
+            "logo_base64": logo_base64,
+            "week_end_date": week_end_date,
         }
 
         html_string = render_to_string(

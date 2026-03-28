@@ -393,14 +393,24 @@ export const DAY_NAMES: Record<DayOfWeek, string> = {
 };
 
 export const ENTRY_CATEGORIES = [
-  { value: "learning", label: "Lernzeit", color: "#3B82F6" },
-  { value: "sports", label: "Sport & Bewegung", color: "#EF4444" },
-  { value: "creative", label: "Kreativ", color: "#8B5CF6" },
-  { value: "social", label: "Sozial", color: "#F59E0B" },
-  { value: "outdoor", label: "Outdoor", color: "#10B981" },
-  { value: "meal", label: "Mahlzeit", color: "#78716C" },
-  { value: "free_time", label: "Freizeit", color: "#06B6D4" },
+  { value: "lernen", label: "Lernen", color: "#3B82F6" },
+  { value: "bewegung", label: "Bewegung", color: "#22C55E" },
+  { value: "kreativ", label: "Kreativ", color: "#A855F7" },
+  { value: "essen", label: "Essen", color: "#F97316" },
+  { value: "freizeit", label: "Freizeit", color: "#EAB308" },
+  { value: "musik", label: "Musik", color: "#EC4899" },
+  { value: "natur", label: "Natur", color: "#14B8A6" },
+  { value: "sozial", label: "Soziales Lernen", color: "#6366F1" },
+  { value: "ruhe", label: "Ruhezeit", color: "#94A3B8" },
+  { value: "sonstiges", label: "Sonstiges", color: "#78716C" },
 ] as const;
+
+export interface DailyActivity {
+  id?: number;
+  day_of_week: DayOfWeek;
+  day_name?: string;
+  content: string;
+}
 
 export interface WeeklyPlanEntry {
   id?: number;
@@ -421,9 +431,14 @@ export interface WeeklyPlan {
   group_name: string;
   location_name: string;
   week_start_date: string;
+  week_end_date?: string;
   calendar_week: number;
   title: string;
+  weekly_theme?: string;
   notes?: string;
+  school_year?: number;
+  school_year_name?: string;
+  leader_name?: string;
   status: WeeklyPlanStatus;
   is_template: boolean;
   template_name?: string;
@@ -431,6 +446,8 @@ export interface WeeklyPlan {
   created_by_name: string;
   entry_count?: number;
   entries?: WeeklyPlanEntry[];
+  daily_activities?: DailyActivity[];
+  weekly_theme_preview?: string;
   created_at: string;
   updated_at: string;
 }
@@ -439,11 +456,14 @@ export interface WeeklyPlanCreate {
   group: number;
   week_start_date: string;
   title: string;
+  weekly_theme?: string;
   notes?: string;
+  school_year?: number;
   status?: WeeklyPlanStatus;
   is_template?: boolean;
   template_name?: string;
   entries?: Omit<WeeklyPlanEntry, "id" | "day_name">[];
+  daily_activities?: Omit<DailyActivity, "id" | "day_name">[];
 }
 
 // ─── System ──────────────────────────────────────────────────────────────────

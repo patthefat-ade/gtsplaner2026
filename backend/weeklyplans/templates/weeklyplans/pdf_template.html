@@ -5,7 +5,7 @@
     <style>
         @page {
             size: A4 landscape;
-            margin: 1.5cm;
+            margin: 1cm 1.2cm;
         }
         * {
             margin: 0;
@@ -14,128 +14,255 @@
         }
         body {
             font-family: 'Helvetica Neue', Arial, sans-serif;
-            font-size: 10pt;
+            font-size: 9pt;
             color: #1a1a1a;
+            line-height: 1.3;
         }
+
+        /* ── Header with Logo ─────────────────────────────────── */
         .header {
             display: flex;
             justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 8px;
+            padding-bottom: 6px;
+            border-bottom: 3px solid #F5B800;
+        }
+        .header-left {
+            display: flex;
             align-items: center;
-            margin-bottom: 12px;
-            padding-bottom: 8px;
-            border-bottom: 2px solid #3B82F6;
+            gap: 12px;
         }
-        .header h1 {
-            font-size: 16pt;
+        .logo {
+            width: 60px;
+            height: 60px;
+        }
+        .header-title h1 {
+            font-size: 15pt;
             color: #1e293b;
+            margin-bottom: 2px;
         }
-        .header .meta {
-            text-align: right;
+        .header-subtitle {
             font-size: 9pt;
-            color: #64748b;
+            color: #475569;
         }
-        .header .meta strong {
+        .header-meta {
+            text-align: right;
+            font-size: 8.5pt;
+            color: #475569;
+        }
+        .header-meta strong {
             color: #1e293b;
         }
-        table {
+        .kw-badge {
+            display: inline-block;
+            background-color: #F5B800;
+            color: #000;
+            font-weight: 700;
+            font-size: 10pt;
+            padding: 2px 8px;
+            border-radius: 3px;
+            margin-bottom: 3px;
+        }
+
+        /* ── Meta Grid ────────────────────────────────────────── */
+        .meta-grid {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 6px;
+            font-size: 8.5pt;
+            color: #475569;
+        }
+        .meta-grid strong {
+            color: #1e293b;
+        }
+
+        /* ── Weekly Theme ─────────────────────────────────────── */
+        .weekly-theme {
+            background-color: #FFF9E6;
+            border: 1px solid #F5B800;
+            border-radius: 4px;
+            padding: 6px 10px;
+            margin-bottom: 8px;
+            font-size: 8.5pt;
+        }
+        .weekly-theme-label {
+            font-weight: 700;
+            color: #92400E;
+            font-size: 8pt;
+            margin-bottom: 2px;
+        }
+
+        /* ── Main Table ───────────────────────────────────────── */
+        table.plan-table {
             width: 100%;
             border-collapse: collapse;
             table-layout: fixed;
+            margin-bottom: 8px;
         }
-        th {
-            background-color: #1e293b;
-            color: white;
-            padding: 8px 6px;
+        table.plan-table th {
+            padding: 5px 4px;
             text-align: center;
-            font-size: 9pt;
-            font-weight: 600;
+            font-size: 8pt;
+            font-weight: 700;
         }
-        th.time-col {
-            width: 12%;
-            text-align: left;
+        table.plan-table th.time-header {
+            background-color: #f1f5f9;
+            color: #475569;
+            width: 10%;
         }
-        th.day-col {
-            width: 17.6%;
+        table.plan-table th.day-header {
+            background-color: #F5B800;
+            color: #000;
+            width: 18%;
         }
-        td {
-            border: 1px solid #e2e8f0;
-            padding: 6px;
+        table.plan-table td {
+            border: 1px solid #d1d5db;
+            padding: 4px 5px;
             vertical-align: top;
-            font-size: 8.5pt;
-            height: 40px;
+            font-size: 8pt;
         }
-        td.time-cell {
+        table.plan-table td.time-cell {
             background-color: #f8fafc;
             font-weight: 600;
-            font-size: 8pt;
+            font-size: 7.5pt;
             color: #475569;
             text-align: center;
             vertical-align: middle;
+            width: 5%;
         }
         .activity-cell {
-            border-radius: 3px;
-            padding: 4px 6px;
-            height: 100%;
+            min-height: 28px;
         }
-        .activity-name {
-            font-weight: 600;
-            font-size: 8.5pt;
-            margin-bottom: 2px;
-        }
-        .activity-desc {
-            font-size: 7.5pt;
-            color: #475569;
+        .activity-cell p {
+            margin: 0;
         }
         .empty-cell {
             background-color: #fafafa;
         }
-        .footer {
-            margin-top: 12px;
-            padding-top: 6px;
-            border-top: 1px solid #e2e8f0;
+
+        /* ── Daily Activities ─────────────────────────────────── */
+        .daily-activities {
+            margin-top: 6px;
+            page-break-inside: avoid;
+        }
+        .daily-activities-title {
+            font-weight: 700;
+            font-size: 9pt;
+            color: #92400E;
+            margin-bottom: 4px;
+            padding: 3px 8px;
+            background-color: #FFF9E6;
+            border: 1px solid #F5B800;
+            border-radius: 3px;
+        }
+        table.daily-table {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+        }
+        table.daily-table th {
+            background-color: #F5B800;
+            color: #000;
+            padding: 4px;
+            font-size: 8pt;
+            font-weight: 700;
+            text-align: center;
+            width: 20%;
+        }
+        table.daily-table td {
+            border: 1px solid #d1d5db;
+            padding: 5px 6px;
+            vertical-align: top;
             font-size: 7.5pt;
+            min-height: 40px;
+        }
+        table.daily-table td p {
+            margin: 0;
+        }
+
+        /* ── Footer ───────────────────────────────────────────── */
+        .footer {
+            margin-top: 8px;
+            padding-top: 4px;
+            border-top: 1px solid #e2e8f0;
+            font-size: 7pt;
             color: #94a3b8;
             display: flex;
             justify-content: space-between;
         }
+
+        /* ── Notes ────────────────────────────────────────────── */
         .notes {
-            margin-top: 8px;
-            padding: 8px;
+            margin-top: 6px;
+            padding: 5px 8px;
             background-color: #f8fafc;
             border: 1px solid #e2e8f0;
-            border-radius: 4px;
-            font-size: 8pt;
+            border-radius: 3px;
+            font-size: 7.5pt;
         }
         .notes-title {
-            font-weight: 600;
-            margin-bottom: 4px;
+            font-weight: 700;
+            margin-bottom: 2px;
+            font-size: 8pt;
         }
     </style>
 </head>
 <body>
+    <!-- ── Header ──────────────────────────────────────────── -->
     <div class="header">
-        <div>
-            <h1>Wochenplan{% if plan.title %}: {{ plan.title }}{% endif %}</h1>
-            <div style="font-size: 10pt; color: #475569; margin-top: 4px;">
-                {% if plan.group %}{{ plan.group.name }}{% endif %}
-                {% if plan.group and plan.group.location %} &mdash; {{ plan.group.location.name }}{% endif %}
+        <div class="header-left">
+            {% if logo_base64 %}
+            <img class="logo" src="data:image/jpeg;base64,{{ logo_base64 }}" alt="Hilfswerk Logo" />
+            {% endif %}
+            <div class="header-title">
+                <h1>Wochenplan{% if plan.title %} – {{ plan.title }}{% endif %}</h1>
+                <div class="header-subtitle">
+                    Nachmittagsbetreuung
+                    {% if plan.group %} &mdash; {{ plan.group.name }}{% endif %}
+                    {% if plan.group and plan.group.location %} &mdash; {{ plan.group.location.name }}{% endif %}
+                </div>
             </div>
         </div>
-        <div class="meta">
-            {% if calendar_week %}<div><strong>KW {{ calendar_week }}</strong></div>{% endif %}
-            {% if plan.week_start_date %}
-            <div>{{ plan.week_start_date|date:"d.m.Y" }} &ndash;
-                 {{ plan.week_start_date|date:"d.m.Y" }}</div>
+        <div class="header-meta">
+            {% if calendar_week %}
+            <div class="kw-badge">KW {{ calendar_week }}</div>
             {% endif %}
+            {% if plan.week_start_date %}
+            <div>{{ plan.week_start_date|date:"d.m.Y" }} &ndash; {{ week_end_date }}</div>
+            {% endif %}
+            <div>Schuljahr: <strong>{{ school_year_name }}</strong></div>
         </div>
     </div>
 
-    <table>
+    <!-- ── Meta Row ────────────────────────────────────────── -->
+    <div class="meta-grid">
+        {% if plan.group and plan.group.location %}
+        <div>Standort: <strong>{{ plan.group.location.name }}</strong></div>
+        {% endif %}
+        {% if plan.group %}
+        <div>Gruppe: <strong>{{ plan.group.name }}</strong></div>
+        {% endif %}
+        {% if leader_name %}
+        <div>Gruppenleiter/in: <strong>{{ leader_name }}</strong></div>
+        {% endif %}
+    </div>
+
+    <!-- ── Weekly Theme ────────────────────────────────────── -->
+    {% if plan.weekly_theme %}
+    <div class="weekly-theme">
+        <div class="weekly-theme-label">⭐ Aktivitäten / Thema der Woche:</div>
+        {{ plan.weekly_theme|safe }}
+    </div>
+    {% endif %}
+
+    <!-- ── Plan Table ──────────────────────────────────────── -->
+    <table class="plan-table">
         <thead>
             <tr>
-                <th class="time-col">Uhrzeit</th>
+                <th class="time-header" colspan="1">Uhrzeit</th>
                 {% for day_num, day_name in days %}
-                <th class="day-col">{{ day_name }}{% if week_dates %}<br><small>{{ week_dates|slice:day_num|last }}</small>{% endif %}</th>
+                <th class="day-header">{{ day_name }}{% if week_dates %}<br><small>{{ week_dates|slice:day_num|last }}</small>{% endif %}</th>
                 {% endfor %}
             </tr>
         </thead>
@@ -146,10 +273,7 @@
                 {% for cell in row.cells %}
                 {% if cell %}
                 <td>
-                    <div class="activity-cell" style="background-color: {{ cell.color }}20; border-left: 3px solid {{ cell.color }};">
-                        <div class="activity-name">{{ cell.activity }}</div>
-                        {% if cell.description %}<div class="activity-desc">{{ cell.description }}</div>{% endif %}
-                    </div>
+                    <div class="activity-cell">{{ cell.activity|safe }}</div>
                 </td>
                 {% else %}
                 <td class="empty-cell"></td>
@@ -160,15 +284,43 @@
         </tbody>
     </table>
 
-    {% if plan.notes %}
-    <div class="notes">
-        <div class="notes-title">Anmerkungen:</div>
-        {{ plan.notes }}
+    <!-- ── Daily Activities ────────────────────────────────── -->
+    {% if daily_activities_list %}
+    <div class="daily-activities">
+        <div class="daily-activities-title">📋 Tagesaktivitäten-Vorlagen (passend zum Thema)</div>
+        <table class="daily-table">
+            <thead>
+                <tr>
+                    <th>Montag</th>
+                    <th>Dienstag</th>
+                    <th>Mittwoch</th>
+                    <th>Donnerstag</th>
+                    <th>Freitag</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    {% for da in daily_activities_list %}
+                    <td>{{ da|safe }}</td>
+                    {% endfor %}
+                </tr>
+            </tbody>
+        </table>
     </div>
     {% endif %}
 
+    <!-- ── Notes ───────────────────────────────────────────── -->
+    {% if plan.notes %}
+    <div class="notes">
+        <div class="notes-title">Anmerkungen:</div>
+        {{ plan.notes|safe }}
+    </div>
+    {% endif %}
+
+    <!-- ── Footer ──────────────────────────────────────────── -->
     <div class="footer">
         <div>Erstellt von: {% if plan.created_by %}{{ plan.created_by.first_name }} {{ plan.created_by.last_name }}{% endif %}</div>
+        <div>Hilfswerk Österreich &mdash; GTS Planer</div>
         <div>Erstellt am: {{ plan.created_at|date:"d.m.Y H:i" }}</div>
     </div>
 </body>

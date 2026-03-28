@@ -31,6 +31,15 @@ class WeeklyPlan(TenantModel):
         blank=True,
         help_text="Zugehörige Gruppe (leer bei Vorlagen ohne Gruppenbindung)",
     )
+    school_year = models.ForeignKey(
+        "groups.SchoolYear",
+        on_delete=models.SET_NULL,
+        related_name="weekly_plans",
+        verbose_name="Schuljahr",
+        null=True,
+        blank=True,
+        help_text="Zugehöriges Schuljahr",
+    )
     week_start_date = models.DateField(
         verbose_name="Wochenbeginn (Montag)",
         null=True,
@@ -42,6 +51,11 @@ class WeeklyPlan(TenantModel):
         blank=True,
         verbose_name="Titel",
         help_text="Optionaler Titel (z.B. 'Projektwoche Natur')",
+    )
+    weekly_theme = models.TextField(
+        blank=True,
+        verbose_name="Thema der Woche",
+        help_text="Übergreifendes Wochenthema oder besondere Aktivitäten (Rich-Text/HTML)",
     )
     notes = models.TextField(
         blank=True,
@@ -107,6 +121,14 @@ class WeeklyPlan(TenantModel):
             return self.week_start_date.isocalendar()[1]
         return None
 
+    @property
+    def week_end_date(self):
+        """Return the Friday of the same week."""
+        if self.week_start_date:
+            import datetime
+            return self.week_start_date + datetime.timedelta(days=4)
+        return None
+
 
 class WeeklyPlanEntry(models.Model):
     """
@@ -160,10 +182,9 @@ class WeeklyPlanEntry(models.Model):
     )
     start_time = models.TimeField(verbose_name="Startzeit")
     end_time = models.TimeField(verbose_name="Endzeit")
-    activity = models.CharField(
-        max_length=255,
+    activity = models.TextField(
         verbose_name="Aktivität",
-        help_text="Name der Aktivität (z.B. 'Morgenkreis', 'Freispiel')",
+        help_text="Name/Inhalt der Aktivität (Rich-Text/HTML unterstützt)",
     )
     description = models.TextField(
         blank=True,
@@ -204,3 +225,42 @@ class WeeklyPlanEntry(models.Model):
         if not self.color and self.category:
             self.color = self.CATEGORY_COLORS.get(self.category, "#78716C")
         super().save(*args, **kwargs)
+
+
+class DailyActivity(models.Model):
+    """
+    Detailed daily activity description for a weekly plan.
+    One entry per weekday, containing rich-text content that
+    appears in the PDF export under the weekly grid.
+    """
+
+    DAY_CHOICES = WeeklyPlanEntry.DAY_CHOICES
+
+    weekly_plan = models.ForeignKey(
+        WeeklyPlan,
+        on_delete=models.CASCADE,
+        related_name="daily_activities",
+        verbose_name="Wochenplan",
+    )
+    day_of_week = models.IntegerField(
+        choices=DAY_CHOICES,
+        verbose_name="Wochentag",
+    )
+    content = models.TextField(
+        blank=True,
+        verbose_name="Tagesaktivität",
+        help_text="Detaillierte Aktivitätsbeschreibung für diesen Tag (Rich-Text/HTML)",
+    )
+
+    class Meta:
+        verbose_name = "Tagesaktivität"
+        verbose_name_plural = "Tagesaktivitäten"
+        ordering = ["day_of_week"]
+        unique_together = [("weekly_plan", "day_of_week")]
+        indexes = [
+            models.Index(fields=["weekly_plan", "day_of_week"]),
+        ]
+
+    def __str__(self):
+        day_name = dict(self.DAY_CHOICES).get(self.day_of_week, "?")
+        return f"{day_name}: {self.content[:50]}..."
