@@ -10,6 +10,7 @@ import {
   useDuplicateWeeklyPlan,
   useDuplicateEntry,
 } from "@/hooks/use-weeklyplans";
+import { useSchoolYears } from "@/hooks/use-groups";
 import { usePermissions } from "@/hooks/use-permissions";
 import { useToast } from "@/components/ui/toast";
 import { Breadcrumbs } from "@/components/common/breadcrumbs";
@@ -110,6 +111,7 @@ export default function WeeklyPlanDetailPage() {
   const exportPdf = useExportPdf();
   const duplicateMutation = useDuplicateWeeklyPlan();
   const duplicateEntryMutation = useDuplicateEntry();
+  const { data: schoolYearsData } = useSchoolYears({ page_size: 50 });
 
   // Duplicate entry dialog
   const [duplicateEntryDialog, setDuplicateEntryDialog] = useState(false);
@@ -122,6 +124,11 @@ export default function WeeklyPlanDetailPage() {
   const [editTitle, setEditTitle] = useState("");
   const [editNotes, setEditNotes] = useState("");
   const [editStatus, setEditStatus] = useState<string>("draft");
+  const [editWeeklyTheme, setEditWeeklyTheme] = useState("");
+  const [editSchoolYearId, setEditSchoolYearId] = useState<string>("");
+  const [editDailyActivities, setEditDailyActivities] = useState<Record<number, string>>({
+    0: "", 1: "", 2: "", 3: "", 4: "",
+  });
 
   // Entry dialog
   const [entryDialog, setEntryDialog] = useState(false);
@@ -135,6 +142,16 @@ export default function WeeklyPlanDetailPage() {
       setEditTitle(plan.title);
       setEditNotes(plan.notes ?? "");
       setEditStatus(plan.status);
+      setEditWeeklyTheme(plan.weekly_theme ?? "");
+      setEditSchoolYearId(plan.school_year ? String(plan.school_year) : "");
+      // Initialize daily activities from plan
+      const daMap: Record<number, string> = { 0: "", 1: "", 2: "", 3: "", 4: "" };
+      if (plan.daily_activities) {
+        plan.daily_activities.forEach((da) => {
+          daMap[da.day_of_week] = da.content;
+        });
+      }
+      setEditDailyActivities(daMap);
     }
   }, [plan]);
 
@@ -210,11 +227,21 @@ export default function WeeklyPlanDetailPage() {
   const handleSave = async () => {
     if (!plan) return;
     try {
+      // Build daily activities array from edit state
+      const dailyActivitiesPayload = Object.entries(editDailyActivities)
+        .filter(([, content]) => content.trim() !== "")
+        .map(([dayStr, content]) => ({
+          day_of_week: Number(dayStr) as DayOfWeek,
+          content,
+        }));
+
       await updateMutation.mutateAsync({
         id: plan.id,
         data: {
           title: editTitle,
           notes: editNotes,
+          weekly_theme: editWeeklyTheme,
+          school_year: editSchoolYearId ? Number(editSchoolYearId) : undefined,
           status: editStatus as "draft" | "published",
           entries: editedEntries.map((e) => ({
             day_of_week: e.day_of_week,
@@ -226,6 +253,7 @@ export default function WeeklyPlanDetailPage() {
             category: e.category,
             sort_order: e.sort_order,
           })),
+          daily_activities: dailyActivitiesPayload,
         },
       });
       toast.success("Wochenplan erfolgreich gespeichert");
@@ -275,6 +303,24 @@ export default function WeeklyPlanDetailPage() {
     } catch {
       toast.error("Fehler", "Wochenplan konnte nicht dupliziert werden.");
     }
+  };
+
+  const resetEditState = () => {
+    if (!plan) return;
+    setIsEditing(false);
+    setEditedEntries(plan.entries ?? []);
+    setEditTitle(plan.title);
+    setEditNotes(plan.notes ?? "");
+    setEditStatus(plan.status);
+    setEditWeeklyTheme(plan.weekly_theme ?? "");
+    setEditSchoolYearId(plan.school_year ? String(plan.school_year) : "");
+    const daMap: Record<number, string> = { 0: "", 1: "", 2: "", 3: "", 4: "" };
+    if (plan.daily_activities) {
+      plan.daily_activities.forEach((da) => {
+        daMap[da.day_of_week] = da.content;
+      });
+    }
+    setEditDailyActivities(daMap);
   };
 
   if (isLoading) {
@@ -341,13 +387,19 @@ export default function WeeklyPlanDetailPage() {
                     : ""})
                 </span>
               )}
-              <span>\u00b7</span>
+              <span>{"\u00b7"}</span>
               <span>{plan.group_name}</span>
-              <span>\u00b7</span>
+              <span>{"\u00b7"}</span>
               <span>{plan.location_name}</span>
-              <span>\u00b7</span>
+              {plan.school_year_name && (
+                <>
+                  <span>{"\u00b7"}</span>
+                  <span>SJ {plan.school_year_name}</span>
+                </>
+              )}
+              <span>{"\u00b7"}</span>
               <Badge variant={plan.status === "published" ? "default" : "secondary"}>
-                {plan.status === "published" ? "Ver\u00f6ffentlicht" : "Entwurf"}
+                {plan.status === "published" ? "Veröffentlicht" : "Entwurf"}
               </Badge>
             </div>
           </div>
@@ -366,13 +418,7 @@ export default function WeeklyPlanDetailPage() {
               </Select>
               <Button
                 variant="outline"
-                onClick={() => {
-                  setIsEditing(false);
-                  setEditedEntries(plan.entries ?? []);
-                  setEditTitle(plan.title);
-                  setEditNotes(plan.notes ?? "");
-                  setEditStatus(plan.status);
-                }}
+                onClick={resetEditState}
               >
                 <X className="mr-2 h-4 w-4" />
                 Abbrechen
@@ -411,17 +457,36 @@ export default function WeeklyPlanDetailPage() {
         </div>
       </div>
 
-      {/* Notes (edit mode) */}
+      {/* Schuljahr & Notizen (edit mode) */}
       {isEditing && (
         <Card>
-          <CardContent className="pt-6">
-            <label className="mb-1 block text-sm font-medium">Notizen</label>
-            <Textarea
-              value={editNotes}
-              onChange={(e) => setEditNotes(e.target.value)}
-              placeholder="Notizen zum Wochenplan..."
-              rows={2}
-            />
+          <CardContent className="space-y-4 pt-6">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div>
+                <label className="mb-1 block text-sm font-medium">Schuljahr</label>
+                <Select value={editSchoolYearId} onValueChange={setEditSchoolYearId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Schuljahr auswählen..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {schoolYearsData?.results?.map((sy) => (
+                      <SelectItem key={sy.id} value={String(sy.id)}>
+                        {sy.name} {sy.is_active && "(aktiv)"}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium">Notizen</label>
+                <Textarea
+                  value={editNotes}
+                  onChange={(e) => setEditNotes(e.target.value)}
+                  placeholder="Notizen zum Wochenplan..."
+                  rows={2}
+                />
+              </div>
+            </div>
           </CardContent>
         </Card>
       )}
@@ -435,12 +500,32 @@ export default function WeeklyPlanDetailPage() {
         </Card>
       )}
 
-      {/* Weekly Theme */}
+      {/* Weekly Theme (edit mode) */}
+      {isEditing && (
+        <Card className="border-yellow-400 dark:border-yellow-600">
+          <CardHeader className="bg-yellow-50 dark:bg-yellow-950/30">
+            <CardTitle className="flex items-center gap-2 text-yellow-800 dark:text-yellow-200">
+              <span className="text-lg">{"\u2b50"}</span>
+              Thema der Woche
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="bg-yellow-50/50 pt-4 dark:bg-yellow-950/20">
+            <Textarea
+              value={editWeeklyTheme}
+              onChange={(e) => setEditWeeklyTheme(e.target.value)}
+              placeholder="Thema der Woche eingeben..."
+              rows={3}
+            />
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Weekly Theme (view mode) */}
       {!isEditing && plan.weekly_theme && (
         <Card className="border-yellow-400 dark:border-yellow-600">
           <CardHeader className="bg-yellow-50 dark:bg-yellow-950/30">
             <CardTitle className="flex items-center gap-2 text-yellow-800 dark:text-yellow-200">
-              <span className="text-lg">\u2b50</span>
+              <span className="text-lg">{"\u2b50"}</span>
               Thema der Woche
             </CardTitle>
           </CardHeader>
@@ -468,13 +553,14 @@ export default function WeeklyPlanDetailPage() {
         </CardHeader>
         <CardContent>
           {timeSlots.length === 0 ? (
-            <div className="flex h-32 flex-col items-center justify-center gap-2">
-              <p className="text-muted-foreground">Noch keine Einträge vorhanden</p>
-              {isEditing && (
-                <Button size="sm" onClick={() => openNewEntry(0)}>
+            <div className="flex h-32 items-center justify-center text-muted-foreground">
+              {isEditing ? (
+                <Button variant="outline" onClick={() => openNewEntry(0)}>
                   <Plus className="mr-2 h-4 w-4" />
                   Ersten Eintrag hinzufügen
                 </Button>
+              ) : (
+                <p>Keine Einträge vorhanden</p>
               )}
             </div>
           ) : (
@@ -484,13 +570,13 @@ export default function WeeklyPlanDetailPage() {
             <table className="w-full border-collapse">
               <thead>
                 <tr>
-                  <th className="w-[120px] border border-border bg-muted/50 p-2 text-left text-xs font-semibold">
+                  <th className="border border-border bg-muted/50 p-2 text-xs font-semibold">
                     Zeit
                   </th>
                   {days.map((day) => (
                     <th
                       key={day}
-                      className="border border-border bg-muted/50 p-2 text-center text-xs font-semibold"
+                      className="border border-border bg-primary/10 p-2 text-xs font-semibold"
                     >
                       {DAY_NAMES[day]}
                     </th>
@@ -708,13 +794,47 @@ export default function WeeklyPlanDetailPage() {
         </CardContent>
       </Card>
 
-      {/* Daily Activities */}
+      {/* Daily Activities (edit mode) */}
+      {isEditing && (
+        <Card className="border-amber-300 dark:border-amber-600">
+          <CardHeader className="bg-amber-50 dark:bg-amber-950/30">
+            <CardTitle className="flex items-center gap-2 text-amber-800 dark:text-amber-200">
+              <span className="text-lg">{"\ud83d\udccb"}</span>
+              Tagesaktivitäten
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-4">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+              {([0, 1, 2, 3, 4] as DayOfWeek[]).map((dayIdx) => (
+                <div key={dayIdx} className="space-y-1">
+                  <label className="text-sm font-semibold">
+                    {DAY_NAMES[dayIdx]}
+                  </label>
+                  <Textarea
+                    value={editDailyActivities[dayIdx] ?? ""}
+                    onChange={(e) =>
+                      setEditDailyActivities({
+                        ...editDailyActivities,
+                        [dayIdx]: e.target.value,
+                      })
+                    }
+                    placeholder={`Aktivitäten für ${DAY_NAMES[dayIdx]}...`}
+                    rows={3}
+                  />
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Daily Activities (view mode) */}
       {!isEditing && plan.daily_activities && plan.daily_activities.length > 0 && (
         <Card className="border-amber-300 dark:border-amber-600">
           <CardHeader className="bg-amber-50 dark:bg-amber-950/30">
             <CardTitle className="flex items-center gap-2 text-amber-800 dark:text-amber-200">
-              <span className="text-lg">\ud83d\udccb</span>
-              Tagesaktivit\u00e4ten
+              <span className="text-lg">{"\ud83d\udccb"}</span>
+              Tagesaktivitäten
             </CardTitle>
           </CardHeader>
           <CardContent className="pt-4">
@@ -869,7 +989,7 @@ export default function WeeklyPlanDetailPage() {
               <div className="rounded-lg border border-border bg-muted/30 p-3">
                 <div className="text-sm font-semibold">{duplicateSourceEntry.activity}</div>
                 <div className="text-xs text-muted-foreground">
-                  {DAY_NAMES[duplicateSourceEntry.day_of_week]} {duplicateSourceEntry.start_time} \u2013 {duplicateSourceEntry.end_time}
+                  {DAY_NAMES[duplicateSourceEntry.day_of_week]} {duplicateSourceEntry.start_time} {"\u2013"} {duplicateSourceEntry.end_time}
                 </div>
                 {duplicateSourceEntry.description && (
                   <div className="mt-1 text-xs text-muted-foreground">{duplicateSourceEntry.description}</div>

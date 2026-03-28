@@ -138,7 +138,7 @@ export function useCreateFromTemplate() {
 export function useExportPdf() {
   return useMutation({
     mutationFn: async (id: number) => {
-      const response = await api.get(`${BASE}/${id}/export_pdf/`, {
+      const response = await api.get(`${BASE}/${id}/pdf/`, {
         responseType: "blob",
       });
       // Create download link
