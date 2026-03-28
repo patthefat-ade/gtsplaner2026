@@ -91,8 +91,11 @@ class WeeklyPlanListSerializer(serializers.ModelSerializer):
         return obj.entries.count()
 
     def get_school_year_name(self, obj) -> str:
-        if obj.school_year:
-            return str(obj.school_year)
+        if obj.school_year_id:
+            try:
+                return obj.school_year.name
+            except Exception:
+                return ""
         return ""
 
     def get_weekly_theme_preview(self, obj) -> str:
@@ -140,8 +143,11 @@ class WeeklyPlanDetailSerializer(serializers.ModelSerializer):
         return ""
 
     def get_school_year_name(self, obj) -> str:
-        if obj.school_year:
-            return str(obj.school_year)
+        if obj.school_year_id:
+            try:
+                return obj.school_year.name
+            except Exception:
+                return ""
         return ""
 
     def get_leader_name(self, obj) -> str:

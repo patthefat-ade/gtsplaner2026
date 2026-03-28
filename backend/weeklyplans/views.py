@@ -114,7 +114,7 @@ class WeeklyPlanViewSet(ExportMixin, TenantViewSetMixin, viewsets.ModelViewSet):
             return WeeklyPlan.objects.none()
 
         qs = super().get_queryset()
-        qs = qs.select_related("group", "group__location", "created_by")
+        qs = qs.select_related("group", "group__location", "created_by", "school_year")
 
         user = self.request.user
         level = get_user_hierarchy_level(user)
@@ -138,6 +138,20 @@ class WeeklyPlanViewSet(ExportMixin, TenantViewSetMixin, viewsets.ModelViewSet):
         if self.action in ["list", "retrieve", "templates", "pdf"]:
             return [permissions.IsAuthenticated(), IsEducator()]
         return [permissions.IsAuthenticated(), IsEducator()]
+
+    def update(self, request, *args, **kwargs):
+        """Override to return detail serializer after update."""
+        partial = kwargs.pop("partial", False)
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+        # Re-fetch with select_related and return detail serializer
+        instance.refresh_from_db()
+        detail = WeeklyPlanDetailSerializer(
+            instance, context=self.get_serializer_context()
+        )
+        return Response(detail.data)
 
     def perform_destroy(self, instance):
         """Soft-delete: mark as deleted instead of removing from DB."""
