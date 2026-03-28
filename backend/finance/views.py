@@ -23,6 +23,7 @@ from rest_framework.response import Response
 
 from core.middleware import ensure_tenant_context
 from core.mixins import TenantViewSetMixin
+from core.mixins_export import ExportMixin
 from core.permissions import (
     IsEducator,
     IsLocationManagerOrAbove,
@@ -157,7 +158,7 @@ class TransactionCategoryViewSet(TenantViewSetMixin, viewsets.ModelViewSet):
 # Transaction ViewSet
 # ---------------------------------------------------------------------------
 
-class TransactionViewSet(TenantViewSetMixin, viewsets.ModelViewSet):
+class TransactionViewSet(ExportMixin, TenantViewSetMixin, viewsets.ModelViewSet):
     """
     CRUD for financial transactions with approval workflow.
 
@@ -177,6 +178,21 @@ class TransactionViewSet(TenantViewSetMixin, viewsets.ModelViewSet):
         "status",
     ]
     ordering = ["-transaction_date"]
+
+    # ExportMixin configuration
+    export_fields = [
+        {"key": "id", "label": "ID", "width": 8},
+        {"key": "transaction_date", "label": "Datum", "width": 14},
+        {"key": "description", "label": "Beschreibung", "width": 30},
+        {"key": "get_transaction_type_display", "label": "Typ", "width": 12},
+        {"key": "amount", "label": "Betrag (EUR)", "width": 14},
+        {"key": "category.name", "label": "Kategorie", "width": 18},
+        {"key": "group.name", "label": "Gruppe", "width": 18},
+        {"key": "get_status_display", "label": "Status", "width": 14},
+        {"key": "created_by.first_name", "label": "Erstellt von", "width": 16},
+    ]
+    export_filename = "transaktionen"
+    export_title = "Transaktionen"
 
     def get_queryset(self):
         if getattr(self, "swagger_fake_view", False):
@@ -383,6 +399,103 @@ class TransactionViewSet(TenantViewSetMixin, viewsets.ModelViewSet):
         }
         serializer = GroupBalanceSerializer(data)
         return Response(serializer.data)
+
+    @action(detail=False, methods=["get"], url_path="monthly-summary")
+    def monthly_summary(self, request):
+        """Monatliche Buchhaltungs-Zusammenfassung: Barbestand, Einnahmen, Ausgaben."""
+        ensure_tenant_context(request)
+        year = int(request.query_params.get("year", timezone.now().year))
+        group_id = request.query_params.get("group_id")
+        location_id = request.query_params.get("location_id")
+
+        qs = self.get_queryset().filter(
+            status=Transaction.Status.APPROVED,
+            transaction_date__year=year,
+        )
+        if group_id:
+            qs = qs.filter(group_id=group_id)
+        if location_id:
+            qs = qs.filter(group__location_id=location_id)
+
+        # Aggregate per month
+        from django.db.models.functions import ExtractMonth
+        monthly_income = (
+            qs.filter(transaction_type=Transaction.TransactionType.INCOME)
+            .annotate(month=ExtractMonth("transaction_date"))
+            .values("month")
+            .annotate(total=Sum("amount"))
+        )
+        monthly_expense = (
+            qs.filter(transaction_type=Transaction.TransactionType.EXPENSE)
+            .annotate(month=ExtractMonth("transaction_date"))
+            .values("month")
+            .annotate(total=Sum("amount"))
+        )
+
+        income_map = {r["month"]: float(r["total"]) for r in monthly_income}
+        expense_map = {r["month"]: float(r["total"]) for r in monthly_expense}
+
+        # Build monthly data with running balance
+        months = []
+        running_balance = Decimal("0.00")
+
+        # Get opening balance from group if specific group
+        opening_balance = Decimal("0.00")
+        if group_id:
+            from groups.models import Group
+            try:
+                group = Group.objects.get(pk=group_id)
+                # Calculate opening balance: current balance minus all approved transactions in/after this year
+                year_txns = Transaction.objects.filter(
+                    group=group,
+                    status=Transaction.Status.APPROVED,
+                    is_deleted=False,
+                    transaction_date__year__gte=year,
+                )
+                year_income = float(
+                    year_txns.filter(transaction_type=Transaction.TransactionType.INCOME)
+                    .aggregate(t=Sum("amount"))["t"] or 0
+                )
+                year_expense = float(
+                    year_txns.filter(transaction_type=Transaction.TransactionType.EXPENSE)
+                    .aggregate(t=Sum("amount"))["t"] or 0
+                )
+                opening_balance = group.balance - Decimal(str(year_income)) + Decimal(str(year_expense))
+            except Group.DoesNotExist:
+                pass
+
+        running_balance = opening_balance
+        month_names = [
+            "Jaenner", "Februar", "Maerz", "April", "Mai", "Juni",
+            "Juli", "August", "September", "Oktober", "November", "Dezember",
+        ]
+        for m in range(1, 13):
+            income = income_map.get(m, 0.0)
+            expense = expense_map.get(m, 0.0)
+            running_balance += Decimal(str(income)) - Decimal(str(expense))
+            months.append({
+                "month": m,
+                "month_name": month_names[m - 1],
+                "income": round(income, 2),
+                "expense": round(expense, 2),
+                "net": round(income - expense, 2),
+                "running_balance": round(float(running_balance), 2),
+            })
+
+        # Totals
+        total_income = sum(income_map.values())
+        total_expense = sum(expense_map.values())
+
+        return Response({
+            "year": year,
+            "opening_balance": round(float(opening_balance), 2),
+            "total_income": round(total_income, 2),
+            "total_expense": round(total_expense, 2),
+            "net_result": round(total_income - total_expense, 2),
+            "closing_balance": round(float(running_balance), 2),
+            "months": months,
+            "transaction_count": qs.count(),
+        })
 
     @action(
         detail=False,

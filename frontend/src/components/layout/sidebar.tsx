@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
@@ -26,6 +27,8 @@ import {
   ArrowLeftRight,
   Contact,
   School,
+  PartyPopper,
+  Calculator,
   type LucideIcon,
 } from "lucide-react";
 import {
@@ -86,6 +89,12 @@ const navigation: NavSection[] = [
         href: "/finance/categories",
         icon: Receipt,
         permission: "manage_categories",
+      },
+      {
+        title: "Buchhaltung",
+        href: "/finance/accounting",
+        icon: Calculator,
+        permission: "view_own_transactions",
       },
       {
         title: "Berichte",
@@ -165,6 +174,17 @@ const navigation: NavSection[] = [
         href: "/weeklyplans/templates",
         icon: BookTemplate,
         permission: "view_weeklyplans",
+      },
+    ],
+  },
+  {
+    title: "Veranstaltungen",
+    items: [
+      {
+        title: "Veranstaltungen",
+        href: "/events",
+        icon: PartyPopper,
+        permission: "view_own_groups",
       },
     ],
   },
@@ -250,9 +270,14 @@ export function Sidebar({ collapsed = false }: SidebarProps) {
           collapsed ? "justify-center" : "px-6"
         )}
       >
-        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-primary">
-          <span className="text-xs font-bold text-primary-foreground">GTS</span>
-        </div>
+        <Image
+          src="/assets/logos/hilfswerk-logo.svg"
+          alt="Hilfswerk Logo"
+          width={collapsed ? 36 : 40}
+          height={collapsed ? 36 : 40}
+          className="shrink-0 rounded-md"
+          priority
+        />
         {!collapsed && (
           <h2 className="ml-3 text-lg font-bold text-sidebar-foreground">
             GTS Planner
