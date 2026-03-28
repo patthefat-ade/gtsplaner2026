@@ -40,6 +40,8 @@ TRACKED_MODELS = [
     "groups.Student",
     "groups.SchoolYear",
     "groups.GroupMember",
+    "groups.GroupTransfer",
+    "groups.StudentContact",
     "system.SystemSetting",
 ]
 
