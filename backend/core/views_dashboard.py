@@ -76,7 +76,7 @@ class DashboardStatsView(APIView):
             transactions_qs = Transaction.objects.all()
             time_entries_qs = TimeEntry.objects.all()
             leave_requests_qs = LeaveRequest.objects.all()
-            weeklyplans_qs = WeeklyPlan.objects.all()
+            weeklyplans_qs = WeeklyPlan.objects.filter(is_deleted=False, is_template=False)
             educators_count = User.objects.filter(
                 role=User.Role.EDUCATOR, is_active=True
             ).count()
@@ -89,7 +89,7 @@ class DashboardStatsView(APIView):
             transactions_qs = Transaction.objects.filter(organization_id__in=tenant_ids)
             time_entries_qs = TimeEntry.objects.filter(organization_id__in=tenant_ids)
             leave_requests_qs = LeaveRequest.objects.filter(organization_id__in=tenant_ids)
-            weeklyplans_qs = WeeklyPlan.objects.filter(organization_id__in=tenant_ids)
+            weeklyplans_qs = WeeklyPlan.objects.filter(organization_id__in=tenant_ids, is_deleted=False, is_template=False)
             educators_count = User.objects.filter(
                 role=User.Role.EDUCATOR,
                 is_active=True,
@@ -106,7 +106,7 @@ class DashboardStatsView(APIView):
                 transactions_qs = Transaction.objects.filter(organization_id__in=tenant_ids)
                 time_entries_qs = TimeEntry.objects.filter(organization_id__in=tenant_ids)
                 leave_requests_qs = LeaveRequest.objects.filter(organization_id__in=tenant_ids)
-                weeklyplans_qs = WeeklyPlan.objects.filter(organization_id__in=tenant_ids)
+                weeklyplans_qs = WeeklyPlan.objects.filter(organization_id__in=tenant_ids, is_deleted=False, is_template=False)
             else:
                 locations_qs = Location.objects.none()
                 groups_qs = Group.objects.none()
@@ -120,15 +120,16 @@ class DashboardStatsView(APIView):
             # Educator: personal data only
             locations_qs = Location.objects.filter(id=getattr(user, "location_id", 0))
             groups_qs = Group.objects.filter(
-                organization_id__in=request.tenant_ids
-            ) if request.tenant_ids else Group.objects.none()
+                Q(members__user=user) | Q(leader=user)
+            ).distinct() if request.tenant_ids else Group.objects.none()
+            educator_group_ids = list(groups_qs.values_list("id", flat=True))
             students_qs = Student.objects.filter(
-                organization_id__in=request.tenant_ids
-            ) if request.tenant_ids else Student.objects.none()
+                group_id__in=educator_group_ids
+            ) if educator_group_ids else Student.objects.none()
             transactions_qs = Transaction.objects.filter(created_by=user)
             time_entries_qs = TimeEntry.objects.filter(user=user)
             leave_requests_qs = LeaveRequest.objects.filter(user=user)
-            weeklyplans_qs = WeeklyPlan.objects.filter(created_by=user)
+            weeklyplans_qs = WeeklyPlan.objects.filter(created_by=user, is_deleted=False, is_template=False)
             educators_count = 0
 
         # Calculate counts
