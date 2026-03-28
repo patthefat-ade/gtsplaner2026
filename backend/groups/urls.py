@@ -2,7 +2,7 @@
 Groups URL configuration.
 
 Routes for SchoolYear, Semester, Group, GroupMember, Student,
-and Attendance endpoints.
+Attendance, GroupTransfer, and StudentContact endpoints.
 """
 
 from django.urls import include, path
@@ -16,6 +16,7 @@ from groups.views import (
     StudentViewSet,
 )
 from groups.views_attendance import AttendanceViewSet
+from groups.views_transfer import GroupTransferViewSet
 
 app_name = "groups"
 
@@ -26,6 +27,7 @@ router.register(r"groups", GroupViewSet, basename="group")
 router.register(r"members", GroupMemberViewSet, basename="groupmember")
 router.register(r"students", StudentViewSet, basename="student")
 router.register(r"attendance", AttendanceViewSet, basename="attendance")
+router.register(r"transfers", GroupTransferViewSet, basename="grouptransfer")
 
 urlpatterns = [
     path("", include(router.urls)),
