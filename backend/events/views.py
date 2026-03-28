@@ -81,6 +81,7 @@ class EventViewSet(ExportMixin, TenantViewSetMixin, viewsets.ModelViewSet):
             participant_count=Count(
                 "participants",
                 filter=Q(participants__is_deleted=False),
+                distinct=True,
             ),
             consent_count=Count(
                 "participants",
@@ -88,6 +89,7 @@ class EventViewSet(ExportMixin, TenantViewSetMixin, viewsets.ModelViewSet):
                     participants__is_deleted=False,
                     participants__consent_status="granted",
                 ),
+                distinct=True,
             ),
         )
         return qs
@@ -103,15 +105,25 @@ class EventViewSet(ExportMixin, TenantViewSetMixin, viewsets.ModelViewSet):
         instance.is_deleted = True
         instance.save()
 
+    def create(self, request, *args, **kwargs):
+        """Override to return detail serializer after create."""
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        # Re-fetch from annotated queryset for correct serialization
+        instance = self.get_queryset().get(pk=serializer.instance.pk)
+        detail_serializer = EventDetailSerializer(instance)
+        return Response(detail_serializer.data, status=status.HTTP_201_CREATED)
+
     def update(self, request, *args, **kwargs):
         """Override to return detail serializer after update."""
         partial = kwargs.pop("partial", False)
         instance = self.get_object()
         serializer = self.get_serializer(instance, data=request.data, partial=partial)
-        serializer.validate(serializer.initial_data)
         serializer.is_valid(raise_exception=True)
         self.perform_update(serializer)
-        # Return detail serializer
+        # Re-fetch from annotated queryset for correct serialization
+        instance = self.get_queryset().get(pk=instance.pk)
         detail_serializer = EventDetailSerializer(instance)
         return Response(detail_serializer.data)
 

@@ -145,6 +145,7 @@ class EventCreateUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Event
         fields = [
+            "id",
             "title",
             "description",
             "event_type",
@@ -166,6 +167,7 @@ class EventCreateUpdateSerializer(serializers.ModelSerializer):
             "notes",
             "internal_notes",
         ]
+        read_only_fields = ["id"]
 
     def validate(self, data):
         """Validate date range."""
