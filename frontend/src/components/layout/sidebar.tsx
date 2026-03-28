@@ -138,6 +138,12 @@ const navigation: NavSection[] = [
         permission: "view_students",
       },
       {
+        title: "Tagesprotokoll",
+        href: "/groups/daily-protocols",
+        icon: FileText,
+        permission: "view_own_groups",
+      },
+      {
         title: "Schuljahre",
         href: "/groups/school-years",
         icon: School,

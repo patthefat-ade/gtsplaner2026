@@ -690,3 +690,80 @@ export interface AutonomousDay {
   created_at: string;
   updated_at: string;
 }
+
+/* ───── Daily Protocol ─────────────────────────────────────────────────── */
+
+export type IncidentSeverity = "normal" | "important" | "urgent";
+
+export const SEVERITY_LABELS: Record<IncidentSeverity, string> = {
+  normal: "Normal",
+  important: "Wichtig",
+  urgent: "Dringend",
+};
+
+export const SEVERITY_COLORS: Record<IncidentSeverity, string> = {
+  normal: "#22C55E",
+  important: "#F97316",
+  urgent: "#EF4444",
+};
+
+export interface DailyProtocol {
+  id: number;
+  student: number;
+  student_name: string;
+  date: string;
+  group: number;
+  group_name: string;
+  effective_group: number | null;
+  effective_group_name: string;
+  transfer: number | null;
+  has_transfer: boolean;
+  school_year: number | null;
+  school_year_name: string;
+  arrival_time: string | null;
+  arrival_notes: string;
+  incidents: string;
+  incident_severity: IncidentSeverity;
+  pickup_time: string | null;
+  picked_up_by: number | null;
+  picked_up_by_name: string;
+  pickup_notes: string;
+  recorded_by: number | null;
+  recorded_by_name: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface DailyProtocolCreate {
+  student: number;
+  date: string;
+  group?: number;
+  effective_group?: number | null;
+  transfer?: number | null;
+  school_year?: number | null;
+  arrival_time?: string | null;
+  arrival_notes?: string;
+  incidents?: string;
+  incident_severity?: IncidentSeverity;
+  pickup_time?: string | null;
+  picked_up_by?: number | null;
+  pickup_notes?: string;
+}
+
+export interface BulkDailyProtocolRecord {
+  student_id: number;
+  arrival_time?: string | null;
+  arrival_notes?: string;
+  incidents?: string;
+  incident_severity?: IncidentSeverity;
+  pickup_time?: string | null;
+  picked_up_by_id?: number | null;
+  pickup_notes?: string;
+}
+
+export interface BulkDailyProtocolPayload {
+  group_id: number;
+  date: string;
+  school_year_id?: number | null;
+  records: BulkDailyProtocolRecord[];
+}
