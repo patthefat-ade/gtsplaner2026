@@ -8,6 +8,7 @@ import {
   useUpdateWeeklyPlan,
   useExportPdf,
   useDuplicateWeeklyPlan,
+  useDuplicateEntry,
 } from "@/hooks/use-weeklyplans";
 import { usePermissions } from "@/hooks/use-permissions";
 import { useToast } from "@/components/ui/toast";
@@ -108,6 +109,12 @@ export default function WeeklyPlanDetailPage() {
   const updateMutation = useUpdateWeeklyPlan();
   const exportPdf = useExportPdf();
   const duplicateMutation = useDuplicateWeeklyPlan();
+  const duplicateEntryMutation = useDuplicateEntry();
+
+  // Duplicate entry dialog
+  const [duplicateEntryDialog, setDuplicateEntryDialog] = useState(false);
+  const [duplicateSourceEntry, setDuplicateSourceEntry] = useState<WeeklyPlanEntry | null>(null);
+  const [duplicateTargetDay, setDuplicateTargetDay] = useState<string>("0");
 
   // Edit mode
   const [isEditing, setIsEditing] = useState(searchParams.get("edit") === "true");
@@ -237,6 +244,30 @@ export default function WeeklyPlanDetailPage() {
     }
   };
 
+  const handleDuplicateEntry = async () => {
+    if (!duplicateSourceEntry?.id || !plan) return;
+    try {
+      await duplicateEntryMutation.mutateAsync({
+        planId: plan.id,
+        entryId: duplicateSourceEntry.id,
+        targetDay: Number(duplicateTargetDay),
+      });
+      toast.success("Eintrag erfolgreich dupliziert");
+      setDuplicateEntryDialog(false);
+      setDuplicateSourceEntry(null);
+    } catch {
+      toast.error("Fehler", "Eintrag konnte nicht dupliziert werden.");
+    }
+  };
+
+  const openDuplicateEntryDialog = (entry: WeeklyPlanEntry) => {
+    setDuplicateSourceEntry(entry);
+    // Default to next day
+    const nextDay = entry.day_of_week < 4 ? entry.day_of_week + 1 : 0;
+    setDuplicateTargetDay(String(nextDay));
+    setDuplicateEntryDialog(true);
+  };
+
   const handleDuplicate = async () => {
     try {
       await duplicateMutation.mutateAsync(planId);
@@ -298,16 +329,25 @@ export default function WeeklyPlanDetailPage() {
             ) : (
               <h1 className="text-3xl font-bold tracking-tight">{plan.title}</h1>
             )}
-            <div className="mt-1 flex items-center gap-2 text-muted-foreground">
+            <div className="mt-1 flex flex-wrap items-center gap-2 text-muted-foreground">
               <CalendarDays className="h-4 w-4" />
               <span>KW {plan.calendar_week}</span>
-              <span>·</span>
+              {plan.week_start_date && (
+                <span className="text-xs">
+                  ({new Date(plan.week_start_date).toLocaleDateString("de-AT", { day: "2-digit", month: "2-digit", year: "numeric" })}
+                  {" \u2013 "}
+                  {plan.week_end_date
+                    ? new Date(plan.week_end_date).toLocaleDateString("de-AT", { day: "2-digit", month: "2-digit", year: "numeric" })
+                    : ""})
+                </span>
+              )}
+              <span>\u00b7</span>
               <span>{plan.group_name}</span>
-              <span>·</span>
+              <span>\u00b7</span>
               <span>{plan.location_name}</span>
-              <span>·</span>
+              <span>\u00b7</span>
               <Badge variant={plan.status === "published" ? "default" : "secondary"}>
-                {plan.status === "published" ? "Veröffentlicht" : "Entwurf"}
+                {plan.status === "published" ? "Ver\u00f6ffentlicht" : "Entwurf"}
               </Badge>
             </div>
           </div>
@@ -391,6 +431,24 @@ export default function WeeklyPlanDetailPage() {
         <Card>
           <CardContent className="pt-6">
             <p className="text-sm text-muted-foreground">{plan.notes}</p>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Weekly Theme */}
+      {!isEditing && plan.weekly_theme && (
+        <Card className="border-yellow-400 dark:border-yellow-600">
+          <CardHeader className="bg-yellow-50 dark:bg-yellow-950/30">
+            <CardTitle className="flex items-center gap-2 text-yellow-800 dark:text-yellow-200">
+              <span className="text-lg">\u2b50</span>
+              Thema der Woche
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="bg-yellow-50/50 pt-4 dark:bg-yellow-950/20">
+            <div
+              className="prose prose-sm dark:prose-invert max-w-none"
+              dangerouslySetInnerHTML={{ __html: plan.weekly_theme }}
+            />
           </CardContent>
         </Card>
       )}
@@ -494,7 +552,7 @@ export default function WeeklyPlanDetailPage() {
                                     {getCategoryLabel(entry.category)}
                                   </span>
                                 </div>
-                                {isEditing && (
+                                {isEditing ? (
                                   <button
                                     className="mt-1 text-[10px] text-destructive hover:underline"
                                     onClick={(e) => {
@@ -504,6 +562,19 @@ export default function WeeklyPlanDetailPage() {
                                   >
                                     Entfernen
                                   </button>
+                                ) : (
+                                  entry.id && (
+                                    <button
+                                      className="mt-1 flex items-center gap-0.5 text-[10px] text-muted-foreground hover:text-primary hover:underline"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        openDuplicateEntryDialog(entry);
+                                      }}
+                                    >
+                                      <Copy className="h-2.5 w-2.5" />
+                                      Duplizieren
+                                    </button>
+                                  )
                                 )}
                               </div>
                             </td>
@@ -637,6 +708,37 @@ export default function WeeklyPlanDetailPage() {
         </CardContent>
       </Card>
 
+      {/* Daily Activities */}
+      {!isEditing && plan.daily_activities && plan.daily_activities.length > 0 && (
+        <Card className="border-amber-300 dark:border-amber-600">
+          <CardHeader className="bg-amber-50 dark:bg-amber-950/30">
+            <CardTitle className="flex items-center gap-2 text-amber-800 dark:text-amber-200">
+              <span className="text-lg">\ud83d\udccb</span>
+              Tagesaktivit\u00e4ten
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-4">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+              {[0, 1, 2, 3, 4].map((dayIdx) => {
+                const da = plan.daily_activities?.find((a) => a.day_of_week === dayIdx);
+                if (!da || !da.content) return null;
+                return (
+                  <div key={dayIdx} className="rounded-lg border border-border p-3">
+                    <h4 className="mb-2 text-sm font-semibold">
+                      {DAY_NAMES[dayIdx as DayOfWeek]}
+                    </h4>
+                    <div
+                      className="prose prose-xs dark:prose-invert max-w-none text-sm"
+                      dangerouslySetInnerHTML={{ __html: da.content }}
+                    />
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Entry Edit Dialog */}
       <Dialog open={entryDialog} onOpenChange={setEntryDialog}>
         <DialogContent>
@@ -751,6 +853,55 @@ export default function WeeklyPlanDetailPage() {
             </Button>
             <Button onClick={saveEntry} disabled={!editingEntry.activity}>
               {editingEntryIndex !== null ? "Aktualisieren" : "Hinzufügen"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Duplicate Entry Dialog */}
+      <Dialog open={duplicateEntryDialog} onOpenChange={setDuplicateEntryDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Eintrag duplizieren</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            {duplicateSourceEntry && (
+              <div className="rounded-lg border border-border bg-muted/30 p-3">
+                <div className="text-sm font-semibold">{duplicateSourceEntry.activity}</div>
+                <div className="text-xs text-muted-foreground">
+                  {DAY_NAMES[duplicateSourceEntry.day_of_week]} {duplicateSourceEntry.start_time} \u2013 {duplicateSourceEntry.end_time}
+                </div>
+                {duplicateSourceEntry.description && (
+                  <div className="mt-1 text-xs text-muted-foreground">{duplicateSourceEntry.description}</div>
+                )}
+              </div>
+            )}
+            <div>
+              <label className="mb-1 block text-sm font-medium">Ziel-Wochentag</label>
+              <Select value={duplicateTargetDay} onValueChange={setDuplicateTargetDay}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {days.map((d) => (
+                    <SelectItem key={d} value={String(d)}>
+                      {DAY_NAMES[d]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDuplicateEntryDialog(false)}>
+              Abbrechen
+            </Button>
+            <Button
+              onClick={handleDuplicateEntry}
+              disabled={duplicateEntryMutation.isPending}
+            >
+              <Copy className="mr-2 h-4 w-4" />
+              {duplicateEntryMutation.isPending ? "Duplizieren..." : "Duplizieren"}
             </Button>
           </DialogFooter>
         </DialogContent>

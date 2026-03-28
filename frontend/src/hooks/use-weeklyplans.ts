@@ -152,3 +152,28 @@ export function useExportPdf() {
     },
   });
 }
+
+// ── Duplicate Entry ─────────────────────────────────────────────────────────
+export function useDuplicateEntry() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      planId,
+      entryId,
+      targetDay,
+    }: {
+      planId: number;
+      entryId: number;
+      targetDay: number;
+    }) =>
+      api
+        .post(`${BASE}/${planId}/duplicate-entry/`, {
+          entry_id: entryId,
+          target_day: targetDay,
+        })
+        .then((r) => r.data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["weeklyplans"] });
+    },
+  });
+}
