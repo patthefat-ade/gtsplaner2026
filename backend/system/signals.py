@@ -42,6 +42,8 @@ TRACKED_MODELS = [
     "groups.GroupMember",
     "groups.GroupTransfer",
     "groups.StudentContact",
+    "groups.HolidayPeriod",
+    "groups.AutonomousDay",
     "system.SystemSetting",
 ]
 
