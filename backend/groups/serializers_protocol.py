@@ -82,6 +82,13 @@ class DailyProtocolSerializer(serializers.ModelSerializer):
 class DailyProtocolCreateSerializer(serializers.ModelSerializer):
     """Write serializer for creating/updating a DailyProtocol."""
 
+    # group wird automatisch im Model.save() aus dem Schüler abgeleitet
+    group = serializers.PrimaryKeyRelatedField(
+        queryset=DailyProtocol.group.field.related_model.objects.all(),
+        required=False,
+        allow_null=True,
+    )
+
     class Meta:
         model = DailyProtocol
         fields = [
