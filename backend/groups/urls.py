@@ -16,6 +16,7 @@ from groups.views import (
     StudentViewSet,
 )
 from groups.views_attendance import AttendanceViewSet
+from groups.views_contacts import StudentContactViewSet
 from groups.views_transfer import GroupTransferViewSet
 
 app_name = "groups"
@@ -28,6 +29,7 @@ router.register(r"members", GroupMemberViewSet, basename="groupmember")
 router.register(r"students", StudentViewSet, basename="student")
 router.register(r"attendance", AttendanceViewSet, basename="attendance")
 router.register(r"transfers", GroupTransferViewSet, basename="grouptransfer")
+router.register(r"contacts", StudentContactViewSet, basename="studentcontact")
 
 urlpatterns = [
     path("", include(router.urls)),
