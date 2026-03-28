@@ -93,8 +93,10 @@ class GroupTransferCreateSerializer(serializers.ModelSerializer):
             "end_time",
             "reason",
             "notes",
+            "status",
+            "requested_by",
         ]
-        read_only_fields = ["id"]
+        read_only_fields = ["id", "status", "requested_by"]
 
     def validate(self, attrs: dict) -> dict:
         source = attrs.get("source_group")
