@@ -345,3 +345,4 @@ from groups.models_attendance import Attendance  # noqa: E402, F401
 from groups.models_transfer import GroupTransfer  # noqa: E402, F401
 from groups.models_contacts import StudentContact  # noqa: E402, F401
 from groups.models_calendar import HolidayPeriod, AutonomousDay  # noqa: E402, F401
+from groups.models_protocol import DailyProtocol  # noqa: E402, F401

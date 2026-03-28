@@ -3,7 +3,7 @@ Groups URL configuration.
 
 Routes for SchoolYear, Semester, Group, GroupMember, Student,
 Attendance, GroupTransfer, StudentContact, HolidayPeriod,
-and AutonomousDay endpoints.
+AutonomousDay, and DailyProtocol endpoints.
 """
 
 from django.urls import include, path
@@ -19,6 +19,7 @@ from groups.views import (
 from groups.views_attendance import AttendanceViewSet
 from groups.views_calendar import AutonomousDayViewSet, HolidayPeriodViewSet
 from groups.views_contacts import StudentContactViewSet
+from groups.views_protocol import DailyProtocolViewSet
 from groups.views_transfer import GroupTransferViewSet
 
 app_name = "groups"
@@ -34,6 +35,7 @@ router.register(r"transfers", GroupTransferViewSet, basename="grouptransfer")
 router.register(r"contacts", StudentContactViewSet, basename="studentcontact")
 router.register(r"holidays", HolidayPeriodViewSet, basename="holidayperiod")
 router.register(r"autonomous-days", AutonomousDayViewSet, basename="autonomousday")
+router.register(r"daily-protocols", DailyProtocolViewSet, basename="dailyprotocol")
 
 urlpatterns = [
     path("", include(router.urls)),

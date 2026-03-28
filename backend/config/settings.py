@@ -288,6 +288,7 @@ SPECTACULAR_SETTINGS = {
         {"name": "Gruppenwechsel", "description": "Temporäre Gruppenwechsel & Bestätigungsworkflow"},
         {"name": "Kontaktpersonen", "description": "Kontaktpersonen & Abholberechtigte"},
         {"name": "Schulkalender", "description": "Ferien & schulautonome Tage"},
+        {"name": "Tagesprotokoll", "description": "Tägliche Schülerprotokolle (Ankunft, Vorkommnisse, Abholung)"},
         {"name": "WeeklyPlans", "description": "Wochenpläne & Tagesaktivitäten"},
         {"name": "Admin", "description": "Admin-Funktionen & Systemverwaltung"},
         {"name": "System", "description": "Systemeinstellungen & Audit-Log"},
@@ -305,6 +306,7 @@ SPECTACULAR_SETTINGS = {
         "StudentContactRelationshipEnum": "groups.models_contacts.StudentContact.Relationship",
         # Resolve TransactionType duplicate naming
         "TransactionTypeEnum": "finance.models.Transaction.TransactionType",
+        "IncidentSeverityEnum": "groups.models_protocol.DailyProtocol.IncidentSeverity",
     },
 }
 
