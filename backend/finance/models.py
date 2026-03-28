@@ -107,6 +107,15 @@ class Transaction(TenantModel):
         related_name="transactions",
         verbose_name="Gruppe",
     )
+    school_year = models.ForeignKey(
+        "groups.SchoolYear",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="transactions",
+        verbose_name="Schuljahr",
+        help_text="Zugehöriges Schuljahr (wird automatisch zugeordnet)",
+    )
     category = models.ForeignKey(
         TransactionCategory,
         on_delete=models.SET_NULL,
@@ -190,9 +199,15 @@ class Transaction(TenantModel):
         return f"{sign}{self.amount} EUR - {self.description} ({self.get_status_display()})"
 
     def save(self, *args, **kwargs):
-        """Auto-set organization from group if not set."""
+        """Auto-set organization and school_year from group if not set."""
         if not self.organization_id and self.group_id:
             self.organization_id = self.group.organization_id
+        # Auto-assign active school year from group if not set
+        if not self.school_year_id and self.group_id:
+            try:
+                self.school_year = self.group.school_year
+            except Exception:
+                pass
         super().save(*args, **kwargs)
 
 

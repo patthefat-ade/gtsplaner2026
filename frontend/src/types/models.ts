@@ -668,3 +668,25 @@ export interface StudentContactCreate {
   whatsapp_available?: boolean;
   notes?: string;
 }
+
+/* ───── School Calendar ────────────────────────────────────────────────── */
+
+export interface HolidayPeriod {
+  id: number;
+  school_year: number;
+  name: string;
+  start_date: string;
+  end_date: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AutonomousDay {
+  id: number;
+  school_year: number;
+  name: string;
+  date: string;
+  description: string;
+  created_at: string;
+  updated_at: string;
+}

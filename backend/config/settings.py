@@ -287,6 +287,7 @@ SPECTACULAR_SETTINGS = {
         {"name": "Groups", "description": "Gruppen- & Schülerverwaltung"},
         {"name": "Gruppenwechsel", "description": "Temporäre Gruppenwechsel & Bestätigungsworkflow"},
         {"name": "Kontaktpersonen", "description": "Kontaktpersonen & Abholberechtigte"},
+        {"name": "Schulkalender", "description": "Ferien & schulautonome Tage"},
         {"name": "WeeklyPlans", "description": "Wochenpläne & Tagesaktivitäten"},
         {"name": "Admin", "description": "Admin-Funktionen & Systemverwaltung"},
         {"name": "System", "description": "Systemeinstellungen & Audit-Log"},

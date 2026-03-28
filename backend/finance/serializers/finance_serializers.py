@@ -143,6 +143,9 @@ class TransactionListSerializer(serializers.ModelSerializer):
     category_name = serializers.CharField(
         source="category.name", read_only=True, default=None
     )
+    school_year_name = serializers.CharField(
+        source="school_year.name", read_only=True, default=None
+    )
     created_by = FinanceUserCompactSerializer(read_only=True)
     approved_by = FinanceUserCompactSerializer(read_only=True)
     receipt_count = serializers.IntegerField(
@@ -155,6 +158,8 @@ class TransactionListSerializer(serializers.ModelSerializer):
             "id",
             "group",
             "group_name",
+            "school_year",
+            "school_year_name",
             "category",
             "category_name",
             "description",
@@ -190,12 +195,18 @@ class TransactionDetailSerializer(serializers.ModelSerializer):
     approved_by = FinanceUserCompactSerializer(read_only=True)
     receipts = ReceiptSerializer(many=True, read_only=True)
 
+    school_year_name = serializers.CharField(
+        source="school_year.name", read_only=True, default=None
+    )
+
     class Meta:
         model = Transaction
         fields = [
             "id",
             "group",
             "group_name",
+            "school_year",
+            "school_year_name",
             "category",
             "category_name",
             "description",

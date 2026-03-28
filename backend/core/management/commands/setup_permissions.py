@@ -60,9 +60,10 @@ GROUP_PERMISSIONS = {
     "Educator": [
         # Dashboard
         "view_dashboard",
-        # Groups: can view own groups and students (read-only)
+        # Groups: can view own groups and manage students in own groups
         "view_own_groups",
         "view_students",
+        "manage_students",
         # Locations: can view own location (read-only)
         "view_locations",
         # Finance: can view and create own transactions

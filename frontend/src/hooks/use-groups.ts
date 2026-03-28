@@ -229,3 +229,120 @@ export function useSchoolYears(params?: Record<string, string | number>) {
     staleTime: 10 * 60 * 1000,
   });
 }
+
+// ─── School Calendar (Holidays & Autonomous Days) ───────────────────────────
+
+import type { HolidayPeriod, AutonomousDay } from "@/types/models";
+
+export const calendarKeys = {
+  holidays: (schoolYearId: number) =>
+    ["calendar", "holidays", schoolYearId] as const,
+  autonomousDays: (schoolYearId: number) =>
+    ["calendar", "autonomous-days", schoolYearId] as const,
+};
+
+export function useHolidays(schoolYearId: number) {
+  return useQuery({
+    queryKey: calendarKeys.holidays(schoolYearId),
+    queryFn: async () => {
+      const { data } = await api.get<PaginatedResponse<HolidayPeriod>>(
+        `/groups/holidays/`,
+        { params: { school_year: schoolYearId, page_size: 100 } }
+      );
+      return data;
+    },
+    enabled: !!schoolYearId,
+    staleTime: 10 * 60 * 1000,
+  });
+}
+
+export function useCreateHoliday() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (payload: Omit<HolidayPeriod, "id" | "created_at" | "updated_at">) => {
+      const { data } = await api.post<HolidayPeriod>("/groups/holidays/", payload);
+      return data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["calendar", "holidays"] });
+    },
+  });
+}
+
+export function useDeleteHoliday() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: number) => {
+      await api.delete(`/groups/holidays/${id}/`);
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["calendar", "holidays"] });
+    },
+  });
+}
+
+export function useAutonomousDays(schoolYearId: number) {
+  return useQuery({
+    queryKey: calendarKeys.autonomousDays(schoolYearId),
+    queryFn: async () => {
+      const { data } = await api.get<PaginatedResponse<AutonomousDay>>(
+        `/groups/autonomous-days/`,
+        { params: { school_year: schoolYearId, page_size: 100 } }
+      );
+      return data;
+    },
+    enabled: !!schoolYearId,
+    staleTime: 10 * 60 * 1000,
+  });
+}
+
+export function useCreateAutonomousDay() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (payload: Omit<AutonomousDay, "id" | "created_at" | "updated_at">) => {
+      const { data } = await api.post<AutonomousDay>("/groups/autonomous-days/", payload);
+      return data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["calendar", "autonomous-days"] });
+    },
+  });
+}
+
+export function useDeleteAutonomousDay() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: number) => {
+      await api.delete(`/groups/autonomous-days/${id}/`);
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["calendar", "autonomous-days"] });
+    },
+  });
+}
+
+export function useCreateSchoolYear() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (payload: { name: string; location: number; start_date: string; end_date: string; is_active?: boolean }) => {
+      const { data } = await api.post<SchoolYear>("/groups/school-years/", payload);
+      return data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["groups", "school-years"] });
+    },
+  });
+}
+
+export function useUpdateSchoolYear() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, ...payload }: { id: number; name?: string; start_date?: string; end_date?: string; is_active?: boolean }) => {
+      const { data } = await api.patch<SchoolYear>(`/groups/school-years/${id}/`, payload);
+      return data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["groups", "school-years"] });
+    },
+  });
+}
