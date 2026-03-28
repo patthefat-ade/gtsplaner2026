@@ -309,7 +309,7 @@ export default function WeeklyPlansPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>KW</TableHead>
+                  <TableHead>KW / Zeitraum</TableHead>
                   <TableHead>Titel</TableHead>
                   <TableHead>Gruppe</TableHead>
                   <TableHead>Standort</TableHead>
@@ -323,7 +323,16 @@ export default function WeeklyPlansPage() {
                 {sortedPlans.map((plan) => (
                   <TableRow key={plan.id}>
                     <TableCell className="font-medium">
-                      KW {plan.calendar_week}
+                      <div>KW {plan.calendar_week}</div>
+                      {plan.week_start_date && (
+                        <div className="text-xs text-muted-foreground">
+                          {new Date(plan.week_start_date).toLocaleDateString("de-AT", { day: "2-digit", month: "2-digit" })}
+                          {" – "}
+                          {plan.week_end_date
+                            ? new Date(plan.week_end_date).toLocaleDateString("de-AT", { day: "2-digit", month: "2-digit" })
+                            : ""}
+                        </div>
+                      )}
                     </TableCell>
                     <TableCell>
                       <Link

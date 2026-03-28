@@ -129,6 +129,9 @@ class SystemSettingViewSet(viewsets.ModelViewSet):
     ordering = ["key"]
 
     def get_queryset(self):
+        if getattr(self, "swagger_fake_view", False):
+            return SystemSetting.objects.none()
+
         user = self.request.user
         if user.role in ["admin", "super_admin"]:
             return SystemSetting.objects.all()

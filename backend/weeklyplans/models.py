@@ -118,15 +118,22 @@ class WeeklyPlan(TenantModel):
     def calendar_week(self):
         """Return the ISO calendar week number."""
         if self.week_start_date:
-            return self.week_start_date.isocalendar()[1]
+            import datetime as _dt
+            d = self.week_start_date
+            if isinstance(d, str):
+                d = _dt.date.fromisoformat(d)
+            return d.isocalendar()[1]
         return None
 
     @property
     def week_end_date(self):
         """Return the Friday of the same week."""
         if self.week_start_date:
-            import datetime
-            return self.week_start_date + datetime.timedelta(days=4)
+            import datetime as _dt
+            d = self.week_start_date
+            if isinstance(d, str):
+                d = _dt.date.fromisoformat(d)
+            return d + _dt.timedelta(days=4)
         return None
 
 

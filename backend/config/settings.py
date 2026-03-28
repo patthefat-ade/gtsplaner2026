@@ -269,13 +269,13 @@ SIMPLE_JWT = {
 # ---------------------------------------------------------------------------
 
 SPECTACULAR_SETTINGS = {
-    "TITLE": "Kassenbuch App v2 API",
+    "TITLE": "GTS Planer API",
     "DESCRIPTION": (
-        "REST API für die Kassenbuch App v2 – "
-        "Verwaltung von Klassenkassen für Freizeitpädagoginnen. "
+        "REST API für den GTS Planer – "
+        "Verwaltung von Ganztagsschul-Gruppen, Wochenplänen, Finanzen und Zeiterfassung. "
         "Django + Next.js Headless Architecture."
     ),
-    "VERSION": "2.0.0",
+    "VERSION": "2.4.0",
     "SERVE_INCLUDE_SCHEMA": False,
     "COMPONENT_SPLIT_REQUEST": True,
     "SCHEMA_PATH_PREFIX": r"/api/v1",
@@ -285,9 +285,22 @@ SPECTACULAR_SETTINGS = {
         {"name": "Finance", "description": "Kassenbuch & Transaktionen"},
         {"name": "TimeTracking", "description": "Zeiterfassung & Arbeitszeiten"},
         {"name": "Groups", "description": "Gruppen- & Schülerverwaltung"},
+        {"name": "WeeklyPlans", "description": "Wochenpläne & Tagesaktivitäten"},
         {"name": "Admin", "description": "Admin-Funktionen & Systemverwaltung"},
         {"name": "System", "description": "Systemeinstellungen & Audit-Log"},
     ],
+    "ENUM_NAME_OVERRIDES": {
+        # Resolve enum naming collisions for 'status' fields across models
+        "WeeklyPlanStatusEnum": "weeklyplans.models.WeeklyPlan.STATUS_CHOICES",
+        "TransactionStatusEnum": "finance.models.Transaction.Status",
+        "LeaveRequestStatusEnum": "timetracking.models.LeaveRequest.Status",
+        "AttendanceStatusEnum": "groups.models_attendance.Attendance.Status",
+        # Resolve enum naming collisions for 'role' fields
+        "UserRoleEnum": "core.models.User.Role",
+        "GroupMemberRoleEnum": "groups.models.GroupMember.MemberRole",
+        # Resolve TransactionType duplicate naming
+        "TransactionTypeEnum": "finance.models.Transaction.TransactionType",
+    },
 }
 
 # ---------------------------------------------------------------------------
