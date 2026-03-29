@@ -16,6 +16,10 @@ from encrypted_fields.fields import (
 )
 
 from core.managers import AllTenantsManager, TenantManager
+from core.validators import (
+    validate_image_size,
+    validate_image_type,
+)
 
 
 class User(AbstractUser):
@@ -66,7 +70,11 @@ class User(AbstractUser):
         max_length=255, blank=True, null=True, default="", verbose_name="Telefon"
     )
     profile_picture = models.ImageField(
-        upload_to="profiles/", null=True, blank=True, verbose_name="Profilbild"
+        upload_to="profiles/",
+        null=True,
+        blank=True,
+        verbose_name="Profilbild",
+        validators=[validate_image_type, validate_image_size],
     )
     is_deleted = models.BooleanField(default=False, verbose_name="Gelöscht")
     last_password_change = models.DateTimeField(
@@ -212,7 +220,11 @@ class Organization(models.Model):
     )
     country = models.CharField(max_length=100, default="Oesterreich", verbose_name="Land")
     logo = models.ImageField(
-        upload_to="organizations/", null=True, blank=True, verbose_name="Logo"
+        upload_to="organizations/",
+        null=True,
+        blank=True,
+        verbose_name="Logo",
+        validators=[validate_image_type, validate_image_size],
     )
     is_active = models.BooleanField(default=True, verbose_name="Aktiv")
     is_deleted = models.BooleanField(default=False, verbose_name="Geloescht")

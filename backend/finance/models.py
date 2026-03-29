@@ -13,6 +13,7 @@ from django.core.validators import MinValueValidator
 from django.db import models
 
 from core.models import TenantModel
+from core.validators import validate_receipt_size, validate_receipt_type
 
 
 class TransactionCategory(TenantModel):
@@ -227,6 +228,7 @@ class Receipt(TenantModel):
     file = models.FileField(
         upload_to="receipts/%Y/%m/",
         verbose_name="Datei",
+        validators=[validate_receipt_type, validate_receipt_size],
     )
     file_name = models.CharField(max_length=255, verbose_name="Dateiname")
     file_size = models.IntegerField(
