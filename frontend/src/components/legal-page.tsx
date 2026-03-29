@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { sanitizeHtml } from "@/lib/sanitize";
 
 interface LegalPageProps {
   title: string;
@@ -73,7 +74,7 @@ export function LegalPage({ title, content }: LegalPageProps) {
                   {intro && !intro.startsWith("- ") && (
                     <p
                       dangerouslySetInnerHTML={{
-                        __html: formatText(intro),
+                        __html: sanitizeHtml(formatText(intro)),
                       }}
                     />
                   )}
@@ -82,7 +83,7 @@ export function LegalPage({ title, content }: LegalPageProps) {
                       <li
                         key={i}
                         dangerouslySetInnerHTML={{
-                          __html: formatText(item.replace(/^- /, "")),
+                          __html: sanitizeHtml(formatText(item.replace(/^- /, ""))),
                         }}
                       />
                     ))}
@@ -96,7 +97,7 @@ export function LegalPage({ title, content }: LegalPageProps) {
               <p
                 key={index}
                 dangerouslySetInnerHTML={{
-                  __html: formatText(paragraph),
+                  __html: sanitizeHtml(formatText(paragraph)),
                 }}
               />
             );

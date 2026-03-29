@@ -12,6 +12,7 @@ import {
 } from "@/hooks/use-weeklyplans";
 import { useSchoolYears } from "@/hooks/use-groups";
 import { usePermissions } from "@/hooks/use-permissions";
+import { sanitizeHtml } from "@/lib/sanitize";
 import { useToast } from "@/components/ui/toast";
 import { Breadcrumbs } from "@/components/common/breadcrumbs";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -532,7 +533,7 @@ export default function WeeklyPlanDetailPage() {
           <CardContent className="bg-yellow-50/50 pt-4 dark:bg-yellow-950/20">
             <div
               className="prose prose-sm dark:prose-invert max-w-none"
-              dangerouslySetInnerHTML={{ __html: plan.weekly_theme }}
+              dangerouslySetInnerHTML={{ __html: sanitizeHtml(plan.weekly_theme) }}
             />
           </CardContent>
         </Card>
@@ -849,7 +850,7 @@ export default function WeeklyPlanDetailPage() {
                     </h4>
                     <div
                       className="prose prose-xs dark:prose-invert max-w-none text-sm"
-                      dangerouslySetInnerHTML={{ __html: da.content }}
+                      dangerouslySetInnerHTML={{ __html: sanitizeHtml(da.content) }}
                     />
                   </div>
                 );
