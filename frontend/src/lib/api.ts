@@ -3,7 +3,12 @@ import axios from "axios";
 /**
  * Pre-configured Axios instance for communicating with the Django backend.
  *
- * Includes automatic JWT token attachment and silent token refresh on 401.
+ * Authentication is handled via httpOnly cookies set by the backend.
+ * The `withCredentials: true` flag ensures cookies are sent with every request.
+ * No manual token management is needed on the client side.
+ *
+ * Token refresh is handled automatically on 401 responses by calling
+ * the /auth/refresh/ endpoint (which reads the refresh token from its cookie).
  */
 const api = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL || "/api/v1",
@@ -13,33 +18,19 @@ const api = axios.create({
   withCredentials: true,
 });
 
-// Request interceptor: attach JWT access token
-api.interceptors.request.use(
-  (config) => {
-    if (typeof window !== "undefined") {
-      const token = localStorage.getItem("access_token");
-      if (token && config.headers) {
-        config.headers.Authorization = `Bearer ${token}`;
-      }
-    }
-    return config;
-  },
-  (error) => Promise.reject(error),
-);
-
-// Response interceptor: handle 401 with silent token refresh
+// Response interceptor: handle 401 with silent token refresh via cookies
 let isRefreshing = false;
 let failedQueue: Array<{
   resolve: (value: unknown) => void;
   reject: (reason?: unknown) => void;
 }> = [];
 
-const processQueue = (error: unknown, token: string | null = null) => {
+const processQueue = (error: unknown) => {
   failedQueue.forEach((prom) => {
     if (error) {
       prom.reject(error);
     } else {
-      prom.resolve(token);
+      prom.resolve(undefined);
     }
   });
   failedQueue = [];
@@ -62,8 +53,8 @@ api.interceptors.response.use(
         return new Promise((resolve, reject) => {
           failedQueue.push({ resolve, reject });
         })
-          .then((token) => {
-            originalRequest.headers.Authorization = `Bearer ${token}`;
+          .then(() => {
+            // Retry with cookies (no manual header needed)
             return api(originalRequest);
           })
           .catch((err) => Promise.reject(err));
@@ -72,34 +63,21 @@ api.interceptors.response.use(
       originalRequest._retry = true;
       isRefreshing = true;
 
-      const refreshToken = localStorage.getItem("refresh_token");
-
-      if (!refreshToken) {
-        isRefreshing = false;
-        localStorage.removeItem("access_token");
-        localStorage.removeItem("refresh_token");
-        window.location.href = "/login";
-        return Promise.reject(error);
-      }
-
       try {
-        const { data } = await axios.post(
+        // Call refresh endpoint – it reads the refresh token from the httpOnly cookie
+        // and sets new access + refresh cookies in the response
+        await axios.post(
           `${api.defaults.baseURL}/auth/refresh/`,
-          { refresh: refreshToken },
+          {},
+          { withCredentials: true },
         );
 
-        localStorage.setItem("access_token", data.access);
-        if (data.refresh) {
-          localStorage.setItem("refresh_token", data.refresh);
-        }
-
-        processQueue(null, data.access);
-        originalRequest.headers.Authorization = `Bearer ${data.access}`;
+        processQueue(null);
+        // Retry original request – new cookies are automatically included
         return api(originalRequest);
       } catch (refreshError) {
-        processQueue(refreshError, null);
-        localStorage.removeItem("access_token");
-        localStorage.removeItem("refresh_token");
+        processQueue(refreshError);
+        // Refresh failed – redirect to login
         window.location.href = "/login";
         return Promise.reject(refreshError);
       } finally {

@@ -1,5 +1,8 @@
 /**
  * Auth API service – handles all authentication-related API calls.
+ *
+ * JWT tokens are managed via httpOnly cookies set by the backend.
+ * No manual token handling is needed on the client side.
  */
 
 import api from "@/lib/api";
@@ -9,7 +12,6 @@ import type {
   PasswordChange,
   PasswordResetConfirm,
   PasswordResetRequest,
-  TokenRefreshResponse,
   TwoFactorLoginVerify,
   TwoFactorSetupResponse,
   TwoFactorStatusResponse,
@@ -20,6 +22,7 @@ import type {
 export const authApi = {
   /**
    * Login with username/email and password.
+   * The backend sets httpOnly cookies with JWT tokens in the response.
    * May return requires_2fa=true if 2FA is enabled.
    */
   login: async (credentials: LoginCredentials): Promise<LoginResponse> => {
@@ -28,22 +31,20 @@ export const authApi = {
   },
 
   /**
-   * Logout by blacklisting the refresh token.
+   * Logout by calling the backend which blacklists the refresh token
+   * and clears the httpOnly cookies.
    */
-  logout: async (refreshToken: string): Promise<void> => {
-    await api.post("/auth/logout/", { refresh: refreshToken });
+  logout: async (): Promise<void> => {
+    await api.post("/auth/logout/");
   },
 
   /**
    * Refresh the access token.
+   * The backend reads the refresh token from the httpOnly cookie
+   * and sets new tokens as cookies in the response.
    */
-  refreshToken: async (
-    refreshToken: string,
-  ): Promise<TokenRefreshResponse> => {
-    const { data } = await api.post<TokenRefreshResponse>("/auth/refresh/", {
-      refresh: refreshToken,
-    });
-    return data;
+  refreshToken: async (): Promise<void> => {
+    await api.post("/auth/refresh/");
   },
 
   /**
@@ -113,7 +114,7 @@ export const authApi = {
 
   /**
    * Verify 2FA during login process.
-   * Returns JWT tokens upon successful verification.
+   * The backend sets httpOnly cookies with JWT tokens in the response.
    */
   verify2FALogin: async (payload: TwoFactorLoginVerify): Promise<LoginResponse> => {
     const { data } = await api.post<LoginResponse>("/auth/2fa/login-verify/", payload);

@@ -1,14 +1,17 @@
 /**
  * Generische Export-Funktionen fuer XLSX und PDF Downloads.
  *
- * Nutzt direkte URL-Navigation (window.open) statt Blob-Downloads,
- * damit der Browser den Download nativ handhabt.
- * Der JWT-Token wird als Query-Parameter uebergeben, da der Browser
- * bei window.open() keine Authorization-Header senden kann.
+ * Downloads werden ueber fetch() mit credentials: "include" durchgefuehrt,
+ * sodass die httpOnly JWT-Cookies automatisch mitgesendet werden.
+ *
+ * Fuer Endpunkte, die ueber window.open() aufgerufen werden muessen
+ * (z.B. direkte PDF-Ansicht), wird der QueryParameterJWTAuthentication
+ * Fallback im Backend verwendet. Da die Cookies bei same-origin window.open()
+ * automatisch mitgesendet werden, funktioniert auch das ohne Token-Parameter.
  *
  * Backend-Endpunkte:
- *   GET /api/v1/<resource>/export-xlsx/?token=<jwt>&<filter_params>
- *   GET /api/v1/<resource>/export-pdf/?token=<jwt>&<filter_params>
+ *   GET /api/v1/<resource>/export-xlsx/
+ *   GET /api/v1/<resource>/export-pdf/
  */
 
 export type ExportFormat = "xlsx" | "pdf" | "csv";
@@ -23,28 +26,18 @@ interface ExportOptions {
 }
 
 /**
- * Oeffnet eine Export-URL direkt im Browser.
- * Der JWT-Token wird als Query-Parameter angehaengt,
- * sodass der Browser den Download nativ handhabt.
+ * Download eine Export-Datei ueber fetch() mit Cookie-Authentifizierung.
+ * Erstellt einen temporaeren Blob-Download-Link.
  */
-export function downloadExport({
+export async function downloadExport({
   basePath,
   format,
   params = {},
-}: ExportOptions): void {
-  const token = typeof window !== "undefined"
-    ? localStorage.getItem("access_token")
-    : null;
-
-  if (!token) {
-    throw new Error("Nicht authentifiziert. Bitte erneut anmelden.");
-  }
-
+}: ExportOptions): Promise<void> {
   const apiBase = process.env.NEXT_PUBLIC_API_URL || "/api/v1";
 
-  // Build query string from params
+  // Build query string from params (without token)
   const searchParams = new URLSearchParams();
-  searchParams.set("token", token);
 
   Object.entries(params).forEach(([key, value]) => {
     if (value !== undefined && value !== "" && value !== "all") {
@@ -52,31 +45,79 @@ export function downloadExport({
     }
   });
 
-  const url = `${apiBase}${basePath}/export-${format}/?${searchParams.toString()}`;
+  const queryString = searchParams.toString();
+  const url = `${apiBase}${basePath}/export-${format}/${queryString ? `?${queryString}` : ""}`;
 
-  // Open in new window - browser handles the download natively
-  window.open(url, "_blank");
+  // Fetch with credentials to include httpOnly cookies
+  const response = await fetch(url, {
+    method: "GET",
+    credentials: "include",
+  });
+
+  if (!response.ok) {
+    throw new Error(`Export fehlgeschlagen: ${response.status} ${response.statusText}`);
+  }
+
+  // Extract filename from Content-Disposition header or generate default
+  const contentDisposition = response.headers.get("Content-Disposition");
+  let filename = `export.${format}`;
+  if (contentDisposition) {
+    const match = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+    if (match?.[1]) {
+      filename = match[1].replace(/['"]/g, "");
+    }
+  }
+
+  // Create blob download
+  const blob = await response.blob();
+  const blobUrl = window.URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = blobUrl;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  window.URL.revokeObjectURL(blobUrl);
 }
 
 /**
- * Oeffnet eine einzelne Ressourcen-Export-URL direkt im Browser.
+ * Download eine einzelne Ressource ueber fetch() mit Cookie-Authentifizierung.
  * Fuer Detail-Exporte wie z.B. einzelne Wochenplan-PDFs.
  *
  * @param url - Relativer API-Pfad, z.B. "/weeklyplans/123/pdf/"
  */
-export function downloadDirectUrl(url: string): void {
-  const token = typeof window !== "undefined"
-    ? localStorage.getItem("access_token")
-    : null;
+export async function downloadDirectUrl(url: string): Promise<void> {
+  const apiBase = process.env.NEXT_PUBLIC_API_URL || "/api/v1";
+  const fullUrl = `${apiBase}${url}`;
 
-  if (!token) {
-    throw new Error("Nicht authentifiziert. Bitte erneut anmelden.");
+  // Fetch with credentials to include httpOnly cookies
+  const response = await fetch(fullUrl, {
+    method: "GET",
+    credentials: "include",
+  });
+
+  if (!response.ok) {
+    throw new Error(`Download fehlgeschlagen: ${response.status} ${response.statusText}`);
   }
 
-  const apiBase = process.env.NEXT_PUBLIC_API_URL || "/api/v1";
-  const separator = url.includes("?") ? "&" : "?";
-  const fullUrl = `${apiBase}${url}${separator}token=${token}`;
+  // Extract filename from Content-Disposition header
+  const contentDisposition = response.headers.get("Content-Disposition");
+  let filename = "download";
+  if (contentDisposition) {
+    const match = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+    if (match?.[1]) {
+      filename = match[1].replace(/['"]/g, "");
+    }
+  }
 
-  // Open in new window - browser handles the download natively
-  window.open(fullUrl, "_blank");
+  // Create blob download
+  const blob = await response.blob();
+  const blobUrl = window.URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = blobUrl;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  window.URL.revokeObjectURL(blobUrl);
 }

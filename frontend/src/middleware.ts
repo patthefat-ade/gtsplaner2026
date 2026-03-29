@@ -4,9 +4,9 @@ import type { NextRequest } from "next/server";
 /**
  * Next.js middleware for route protection.
  *
- * Since JWT tokens are stored in localStorage (client-side only),
- * we use a lightweight cookie-based flag to check auth status in middleware.
- * The actual token validation happens on the client side via the AuthProvider.
+ * JWT tokens are stored in httpOnly cookies managed by the backend.
+ * A lightweight `is_authenticated` cookie (non-httpOnly) is set by the
+ * AuthProvider to signal auth status to this middleware.
  *
  * Public routes: /login, /forgot-password, /reset-password, /api/*
  * Protected routes: everything else (dashboard, etc.)
