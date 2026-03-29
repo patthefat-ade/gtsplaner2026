@@ -7,15 +7,44 @@ import axios from "axios";
  * The `withCredentials: true` flag ensures cookies are sent with every request.
  * No manual token management is needed on the client side.
  *
+ * CSRF protection:
+ * Django sets a `csrftoken` cookie (non-httpOnly) after login.
+ * This instance reads the cookie and sends it as the `X-CSRFToken` header
+ * on every state-changing request (POST, PUT, PATCH, DELETE).
+ *
  * Token refresh is handled automatically on 401 responses by calling
  * the /auth/refresh/ endpoint (which reads the refresh token from its cookie).
  */
+
+/**
+ * Read a cookie value by name from document.cookie.
+ */
+function getCookie(name: string): string | null {
+  if (typeof document === "undefined") return null;
+  const match = document.cookie.match(
+    new RegExp("(^|;\\s*)" + name + "=([^;]*)"),
+  );
+  return match ? decodeURIComponent(match[2]) : null;
+}
+
 const api = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL || "/api/v1",
   headers: {
     "Content-Type": "application/json",
   },
   withCredentials: true,
+});
+
+// Request interceptor: attach CSRF token to state-changing requests
+api.interceptors.request.use((config) => {
+  const method = config.method?.toUpperCase();
+  if (method && ["POST", "PUT", "PATCH", "DELETE"].includes(method)) {
+    const csrfToken = getCookie("csrftoken");
+    if (csrfToken) {
+      config.headers["X-CSRFToken"] = csrfToken;
+    }
+  }
+  return config;
 });
 
 // Response interceptor: handle 401 with silent token refresh via cookies

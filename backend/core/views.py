@@ -9,6 +9,9 @@ The Authorization header is still supported for API clients.
 """
 
 from django.conf import settings
+from django.middleware.csrf import get_token
+from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
+from django.utils.decorators import method_decorator
 from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework import permissions, status
 from rest_framework.response import Response
@@ -34,6 +37,8 @@ from core.serializers import (
 )
 
 
+@method_decorator(csrf_exempt, name="dispatch")
+@method_decorator(ensure_csrf_cookie, name="dispatch")
 class LoginView(APIView):
     """
     POST /api/v1/auth/login/
@@ -41,6 +46,10 @@ class LoginView(APIView):
     Authenticate a user with username/email and password.
     Returns user data and sets JWT tokens as httpOnly cookies.
     Rate limited to 5 attempts per minute to prevent brute-force attacks.
+
+    CSRF: exempt because this is the initial auth endpoint (no session yet).
+    ensure_csrf_cookie: sets the csrftoken cookie so the frontend can
+    include X-CSRFToken in subsequent state-changing requests.
     """
 
     permission_classes = [permissions.AllowAny]
@@ -99,20 +108,17 @@ class LogoutView(APIView):
         },
     )
     def post(self, request):
-        try:
-            # Try to get refresh token from cookie first, then from body
-            refresh_token = request.COOKIES.get(REFRESH_TOKEN_COOKIE)
-            if not refresh_token:
-                refresh_token = request.data.get("refresh")
+        # Try to get refresh token from cookie first, then from body
+        refresh_token = request.COOKIES.get(REFRESH_TOKEN_COOKIE)
+        if not refresh_token:
+            refresh_token = request.data.get("refresh")
 
-            if refresh_token:
-                try:
-                    token = RefreshToken(refresh_token)
-                    token.blacklist()
-                except Exception:
-                    pass  # Token may already be blacklisted or invalid
-        except Exception:
-            pass  # Ensure logout always succeeds
+        if refresh_token:
+            try:
+                token = RefreshToken(refresh_token)
+                token.blacklist()
+            except (InvalidToken, TokenError):
+                pass  # Token already blacklisted, expired, or invalid
 
         response = Response(
             {"detail": "Erfolgreich abgemeldet."},
@@ -122,12 +128,17 @@ class LogoutView(APIView):
         return response
 
 
+@method_decorator(csrf_exempt, name="dispatch")
 class CustomTokenRefreshView(APIView):
     """
     POST /api/v1/auth/refresh/
 
     Refresh the JWT access token using the refresh token from the httpOnly cookie.
     Sets new tokens as httpOnly cookies.
+
+    CSRF: exempt because this endpoint uses the refresh token cookie
+    for authentication, not the session. The refresh token itself
+    proves the request is legitimate.
     """
 
     permission_classes = [permissions.AllowAny]
@@ -263,6 +274,7 @@ class MeView(APIView):
         return Response(UserProfileSerializer(request.user).data)
 
 
+@method_decorator(csrf_exempt, name="dispatch")
 class PasswordResetRequestView(APIView):
     """
     POST /api/v1/auth/password-reset/
@@ -270,6 +282,8 @@ class PasswordResetRequestView(APIView):
     Request a password reset email.
     Always returns 200 to prevent email enumeration.
     Rate limited to 3 requests per hour to prevent abuse.
+
+    CSRF: exempt because this is a public endpoint (AllowAny).
     """
 
     permission_classes = [permissions.AllowAny]
@@ -331,11 +345,15 @@ class PasswordResetRequestView(APIView):
         )
 
 
+@method_decorator(csrf_exempt, name="dispatch")
 class PasswordResetConfirmView(APIView):
     """
     POST /api/v1/auth/password-reset/confirm/
 
     Confirm a password reset with uid, token, and new password.
+
+    CSRF: exempt because this is a public endpoint (AllowAny).
+    The reset token itself proves the request is legitimate.
     """
 
     permission_classes = [permissions.AllowAny]

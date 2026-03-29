@@ -51,7 +51,12 @@ if not DEBUG:
     SECURE_REFERRER_POLICY = "strict-origin-when-cross-origin"
     # Cookie-Sicherheit
     SESSION_COOKIE_HTTPONLY = True
-    CSRF_COOKIE_HTTPONLY = True
+    # CSRF-Cookie muss für JavaScript lesbar sein (httpOnly=False),
+    # damit das SPA-Frontend den Token als X-CSRFToken Header mitsenden kann.
+    # Der CSRF-Token selbst ist kein Geheimnis – er schützt nur gegen
+    # Cross-Site-Request-Forgery, indem er beweist, dass der Request
+    # von unserer eigenen Domain stammt.
+    CSRF_COOKIE_HTTPONLY = False
     SESSION_COOKIE_SAMESITE = "Lax"
     CSRF_COOKIE_SAMESITE = "Lax"
 
