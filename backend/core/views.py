@@ -99,17 +99,20 @@ class LogoutView(APIView):
         },
     )
     def post(self, request):
-        # Try to get refresh token from cookie first, then from body
-        refresh_token = request.COOKIES.get(REFRESH_TOKEN_COOKIE)
-        if not refresh_token:
-            refresh_token = request.data.get("refresh")
+        try:
+            # Try to get refresh token from cookie first, then from body
+            refresh_token = request.COOKIES.get(REFRESH_TOKEN_COOKIE)
+            if not refresh_token:
+                refresh_token = request.data.get("refresh")
 
-        if refresh_token:
-            try:
-                token = RefreshToken(refresh_token)
-                token.blacklist()
-            except Exception:
-                pass  # Token may already be blacklisted or invalid
+            if refresh_token:
+                try:
+                    token = RefreshToken(refresh_token)
+                    token.blacklist()
+                except Exception:
+                    pass  # Token may already be blacklisted or invalid
+        except Exception:
+            pass  # Ensure logout always succeeds
 
         response = Response(
             {"detail": "Erfolgreich abgemeldet."},
