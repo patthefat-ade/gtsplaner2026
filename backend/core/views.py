@@ -155,9 +155,8 @@ class CustomTokenRefreshView(APIView):
 
             # Rotate: create new refresh token and blacklist old one
             if settings.SIMPLE_JWT.get("ROTATE_REFRESH_TOKENS", False):
-                new_refresh = RefreshToken.for_user(old_token.payload.get("user_id"))
-                # Get user from old token to generate proper new token
                 from core.models import User
+
                 user_id = old_token.payload.get("user_id")
                 user = User.objects.get(pk=user_id)
                 new_refresh = RefreshToken.for_user(user)
@@ -181,10 +180,17 @@ class CustomTokenRefreshView(APIView):
             set_auth_cookies(response, new_access, new_refresh_str)
             return response
 
-        except (InvalidToken, TokenError) as e:
+        except (InvalidToken, TokenError):
             response = Response(
                 {"detail": "Ungültiger oder abgelaufener Refresh Token."},
                 status=status.HTTP_401_UNAUTHORIZED,
+            )
+            clear_auth_cookies(response)
+            return response
+        except Exception:
+            response = Response(
+                {"detail": "Token-Erneuerung fehlgeschlagen."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
             clear_auth_cookies(response)
             return response
