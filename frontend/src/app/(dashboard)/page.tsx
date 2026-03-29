@@ -30,6 +30,10 @@ import {
   CalendarDays,
   FileText,
   BarChart3,
+  ClipboardList,
+  CheckCircle2,
+  CircleDot,
+  AlertTriangle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
@@ -79,6 +83,29 @@ interface DashboardStats {
     user__first_name: string;
     user__last_name: string;
     leave_type__name: string;
+  }>;
+  open_tasks?: number;
+  in_progress_tasks?: number;
+  done_tasks?: number;
+  overdue_tasks?: number;
+  recent_tasks?: Array<{
+    id: number;
+    title: string;
+    status: string;
+    priority: string;
+    due_date: string;
+    assigned_to__first_name: string;
+    assigned_to__last_name: string;
+    created_by__first_name: string;
+    created_by__last_name: string;
+  }>;
+  educator_task_summary?: Array<{
+    assigned_to__id: number;
+    assigned_to__first_name: string;
+    assigned_to__last_name: string;
+    open_count: number;
+    in_progress_count: number;
+    overdue_count: number;
   }>;
 }
 
@@ -212,6 +239,39 @@ function EducatorDashboard({ stats, loading }: { stats?: DashboardStats; loading
         />
       </div>
 
+      {/* Task Stats */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <StatCard
+          title="Offene Aufgaben"
+          value={String(stats?.open_tasks ?? 0)}
+          description="Warten auf Bearbeitung"
+          icon={ClipboardList}
+          trend={stats?.open_tasks ? "up" : "neutral"}
+          loading={loading}
+          href="/tasks"
+        />
+        <StatCard
+          title="In Arbeit"
+          value={String(stats?.in_progress_tasks ?? 0)}
+          description="Aktuell in Bearbeitung"
+          icon={CircleDot}
+          loading={loading}
+          href="/tasks"
+        />
+        <StatCard
+          title="Überfällig"
+          value={String(stats?.overdue_tasks ?? 0)}
+          description="Stichtag überschritten"
+          icon={AlertTriangle}
+          trend={stats?.overdue_tasks ? "down" : "neutral"}
+          loading={loading}
+          href="/tasks"
+        />
+      </div>
+
+      {/* My Open Tasks */}
+      <RecentTasks stats={stats} loading={loading} showAssignee={false} />
+
       {/* Quick Actions */}
       <Card>
         <CardHeader>
@@ -319,6 +379,50 @@ function LocationManagerDashboard({ stats, loading }: { stats?: DashboardStats; 
           href="/timetracking/entries"
         />
       </div>
+
+      {/* Task Overview */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <StatCard
+          title="Offene Aufgaben"
+          value={String(stats?.open_tasks ?? 0)}
+          description="Am Standort"
+          icon={ClipboardList}
+          trend={stats?.open_tasks ? "up" : "neutral"}
+          loading={loading}
+          href="/tasks"
+        />
+        <StatCard
+          title="In Arbeit"
+          value={String(stats?.in_progress_tasks ?? 0)}
+          description="Am Standort"
+          icon={CircleDot}
+          loading={loading}
+          href="/tasks"
+        />
+        <StatCard
+          title="Erledigt"
+          value={String(stats?.done_tasks ?? 0)}
+          description="Am Standort"
+          icon={CheckCircle2}
+          loading={loading}
+          href="/tasks"
+        />
+        <StatCard
+          title="Überfällig"
+          value={String(stats?.overdue_tasks ?? 0)}
+          description="Am Standort"
+          icon={AlertTriangle}
+          trend={stats?.overdue_tasks ? "down" : "neutral"}
+          loading={loading}
+          href="/tasks"
+        />
+      </div>
+
+      {/* Educator Task Summary */}
+      <EducatorTaskSummaryWidget stats={stats} loading={loading} />
+
+      {/* Recent Tasks */}
+      <RecentTasks stats={stats} loading={loading} showAssignee={true} />
 
       {/* Recent Leave Requests + Transactions */}
       <div className="grid gap-6 lg:grid-cols-2">
@@ -723,6 +827,169 @@ function RecentLeaveRequests({ stats, loading }: { stats?: DashboardStats; loadi
             Keine ausstehenden Anträge.
           </p>
         )}
+      </CardContent>
+    </Card>
+  );
+}
+
+/* ───── Recent Tasks Widget ───── */
+function RecentTasks({ stats, loading, showAssignee }: { stats?: DashboardStats; loading: boolean; showAssignee: boolean }) {
+  const priorityColors: Record<string, string> = {
+    high: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400",
+    medium: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400",
+    low: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400",
+  };
+  const priorityLabels: Record<string, string> = { high: "Hoch", medium: "Mittel", low: "Niedrig" };
+  const statusLabels: Record<string, string> = { open: "Offen", in_progress: "In Arbeit", done: "Erledigt" };
+  const statusColors: Record<string, string> = {
+    open: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400",
+    in_progress: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400",
+    done: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400",
+  };
+
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between">
+        <CardTitle className="text-base">
+          {showAssignee ? "Offene Aufgaben am Standort" : "Meine offenen Aufgaben"}
+          {!loading && stats?.open_tasks ? (
+            <Badge variant="warning" className="ml-2">
+              {stats.open_tasks}
+            </Badge>
+          ) : null}
+        </CardTitle>
+        <Button variant="ghost" size="sm" asChild>
+          <Link href="/tasks">
+            Alle anzeigen
+            <ArrowRight className="ml-1 h-4 w-4" />
+          </Link>
+        </Button>
+      </CardHeader>
+      <CardContent>
+        {loading ? (
+          <TableSkeleton rows={5} cols={showAssignee ? 5 : 4} />
+        ) : stats?.recent_tasks && stats.recent_tasks.length > 0 ? (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Aufgabe</TableHead>
+                {showAssignee && <TableHead>Zugewiesen an</TableHead>}
+                <TableHead>Priorität</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Stichtag</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {stats.recent_tasks.map((task) => {
+                const isOverdue = task.due_date && new Date(task.due_date) < new Date() && task.status !== "done";
+                return (
+                  <TableRow key={task.id}>
+                    <TableCell className="font-medium max-w-[200px] truncate">
+                      <Link href="/tasks" className="hover:underline">
+                        {task.title}
+                      </Link>
+                    </TableCell>
+                    {showAssignee && (
+                      <TableCell className="text-sm">
+                        {task.assigned_to__first_name} {task.assigned_to__last_name}
+                      </TableCell>
+                    )}
+                    <TableCell>
+                      <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${priorityColors[task.priority] || ""}`}>
+                        {priorityLabels[task.priority] || task.priority}
+                      </span>
+                    </TableCell>
+                    <TableCell>
+                      <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${statusColors[task.status] || ""}`}>
+                        {statusLabels[task.status] || task.status}
+                      </span>
+                    </TableCell>
+                    <TableCell className={isOverdue ? "text-red-600 dark:text-red-400 font-medium" : ""}>
+                      {task.due_date ? formatDate(task.due_date) : "–"}
+                      {isOverdue && " \u26a0"}
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        ) : (
+          <p className="py-8 text-center text-sm text-muted-foreground">
+            Keine offenen Aufgaben.
+          </p>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+/* ───── Educator Task Summary Widget (for LocationManager) ───── */
+function EducatorTaskSummaryWidget({ stats, loading }: { stats?: DashboardStats; loading: boolean }) {
+  if (loading) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Aufgaben je Pädagogin</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <TableSkeleton rows={4} cols={5} />
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (!stats?.educator_task_summary || stats.educator_task_summary.length === 0) {
+    return null;
+  }
+
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between">
+        <CardTitle className="text-base">Aufgaben je Pädagogin</CardTitle>
+        <Button variant="ghost" size="sm" asChild>
+          <Link href="/tasks">
+            Alle anzeigen
+            <ArrowRight className="ml-1 h-4 w-4" />
+          </Link>
+        </Button>
+      </CardHeader>
+      <CardContent>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Pädagogin</TableHead>
+              <TableHead className="text-center">Offen</TableHead>
+              <TableHead className="text-center">In Arbeit</TableHead>
+              <TableHead className="text-center">Überfällig</TableHead>
+              <TableHead className="text-center">Gesamt</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {stats.educator_task_summary.map((edu) => (
+              <TableRow key={edu.assigned_to__id}>
+                <TableCell className="font-medium">
+                  {edu.assigned_to__first_name} {edu.assigned_to__last_name}
+                </TableCell>
+                <TableCell className="text-center">
+                  <Badge variant="outline">{edu.open_count}</Badge>
+                </TableCell>
+                <TableCell className="text-center">
+                  <Badge variant="warning">{edu.in_progress_count}</Badge>
+                </TableCell>
+                <TableCell className="text-center">
+                  {edu.overdue_count > 0 ? (
+                    <Badge variant="destructive">{edu.overdue_count}</Badge>
+                  ) : (
+                    <Badge variant="outline">0</Badge>
+                  )}
+                </TableCell>
+                <TableCell className="text-center">
+                  {edu.open_count + edu.in_progress_count}
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
       </CardContent>
     </Card>
   );

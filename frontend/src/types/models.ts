@@ -525,6 +525,12 @@ export interface DashboardStats {
   recent_time_entries: DashboardRecentTimeEntry[];
   recent_transactions: DashboardRecentTransaction[];
   recent_leave_requests: DashboardRecentLeaveRequest[];
+  open_tasks: number;
+  in_progress_tasks: number;
+  done_tasks: number;
+  overdue_tasks: number;
+  recent_tasks: DashboardRecentTask[];
+  educator_task_summary: DashboardEducatorTaskSummary[];
 }
 
 export interface DashboardRecentTimeEntry {
@@ -559,6 +565,27 @@ export interface DashboardRecentLeaveRequest {
   user__first_name: string;
   user__last_name: string;
   leave_type__name: string;
+}
+
+export interface DashboardRecentTask {
+  id: number;
+  title: string;
+  status: string;
+  priority: string;
+  due_date: string;
+  assigned_to__first_name: string;
+  assigned_to__last_name: string;
+  created_by__first_name: string;
+  created_by__last_name: string;
+}
+
+export interface DashboardEducatorTaskSummary {
+  assigned_to__id: number;
+  assigned_to__first_name: string;
+  assigned_to__last_name: string;
+  open_count: number;
+  in_progress_count: number;
+  overdue_count: number;
 }
 
 /* ───── Attendance ─────────────────────────────────────────────────────────── */

@@ -41,6 +41,7 @@ from finance.models import Transaction, TransactionCategory
 from groups.models import Group, Student
 from timetracking.models import TimeEntry, LeaveRequest
 from weeklyplans.models import WeeklyPlan
+from tasks.models import Task
 
 # Cache TTL in seconds
 DASHBOARD_CACHE_TTL = 120  # 2 minutes for aggregate counts
@@ -134,6 +135,7 @@ class DashboardStatsView(APIView):
                 "weeklyplans": WeeklyPlan.objects.filter(
                     is_deleted=False, is_template=False
                 ),
+                "tasks": Task.objects.all(),
                 "educators_count": User.objects.filter(
                     role=User.Role.EDUCATOR, is_active=True
                 ).count(),
@@ -162,6 +164,9 @@ class DashboardStatsView(APIView):
                     organization_id__in=tenant_ids,
                     is_deleted=False,
                     is_template=False,
+                ),
+                "tasks": Task.objects.filter(
+                    organization_id__in=tenant_ids
                 ),
                 "educators_count": User.objects.filter(
                     role=User.Role.EDUCATOR,
@@ -194,6 +199,9 @@ class DashboardStatsView(APIView):
                         is_deleted=False,
                         is_template=False,
                     ),
+                    "tasks": Task.objects.filter(
+                        organization_id__in=tenant_ids
+                    ),
                     "educators_count": 0,
                 }
             else:
@@ -205,6 +213,7 @@ class DashboardStatsView(APIView):
                     "time_entries": TimeEntry.objects.none(),
                     "leave_requests": LeaveRequest.objects.none(),
                     "weeklyplans": WeeklyPlan.objects.none(),
+                    "tasks": Task.objects.none(),
                     "educators_count": 0,
                 }
         else:
@@ -235,6 +244,7 @@ class DashboardStatsView(APIView):
                 "weeklyplans": WeeklyPlan.objects.filter(
                     created_by=user, is_deleted=False, is_template=False
                 ),
+                "tasks": Task.objects.filter(assigned_to=user),
                 "educators_count": 0,
             }
 
@@ -255,6 +265,21 @@ class DashboardStatsView(APIView):
             ),
         )
 
+        # Task aggregates
+        tasks_qs = qs["tasks"]
+        task_stats = tasks_qs.aggregate(
+            open_tasks=Count("id", filter=Q(status="open")),
+            in_progress_tasks=Count("id", filter=Q(status="in_progress")),
+            done_tasks=Count("id", filter=Q(status="done")),
+            overdue_tasks=Count(
+                "id",
+                filter=Q(
+                    due_date__lt=timezone.now().date(),
+                    status__in=["open", "in_progress"],
+                ),
+            ),
+        )
+
         return {
             "role": group_name,
             "locations_count": qs["locations"].count(),
@@ -270,6 +295,10 @@ class DashboardStatsView(APIView):
             "pending_transactions": financial["pending_count"] or 0,
             "total_income": float(financial["total_income"] or 0),
             "total_expense": float(financial["total_expense"] or 0),
+            "open_tasks": task_stats["open_tasks"] or 0,
+            "in_progress_tasks": task_stats["in_progress_tasks"] or 0,
+            "done_tasks": task_stats["done_tasks"] or 0,
+            "overdue_tasks": task_stats["overdue_tasks"] or 0,
         }
 
     def _get_recent_data(self, user, group_name, tenant_ids):
@@ -296,6 +325,40 @@ class DashboardStatsView(APIView):
             time_entries_qs = TimeEntry.objects.filter(user=user)
             transactions_qs = Transaction.objects.filter(created_by=user)
             leave_requests_qs = LeaveRequest.objects.filter(user=user)
+
+        # Build task querysets based on role
+        if group_name == GROUP_SUPER_ADMIN:
+            tasks_qs = Task.objects.all()
+        elif group_name in (GROUP_ADMIN, GROUP_LOCATION_MANAGER):
+            tasks_qs = Task.objects.filter(
+                organization_id__in=tenant_ids
+            )
+        else:
+            # Educator: only assigned tasks
+            tasks_qs = Task.objects.filter(assigned_to=user)
+
+        # For LocationManager: build per-educator task summary
+        educator_task_summary = []
+        if group_name == GROUP_LOCATION_MANAGER:
+            educator_task_summary = list(
+                tasks_qs.filter(
+                    status__in=["open", "in_progress"]
+                ).values(
+                    "assigned_to__id",
+                    "assigned_to__first_name",
+                    "assigned_to__last_name",
+                ).annotate(
+                    open_count=Count("id", filter=Q(status="open")),
+                    in_progress_count=Count("id", filter=Q(status="in_progress")),
+                    overdue_count=Count(
+                        "id",
+                        filter=Q(
+                            due_date__lt=timezone.now().date(),
+                            status__in=["open", "in_progress"],
+                        ),
+                    ),
+                ).order_by("assigned_to__last_name")
+            )
 
         return {
             "recent_time_entries": list(
@@ -339,4 +402,20 @@ class DashboardStatsView(APIView):
                     "leave_type__name",
                 )
             ),
+            "recent_tasks": list(
+                tasks_qs.filter(
+                    status__in=["open", "in_progress"]
+                ).order_by("due_date")[:5].values(
+                    "id",
+                    "title",
+                    "status",
+                    "priority",
+                    "due_date",
+                    "assigned_to__first_name",
+                    "assigned_to__last_name",
+                    "created_by__first_name",
+                    "created_by__last_name",
+                )
+            ),
+            "educator_task_summary": educator_task_summary,
         }
