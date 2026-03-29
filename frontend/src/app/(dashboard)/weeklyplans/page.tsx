@@ -330,6 +330,7 @@ export default function WeeklyPlansPage() {
                 <TableRow>
                   <TableHead>KW / Zeitraum</TableHead>
                   <TableHead>Titel</TableHead>
+                  <TableHead>Schuljahr</TableHead>
                   <TableHead>Gruppe</TableHead>
                   <TableHead>Standort</TableHead>
                   <TableHead>Status</TableHead>
@@ -360,6 +361,9 @@ export default function WeeklyPlansPage() {
                       >
                         {plan.title}
                       </Link>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {plan.school_year_name || "–"}
                     </TableCell>
                     <TableCell>{plan.group_name}</TableCell>
                     <TableCell>{plan.location_name}</TableCell>

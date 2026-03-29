@@ -18,6 +18,7 @@ class AttendanceSerializer(serializers.ModelSerializer):
     status_display = serializers.CharField(
         source="get_status_display", read_only=True
     )
+    protocol_id = serializers.SerializerMethodField()
 
     class Meta:
         model = Attendance
@@ -32,6 +33,7 @@ class AttendanceSerializer(serializers.ModelSerializer):
             "recorded_by",
             "recorded_by_name",
             "student_name",
+            "protocol_id",
             "created_at",
             "updated_at",
         ]
@@ -41,6 +43,7 @@ class AttendanceSerializer(serializers.ModelSerializer):
             "recorded_by_name",
             "student_name",
             "status_display",
+            "protocol_id",
             "created_at",
             "updated_at",
         ]
@@ -54,6 +57,20 @@ class AttendanceSerializer(serializers.ModelSerializer):
         if obj.recorded_by:
             return f"{obj.recorded_by.first_name} {obj.recorded_by.last_name}".strip()
         return None
+
+    def get_protocol_id(self, obj) -> int | None:
+        """Return the DailyProtocol ID for this student/date if it exists."""
+        from groups.models_protocol import DailyProtocol
+
+        try:
+            protocol = DailyProtocol.objects.only("id").get(
+                student_id=obj.student_id,
+                date=obj.date,
+                is_deleted=False,
+            )
+            return protocol.id
+        except DailyProtocol.DoesNotExist:
+            return None
 
 
 class AttendanceCreateSerializer(serializers.ModelSerializer):

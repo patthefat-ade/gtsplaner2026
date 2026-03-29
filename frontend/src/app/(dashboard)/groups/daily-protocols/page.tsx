@@ -63,6 +63,9 @@ import {
   Clock,
   User,
   Download,
+  ThermometerSun,
+  XCircle,
+  CalendarOff,
 } from "lucide-react";
 import { ExportButtons } from "@/components/common/export-buttons";
 import { Pagination } from "@/components/common/pagination";
@@ -71,8 +74,31 @@ import type {
   IncidentSeverity,
   BulkDailyProtocolRecord,
   StudentContact,
+  AttendanceStatus,
 } from "@/types/models";
 import { SEVERITY_LABELS, SEVERITY_COLORS } from "@/types/models";
+
+/* ─── Attendance Status Badge ──────────────────────────────────────── */
+
+const ATTENDANCE_CONFIG: Record<string, { label: string; icon: typeof CheckCircle2; variant: "success" | "destructive" | "warning" | "secondary" }> = {
+  present: { label: "Anwesend", icon: CheckCircle2, variant: "success" },
+  absent: { label: "Abwesend", icon: XCircle, variant: "destructive" },
+  sick: { label: "Krank", icon: ThermometerSun, variant: "warning" },
+  excused: { label: "Beurlaubt", icon: CalendarOff, variant: "secondary" },
+};
+
+function AttendanceBadge({ status }: { status: AttendanceStatus | "" }) {
+  if (!status) return null;
+  const config = ATTENDANCE_CONFIG[status];
+  if (!config) return null;
+  const Icon = config.icon;
+  return (
+    <Badge variant={config.variant} className="gap-1 text-xs">
+      <Icon className="h-3 w-3" />
+      {config.label}
+    </Badge>
+  );
+}
 
 /* ─── Helper ─────────────────────────────────────────────────────────── */
 
@@ -114,6 +140,7 @@ interface ProtocolRow {
   picked_up_by_id: number | null;
   pickup_notes: string;
   existing_id?: number;
+  attendance_status?: AttendanceStatus | "";
 }
 
 /* ─── Main Page ──────────────────────────────────────────────────────── */
@@ -237,6 +264,7 @@ export default function DailyProtocolsPage() {
         picked_up_by_id: existing?.picked_up_by ?? null,
         pickup_notes: existing?.pickup_notes ?? "",
         existing_id: existing?.id,
+        attendance_status: existing?.attendance_status ?? "",
       };
     });
     setRows(newRows);
@@ -491,6 +519,9 @@ export default function DailyProtocolsPage() {
                             Bereits erfasst
                           </Badge>
                         )}
+                        {row.attendance_status && (
+                          <AttendanceBadge status={row.attendance_status} />
+                        )}
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
                         {/* Ankunft */}
@@ -717,7 +748,12 @@ export default function DailyProtocolsPage() {
                       {listData.results.map((p: DailyProtocol) => (
                         <TableRow key={p.id}>
                           <TableCell>
-                            <div className="font-medium">{p.student_name}</div>
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium">{p.student_name}</span>
+                              {p.attendance_status && (
+                                <AttendanceBadge status={p.attendance_status} />
+                              )}
+                            </div>
                             {p.has_transfer && (
                               <div className="flex items-center gap-1 text-xs text-amber-500 mt-0.5">
                                 <ArrowLeftRight className="h-3 w-3" />
