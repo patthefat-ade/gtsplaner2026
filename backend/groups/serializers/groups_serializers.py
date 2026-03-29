@@ -162,6 +162,9 @@ class StudentListSerializer(serializers.ModelSerializer):
     """Serializer for listing students."""
 
     group_name = serializers.CharField(source="group.name", read_only=True)
+    data_consent_status_display = serializers.CharField(
+        source="get_data_consent_status_display", read_only=True
+    )
 
     class Meta:
         model = Student
@@ -175,9 +178,12 @@ class StudentListSerializer(serializers.ModelSerializer):
             "email",
             "phone",
             "is_active",
+            "data_consent_status",
+            "data_consent_status_display",
+            "processing_restricted",
             "created_at",
         ]
-        read_only_fields = ["id", "created_at"]
+        read_only_fields = ["id", "created_at", "data_consent_status_display"]
 
 
 class StudentCreateSerializer(serializers.ModelSerializer):
@@ -197,14 +203,24 @@ class StudentCreateSerializer(serializers.ModelSerializer):
             "city",
             "postal_code",
             "is_active",
+            "data_consent_status",
+            "data_consent_date",
+            "data_consent_guardian_name",
+            "data_consent_document",
+            "processing_restricted",
+            "restriction_reason",
+            "restriction_date",
         ]
         read_only_fields = ["id"]
 
 
 class StudentDetailSerializer(serializers.ModelSerializer):
-    """Serializer for student detail view (includes address)."""
+    """Serializer for student detail view (includes address and consent)."""
 
     group_name = serializers.CharField(source="group.name", read_only=True)
+    data_consent_status_display = serializers.CharField(
+        source="get_data_consent_status_display", read_only=True
+    )
 
     class Meta:
         model = Student
@@ -221,10 +237,18 @@ class StudentDetailSerializer(serializers.ModelSerializer):
             "city",
             "postal_code",
             "is_active",
+            "data_consent_status",
+            "data_consent_status_display",
+            "data_consent_date",
+            "data_consent_guardian_name",
+            "data_consent_document",
+            "processing_restricted",
+            "restriction_reason",
+            "restriction_date",
             "created_at",
             "updated_at",
         ]
-        read_only_fields = ["id", "created_at", "updated_at"]
+        read_only_fields = ["id", "created_at", "updated_at", "data_consent_status_display"]
 
 
 # ---------------------------------------------------------------------------

@@ -282,6 +282,61 @@ class Student(TenantModel):
     postal_code = EncryptedCharField(max_length=255, blank=True, null=True, default="", verbose_name="PLZ")
     is_active = models.BooleanField(default=True, verbose_name="Aktiv")
     is_deleted = models.BooleanField(default=False, verbose_name="Geloescht")
+
+    # GDPR/DSGVO Art. 8: Consent management for data of minors
+    class ConsentStatus(models.TextChoices):
+        PENDING = "pending", "Ausstehend"
+        GRANTED = "granted", "Erteilt"
+        REVOKED = "revoked", "Widerrufen"
+
+    data_consent_status = models.CharField(
+        max_length=20,
+        choices=ConsentStatus.choices,
+        default=ConsentStatus.PENDING,
+        verbose_name="Einwilligungsstatus",
+        help_text="Status der Einwilligung zur Datenverarbeitung (Art. 8 DSGVO)",
+    )
+    data_consent_date = models.DateField(
+        null=True,
+        blank=True,
+        verbose_name="Einwilligungsdatum",
+        help_text="Datum der Einwilligung durch den Erziehungsberechtigten",
+    )
+    data_consent_guardian_name = EncryptedCharField(
+        max_length=255,
+        blank=True,
+        null=True,
+        default="",
+        verbose_name="Name des Erziehungsberechtigten",
+        help_text="Name der Person, die die Einwilligung erteilt hat",
+    )
+    data_consent_document = models.FileField(
+        upload_to="consent_documents/%Y/%m/",
+        blank=True,
+        null=True,
+        verbose_name="Einwilligungsdokument",
+        help_text="Hochgeladenes Einwilligungsformular (PDF/Scan)",
+    )
+
+    # GDPR/DSGVO Art. 18: Right to restriction of processing
+    processing_restricted = models.BooleanField(
+        default=False,
+        verbose_name="Verarbeitung eingeschraenkt",
+        help_text="Wenn aktiviert, duerfen die Daten nur gespeichert, aber nicht verarbeitet werden (Art. 18 DSGVO)",
+    )
+    restriction_reason = models.TextField(
+        blank=True,
+        default="",
+        verbose_name="Grund der Einschraenkung",
+        help_text="Grund fuer die Einschraenkung der Verarbeitung",
+    )
+    restriction_date = models.DateField(
+        null=True,
+        blank=True,
+        verbose_name="Einschraenkung seit",
+        help_text="Datum, seit dem die Verarbeitung eingeschraenkt ist",
+    )
+
     # GDPR/DSGVO anonymization tracking
     anonymized_at = models.DateTimeField(
         null=True, blank=True, verbose_name="Anonymisiert am"
@@ -305,6 +360,11 @@ class Student(TenantModel):
     def full_name(self) -> str:
         """Return the student's full name."""
         return f"{self.first_name} {self.last_name}"
+
+    @property
+    def has_consent(self) -> bool:
+        """Check if data processing consent has been granted."""
+        return self.data_consent_status == self.ConsentStatus.GRANTED
 
     @property
     def is_anonymized(self) -> bool:
