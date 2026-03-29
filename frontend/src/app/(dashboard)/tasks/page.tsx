@@ -44,7 +44,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
-import { useToast } from "@/hooks/use-toast";
+import { useToast } from "@/components/ui/toast";
 import { usePermissions } from "@/hooks/use-permissions";
 import { useLocations } from "@/hooks/use-locations";
 import {
@@ -447,7 +447,7 @@ function TaskFormModal({
 /* ───── Main Page ────────────────────────────────────────────────────────── */
 
 export default function TasksPage() {
-  const { toast } = useToast();
+  const toast = useToast();
   const { hasPermission } = usePermissions();
   const canManage = hasPermission("manage_tasks");
 
@@ -510,10 +510,7 @@ export default function TasksPage() {
   const handleStatusChange = async (taskId: number, newStatus: TaskStatus) => {
     const result = await changeStatus(taskId, newStatus);
     if (result) {
-      toast({
-        title: "Status geändert",
-        description: `Aufgabe auf "${TASK_STATUS_LABELS[newStatus]}" gesetzt.`,
-      });
+      toast.success("Status geändert", `Aufgabe auf "${TASK_STATUS_LABELS[newStatus]}" gesetzt.`);
       refetchAll();
     }
   };
@@ -522,13 +519,13 @@ export default function TasksPage() {
     if (id) {
       const result = await updateTask(id, data);
       if (result) {
-        toast({ title: "Aufgabe aktualisiert" });
+        toast.success("Aufgabe aktualisiert");
         refetchAll();
       }
     } else {
       const result = await createTask(data);
       if (result) {
-        toast({ title: "Aufgabe erstellt" });
+        toast.success("Aufgabe erstellt");
         refetchAll();
       }
     }
@@ -537,7 +534,7 @@ export default function TasksPage() {
   const handleDelete = async (id: number) => {
     const success = await deleteTask(id);
     if (success) {
-      toast({ title: "Aufgabe gelöscht" });
+      toast.success("Aufgabe gelöscht");
       refetchAll();
     }
   };

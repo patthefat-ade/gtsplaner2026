@@ -43,6 +43,9 @@ export type PermissionCodename =
   | "manage_settings"
   | "view_audit_log"
   | "manage_organizations"
+  // Tasks
+  | "view_tasks"
+  | "manage_tasks"
   // Multi-Tenant
   | "cross_tenant_access";
 
@@ -110,6 +113,7 @@ const createPermissions: Record<string, PermissionCodename> = {
   time_entry: "manage_timeentries",
   leave_request: "manage_timeentries",
   weeklyplan: "manage_weeklyplans",
+  task: "manage_tasks",
   user: "manage_users",
   organization: "manage_organizations",
 };
@@ -166,6 +170,8 @@ export function getRequiredRoleForPath(pathname: string): UserRole | null {
     manage_timeentries: "educator",
     view_weeklyplans: "educator",
     manage_weeklyplans: "educator",
+    view_tasks: "educator",
+    manage_tasks: "location_manager",
   };
 
   return permToMinRole[perm] ?? null;
