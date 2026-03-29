@@ -1,8 +1,15 @@
 """
 Generische Export-Mixins fuer Django REST Framework ViewSets.
 
-Stellt wiederverwendbare XLSX- und PDF-Export-Aktionen bereit,
-die in beliebige ViewSets integriert werden koennen.
+Stellt wiederverwendbare XLSX-, PDF- und CSV-Streaming-Export-Aktionen
+bereit, die in beliebige ViewSets integriert werden koennen.
+
+Performance:
+- CSV: Streaming-Response, kein Speicher-Overhead (empfohlen fuer grosse
+  Datenmengen)
+- XLSX: Openpyxl write-only mode fuer reduzierte Speichernutzung
+- PDF: Chunked Queryset-Iteration (max 5000 Zeilen)
+- Alle Exporte verwenden iterator() fuer speichereffiziente DB-Abfragen
 
 Verwendung:
     class MyViewSet(ExportMixin, TenantViewSetMixin, ModelViewSet):
@@ -14,6 +21,7 @@ Verwendung:
         export_title = "Mein Export"
 """
 
+import csv
 import datetime
 import io
 from typing import Any
@@ -36,14 +44,26 @@ from rest_framework.decorators import action
 from rest_framework.request import Request
 from rest_framework.response import Response
 
-from django.http import HttpResponse
+from django.http import HttpResponse, StreamingHttpResponse
 
 from drf_spectacular.utils import extend_schema
+
+# Maximum rows for in-memory exports (XLSX, PDF)
+MAX_EXPORT_ROWS_MEMORY = 5000
+# Chunk size for iterator()
+ITERATOR_CHUNK_SIZE = 500
+
+
+class Echo:
+    """Pseudo-buffer that returns the value written to it (for StreamingHttpResponse)."""
+
+    def write(self, value):
+        return value
 
 
 class ExportMixin:
     """
-    Mixin fuer ViewSets, das XLSX- und PDF-Export-Aktionen bereitstellt.
+    Mixin fuer ViewSets, das XLSX-, PDF- und CSV-Export-Aktionen bereitstellt.
 
     Konfiguration ueber Klassen-Attribute:
         export_fields: Liste von Dicts mit 'key', 'label', 'width' (optional)
@@ -115,6 +135,41 @@ class ExportMixin:
             row.append(value)
         return row
 
+    # ── CSV Streaming Export ────────────────────────────────────
+    @extend_schema(
+        summary="CSV-Export (Streaming)",
+        description="Exportiert die gefilterten Daten als CSV-Datei mit Streaming fuer grosse Datenmengen.",
+        responses={200: {"type": "string", "format": "binary"}},
+    )
+    @action(detail=False, methods=["get"], url_path="export-csv")
+    def export_csv(self, request: Request) -> StreamingHttpResponse:
+        """
+        Streaming CSV export.
+
+        Uses StreamingHttpResponse so that rows are written to the
+        client as they are read from the database.  Memory usage is
+        constant regardless of the number of rows.
+        """
+        queryset = self.get_export_queryset(request)
+        fields = self.get_export_fields()
+        filename = self.get_export_filename()
+
+        pseudo_buffer = Echo()
+        writer = csv.writer(pseudo_buffer, delimiter=";", quoting=csv.QUOTE_MINIMAL)
+
+        def rows():
+            # Header
+            yield writer.writerow([f["label"] for f in fields])
+            # Data rows – use iterator() for constant memory
+            for obj in queryset.iterator(chunk_size=ITERATOR_CHUNK_SIZE):
+                yield writer.writerow(
+                    [str(v) for v in self.get_row_data(obj, fields)]
+                )
+
+        response = StreamingHttpResponse(rows(), content_type="text/csv; charset=utf-8")
+        response["Content-Disposition"] = f'attachment; filename="{filename}.csv"'
+        return response
+
     # ── XLSX Export ──────────────────────────────────────────────
 
     @extend_schema(
@@ -130,9 +185,8 @@ class ExportMixin:
         filename = self.get_export_filename()
         title = self.get_export_title()
 
-        wb = openpyxl.Workbook()
-        ws = wb.active
-        ws.title = title[:31]  # Excel max 31 Zeichen
+        wb = openpyxl.Workbook(write_only=True)
+        ws = wb.create_sheet(title=title[:31])
 
         # Styles
         header_font = Font(name="Calibri", bold=True, size=11, color="FFFFFF")
@@ -144,69 +198,32 @@ class ExportMixin:
         )
         cell_font = Font(name="Calibri", size=10)
         cell_alignment = Alignment(vertical="top", wrap_text=True)
-        thin_border = Border(
-            left=Side(style="thin"),
-            right=Side(style="thin"),
-            top=Side(style="thin"),
-            bottom=Side(style="thin"),
-        )
 
-        # Titel-Zeile
-        ws.merge_cells(
-            start_row=1,
-            start_column=1,
-            end_row=1,
-            end_column=len(fields),
-        )
-        title_cell = ws.cell(row=1, column=1, value=title)
-        title_cell.font = Font(name="Calibri", bold=True, size=14)
-        title_cell.alignment = Alignment(horizontal="center")
-
-        # Datum
-        ws.merge_cells(
-            start_row=2,
-            start_column=1,
-            end_row=2,
-            end_column=len(fields),
-        )
-        date_cell = ws.cell(
-            row=2,
-            column=1,
-            value=f"Erstellt am {datetime.date.today().strftime('%d.%m.%Y')}",
-        )
-        date_cell.font = Font(name="Calibri", size=9, italic=True)
-        date_cell.alignment = Alignment(horizontal="center")
-
-        # Header-Zeile (Zeile 4)
-        header_row = 4
-        for col_idx, field in enumerate(fields, 1):
-            cell = ws.cell(row=header_row, column=col_idx, value=field["label"])
+        # Header row
+        header_cells = []
+        for field in fields:
+            cell = openpyxl.cell.WriteOnlyCell(ws, value=field["label"])
             cell.font = header_font
             cell.fill = header_fill
             cell.alignment = header_alignment
-            cell.border = thin_border
+            header_cells.append(cell)
+        ws.append(header_cells)
 
-        # Daten
-        for row_idx, obj in enumerate(queryset, header_row + 1):
+        # Data rows – use iterator() for constant memory
+        row_count = 0
+        for obj in queryset.iterator(chunk_size=ITERATOR_CHUNK_SIZE):
             row_data = self.get_row_data(obj, fields)
-            for col_idx, value in enumerate(row_data, 1):
-                cell = ws.cell(row=row_idx, column=col_idx, value=value)
+            data_cells = []
+            for value in row_data:
+                cell = openpyxl.cell.WriteOnlyCell(ws, value=value)
                 cell.font = cell_font
                 cell.alignment = cell_alignment
-                cell.border = thin_border
-
-        # Spaltenbreiten
-        for col_idx, field in enumerate(fields, 1):
-            width = field.get("width", 15)
-            ws.column_dimensions[get_column_letter(col_idx)].width = width
-
-        # Auto-Filter
-        ws.auto_filter.ref = (
-            f"A{header_row}:{get_column_letter(len(fields))}{header_row}"
-        )
-
-        # Zeile fixieren
-        ws.freeze_panes = f"A{header_row + 1}"
+                data_cells.append(cell)
+            ws.append(data_cells)
+            row_count += 1
+            if row_count >= MAX_EXPORT_ROWS_MEMORY:
+                # Safety limit for in-memory exports
+                break
 
         # Response
         output = io.BytesIO()
@@ -295,12 +312,16 @@ class ExportMixin:
             [Paragraph(f["label"], header_style) for f in fields]
         ]
 
-        # Daten-Zeilen
-        for obj in queryset:
+        # Daten-Zeilen – use iterator() with safety limit
+        row_count = 0
+        for obj in queryset.iterator(chunk_size=ITERATOR_CHUNK_SIZE):
             row_data = self.get_row_data(obj, fields)
             table_data.append(
                 [Paragraph(str(v), cell_style) for v in row_data]
             )
+            row_count += 1
+            if row_count >= MAX_EXPORT_ROWS_MEMORY:
+                break
 
         if len(table_data) <= 1:
             elements.append(
@@ -358,8 +379,16 @@ class ExportMixin:
             textColor=colors.grey,
         )
         count = len(table_data) - 1
+        truncated_note = (
+            f" (limitiert auf {MAX_EXPORT_ROWS_MEMORY} Eintraege, verwenden Sie CSV fuer den vollstaendigen Export)"
+            if row_count >= MAX_EXPORT_ROWS_MEMORY
+            else ""
+        )
         elements.append(
-            Paragraph(f"Gesamt: {count} Eintr\u00e4ge", footer_style)
+            Paragraph(
+                f"Gesamt: {count} Eintr\u00e4ge{truncated_note}",
+                footer_style,
+            )
         )
 
         doc.build(elements)

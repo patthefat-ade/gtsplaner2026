@@ -12,6 +12,9 @@ Access control:
 Tenant isolation is provided by TenantViewSetMixin.
 """
 
+import logging
+
+from django.db.models import Count, Q
 from django.utils import timezone
 from django_filters import rest_framework as django_filters
 from rest_framework import permissions, status, viewsets
@@ -22,11 +25,29 @@ from core.mixins import TenantViewSetMixin
 from core.permissions import IsEducator
 from groups.models import Group, Student
 from groups.models_attendance import Attendance
+from groups.models_protocol import DailyProtocol
 from groups.serializers_attendance import (
     AttendanceCreateSerializer,
     AttendanceSerializer,
     BulkAttendanceSerializer,
 )
+
+logger = logging.getLogger(__name__)
+
+# ---------------------------------------------------------------------------
+# Status values and labels for Attendance → DailyProtocol sync
+# ---------------------------------------------------------------------------
+_SYNC_STATUSES = {
+    Attendance.Status.SICK,
+    Attendance.Status.ABSENT,
+    Attendance.Status.EXCUSED,
+}
+_STATUS_LABELS = {
+    Attendance.Status.SICK: "Krank",
+    Attendance.Status.ABSENT: "Abwesend",
+    Attendance.Status.EXCUSED: "Beurlaubt",
+}
+_AUTO_PREFIX = "[Automatisch via Anwesenheit]"
 
 
 class AttendanceFilter(django_filters.FilterSet):
@@ -102,6 +123,10 @@ class AttendanceViewSet(TenantViewSetMixin, viewsets.ModelViewSet):
         instance.is_deleted = True
         instance.save()
 
+    # ------------------------------------------------------------------
+    # Optimised bulk endpoint – replaces per-record update_or_create
+    # with set-based validation and bulk_create / bulk_update.
+    # ------------------------------------------------------------------
     @action(detail=False, methods=["post"], url_path="bulk")
     def bulk_update(self, request):
         """
@@ -117,6 +142,9 @@ class AttendanceViewSet(TenantViewSetMixin, viewsets.ModelViewSet):
                 ...
             ]
         }
+
+        Performance: Uses at most ~6 DB queries regardless of the number
+        of students (was O(n) before).
         """
         group_id = request.data.get("group_id")
         if not group_id:
@@ -151,33 +179,87 @@ class AttendanceViewSet(TenantViewSetMixin, viewsets.ModelViewSet):
         date = serializer.validated_data["date"]
         records = serializer.validated_data["records"]
 
-        created = 0
-        updated = 0
+        # 1) Collect all requested student IDs
+        requested_ids = {r["student_id"] for r in records}
 
-        for record in records:
-            student_id = record["student_id"]
-            # Verify student belongs to group
-            if not Student.objects.filter(
-                id=student_id, group_id=group_id, is_deleted=False
-            ).exists():
+        # 2) Validate students in ONE query
+        valid_ids = set(
+            Student.objects.filter(
+                id__in=requested_ids,
+                group_id=group_id,
+                is_deleted=False,
+            ).values_list("id", flat=True)
+        )
+
+        # 3) Load existing attendance records in ONE query
+        existing_map = {
+            att.student_id: att
+            for att in Attendance.objects.filter(
+                student_id__in=valid_ids,
+                date=date,
+            )
+        }
+
+        # Build record lookup
+        record_map = {r["student_id"]: r for r in records}
+
+        to_create = []
+        to_update = []
+
+        for student_id in valid_ids:
+            record = record_map.get(student_id)
+            if record is None:
                 continue
 
-            obj, was_created = Attendance.objects.update_or_create(
-                student_id=student_id,
-                date=date,
-                defaults={
-                    "group_id": group_id,
-                    "status": record["status"],
-                    "notes": record.get("notes", ""),
-                    "recorded_by": request.user,
-                    "organization_id": group.organization_id,
-                    "is_deleted": False,
-                },
-            )
-            if was_created:
-                created += 1
+            if student_id in existing_map:
+                # Update existing
+                att = existing_map[student_id]
+                att.group_id = group_id
+                att.status = record["status"]
+                att.notes = record.get("notes", "")
+                att.recorded_by = request.user
+                att.organization_id = group.organization_id
+                att.is_deleted = False
+                to_update.append(att)
             else:
-                updated += 1
+                # Create new
+                to_create.append(
+                    Attendance(
+                        student_id=student_id,
+                        date=date,
+                        group_id=group_id,
+                        status=record["status"],
+                        notes=record.get("notes", ""),
+                        recorded_by=request.user,
+                        organization_id=group.organization_id,
+                        is_deleted=False,
+                    )
+                )
+
+        # 4) Bulk create & bulk update (2 queries)
+        if to_create:
+            Attendance.objects.bulk_create(to_create)
+        if to_update:
+            Attendance.objects.bulk_update(
+                to_update,
+                fields=[
+                    "group_id", "status", "notes",
+                    "recorded_by", "organization_id", "is_deleted",
+                    "updated_at",
+                ],
+            )
+
+        # 5) Sync to DailyProtocol in bulk (replaces per-record signal)
+        self._bulk_sync_protocols(
+            group=group,
+            date=date,
+            records=records,
+            valid_ids=valid_ids,
+            user=request.user,
+        )
+
+        created = len(to_create)
+        updated = len(to_update)
 
         return Response(
             {
@@ -188,6 +270,91 @@ class AttendanceViewSet(TenantViewSetMixin, viewsets.ModelViewSet):
             status=status.HTTP_200_OK,
         )
 
+    def _bulk_sync_protocols(self, *, group, date, records, valid_ids, user):
+        """
+        Bulk-synchronise Attendance → DailyProtocol.
+
+        Instead of relying on the post_save signal (which fires once per
+        record), this method handles the sync for the entire batch in a
+        handful of queries.
+        """
+        record_map = {r["student_id"]: r for r in records if r["student_id"] in valid_ids}
+
+        # Load existing protocols in ONE query
+        existing_protocols = {
+            p.student_id: p
+            for p in DailyProtocol.objects.filter(
+                student_id__in=valid_ids,
+                date=date,
+            )
+        }
+
+        protocols_to_create = []
+        protocols_to_update = []
+
+        for student_id, record in record_map.items():
+            att_status = record["status"]
+
+            if att_status in _SYNC_STATUSES:
+                label = _STATUS_LABELS.get(att_status, att_status)
+                auto_note = f"{_AUTO_PREFIX} {label}"
+                severity = (
+                    DailyProtocol.IncidentSeverity.IMPORTANT
+                    if att_status == Attendance.Status.SICK
+                    else DailyProtocol.IncidentSeverity.NORMAL
+                )
+
+                if student_id in existing_protocols:
+                    protocol = existing_protocols[student_id]
+                    existing = protocol.incidents or ""
+                    lines = [
+                        ln for ln in existing.splitlines()
+                        if not ln.startswith(_AUTO_PREFIX)
+                    ]
+                    lines.insert(0, auto_note)
+                    protocol.incidents = "\n".join(lines).strip()
+                    protocol.incident_severity = severity
+                    protocols_to_update.append(protocol)
+                else:
+                    protocols_to_create.append(
+                        DailyProtocol(
+                            student_id=student_id,
+                            date=date,
+                            group_id=group.id,
+                            organization_id=group.organization_id,
+                            incidents=auto_note,
+                            incident_severity=severity,
+                            recorded_by=user,
+                        )
+                    )
+
+            elif att_status == Attendance.Status.PRESENT:
+                if student_id in existing_protocols:
+                    protocol = existing_protocols[student_id]
+                    existing = protocol.incidents or ""
+                    lines = [
+                        ln for ln in existing.splitlines()
+                        if not ln.startswith(_AUTO_PREFIX)
+                    ]
+                    cleaned = "\n".join(lines).strip()
+                    if cleaned != existing.strip():
+                        protocol.incidents = cleaned
+                        protocol.incident_severity = DailyProtocol.IncidentSeverity.NORMAL
+                        protocols_to_update.append(protocol)
+
+        if protocols_to_create:
+            DailyProtocol.objects.bulk_create(
+                protocols_to_create, ignore_conflicts=True
+            )
+        if protocols_to_update:
+            DailyProtocol.objects.bulk_update(
+                protocols_to_update,
+                fields=["incidents", "incident_severity", "updated_at"],
+            )
+
+    # ------------------------------------------------------------------
+    # Optimised summary – single aggregated query instead of N queries
+    # ------------------------------------------------------------------
     @action(detail=False, methods=["get"], url_path="summary")
     def summary(self, request):
         """
@@ -219,10 +386,18 @@ class AttendanceViewSet(TenantViewSetMixin, viewsets.ModelViewSet):
             date__lte=end_date,
         )
 
-        total = qs.count()
+        # Single aggregated query instead of N separate count() calls
+        aggregation = {"total": Count("id")}
+        for choice_value, _choice_label in Attendance.Status.choices:
+            aggregation[f"count_{choice_value}"] = Count(
+                "id", filter=Q(status=choice_value)
+            )
+        result = qs.aggregate(**aggregation)
+
+        total = result["total"]
         by_status = {}
         for choice_value, choice_label in Attendance.Status.choices:
-            count = qs.filter(status=choice_value).count()
+            count = result[f"count_{choice_value}"]
             by_status[choice_value] = {
                 "count": count,
                 "label": choice_label,

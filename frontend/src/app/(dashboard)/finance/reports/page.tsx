@@ -17,21 +17,23 @@ import { usePermissions } from "@/hooks/use-permissions";
 import { api } from "@/lib/api";
 import { formatCurrency } from "@/lib/format";
 import { TRANSACTION_TYPE_LABELS } from "@/lib/constants";
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-  LineChart,
-  Line,
-} from "recharts";
+import dynamic from "next/dynamic";
+
+// Lazy-load recharts to reduce initial bundle size (~200KB)
+const RechartsModule = () => import("recharts");
+const BarChart = dynamic(() => RechartsModule().then(m => ({ default: m.BarChart })), { ssr: false });
+const Bar = dynamic(() => RechartsModule().then(m => ({ default: m.Bar })), { ssr: false });
+const XAxis = dynamic(() => RechartsModule().then(m => ({ default: m.XAxis })), { ssr: false });
+const YAxis = dynamic(() => RechartsModule().then(m => ({ default: m.YAxis })), { ssr: false });
+const CartesianGrid = dynamic(() => RechartsModule().then(m => ({ default: m.CartesianGrid })), { ssr: false });
+const Tooltip = dynamic(() => RechartsModule().then(m => ({ default: m.Tooltip as any })), { ssr: false });
+const Legend = dynamic(() => RechartsModule().then(m => ({ default: m.Legend })), { ssr: false });
+const ResponsiveContainer = dynamic(() => RechartsModule().then(m => ({ default: m.ResponsiveContainer })), { ssr: false });
+const PieChart = dynamic(() => RechartsModule().then(m => ({ default: m.PieChart })), { ssr: false });
+const Pie = dynamic(() => RechartsModule().then(m => ({ default: m.Pie })), { ssr: false });
+const Cell = dynamic(() => RechartsModule().then(m => ({ default: m.Cell })), { ssr: false });
+const LineChart = dynamic(() => RechartsModule().then(m => ({ default: m.LineChart })), { ssr: false });
+const Line = dynamic(() => RechartsModule().then(m => ({ default: m.Line })), { ssr: false });
 import {
   BarChart3,
   PieChart as PieChartIcon,

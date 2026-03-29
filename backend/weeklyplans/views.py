@@ -115,6 +115,7 @@ class WeeklyPlanViewSet(ExportMixin, TenantViewSetMixin, viewsets.ModelViewSet):
 
         qs = super().get_queryset()
         qs = qs.select_related("group", "group__location", "created_by", "school_year")
+        qs = qs.prefetch_related("entries")
 
         user = self.request.user
         level = get_user_hierarchy_level(user)

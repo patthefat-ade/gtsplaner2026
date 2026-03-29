@@ -4,6 +4,11 @@ Signals for the groups app.
 Synchronises Attendance records with DailyProtocol entries so that
 marking a student as sick / absent / excused automatically creates
 or updates the corresponding daily protocol.
+
+NOTE: The bulk endpoint in views_attendance.py handles the sync
+directly (bypassing this signal) for performance reasons.  This
+signal only fires for single-record creates/updates via the
+standard CRUD endpoints.
 """
 
 import logging
@@ -42,7 +47,14 @@ def sync_attendance_to_protocol(sender, instance, **kwargs):
 
     If the student is marked as *present*, any auto-generated
     incident note is cleared (but manually written notes are kept).
+
+    Skipped when the instance has ``_skip_signal = True`` (set by
+    the bulk endpoint to avoid redundant work).
     """
+    # Skip if called from bulk operations (they handle sync directly)
+    if getattr(instance, "_skip_signal", False):
+        return
+
     if instance.is_deleted:
         return
 
@@ -68,11 +80,7 @@ def sync_attendance_to_protocol(sender, instance, **kwargs):
             )
 
             if not created:
-                # Update the existing protocol's incident note
-                # Preserve any manually written text that doesn't
-                # start with the auto-prefix.
                 existing = protocol.incidents or ""
-                # Remove old auto-note if present
                 lines = [
                     ln
                     for ln in existing.splitlines()
@@ -98,7 +106,6 @@ def sync_attendance_to_protocol(sender, instance, **kwargs):
             )
 
         elif instance.status == Attendance.Status.PRESENT:
-            # If student is now present, remove auto-generated note
             try:
                 protocol = DailyProtocol.objects.get(
                     student_id=instance.student_id,

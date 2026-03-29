@@ -329,6 +329,24 @@ CSRF_TRUSTED_ORIGINS = config(
 )
 
 # ---------------------------------------------------------------------------
+# Cache Configuration (Redis)
+# ---------------------------------------------------------------------------
+
+REDIS_URL = config("REDIS_URL", default="redis://localhost:6379/2")
+
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.redis.RedisCacheBackend",
+        "LOCATION": REDIS_URL,
+        "TIMEOUT": 300,  # 5 minutes default TTL
+        "KEY_PREFIX": "gts",
+        "OPTIONS": {
+            "db": 2,
+        },
+    },
+}
+
+# ---------------------------------------------------------------------------
 # Celery Configuration
 # ---------------------------------------------------------------------------
 

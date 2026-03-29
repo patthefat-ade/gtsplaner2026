@@ -122,7 +122,7 @@ class TransactionCategoryViewSet(TenantViewSetMixin, viewsets.ModelViewSet):
         if getattr(self, "swagger_fake_view", False):
             return TransactionCategory.objects.none()
         qs = super().get_queryset()
-        return qs.filter(is_deleted=False)
+        return qs.filter(is_deleted=False).select_related("location")
 
     def get_serializer_class(self):
         if self.action in ["create", "update", "partial_update"]:

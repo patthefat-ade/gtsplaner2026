@@ -18,9 +18,11 @@ function QueryProviderInner({ children }: { children: ReactNode }) {
       new QueryClient({
         defaultOptions: {
           queries: {
-            staleTime: 60 * 1000, // 1 minute
+            staleTime: 2 * 60 * 1000, // 2 minutes – data considered fresh
+            gcTime: 10 * 60 * 1000,   // 10 minutes – keep inactive data in cache
             retry: 1,
             refetchOnWindowFocus: false,
+            refetchOnReconnect: true,
           },
         },
         mutationCache: new MutationCache({
