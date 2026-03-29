@@ -98,6 +98,9 @@ const routePermissions: { path: string; permission: PermissionCodename }[] = [
   { path: "/timetracking/entries", permission: "view_own_timeentries" },
   { path: "/timetracking/leave-requests", permission: "view_own_timeentries" },
   { path: "/timetracking/approval", permission: "approve_leave" },
+
+  // Task routes
+  { path: "/tasks", permission: "view_tasks" },
 ];
 
 /**
