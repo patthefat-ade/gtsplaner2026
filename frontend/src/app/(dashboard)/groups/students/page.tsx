@@ -39,7 +39,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { formatDate } from "@/lib/format";
 import { DEFAULT_PAGE_SIZE } from "@/lib/constants";
-import type { Student } from "@/types/models";
+import type { Student, ConsentStatus } from "@/types/models";
+import { CONSENT_STATUS_LABELS, CONSENT_STATUS_COLORS } from "@/types/models";
 import type { StudentFormData } from "@/lib/validations";
 import {
   Plus,
@@ -53,6 +54,10 @@ import {
   Mail,
   Star,
   MessageCircle,
+  ShieldCheck,
+  ShieldAlert,
+  ShieldOff,
+  Lock,
 } from "lucide-react";
 import { usePermissions } from "@/hooks/use-permissions";
 import { useContacts } from "@/hooks/use-contacts";
@@ -201,6 +206,9 @@ export default function StudentsPage() {
                   </TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="hidden lg:table-cell">
+                    Einwilligung
+                  </TableHead>
+                  <TableHead className="hidden lg:table-cell">
                     Kontakte
                   </TableHead>
                   <TableHead className="w-[50px]" />
@@ -222,11 +230,32 @@ export default function StudentsPage() {
                       {student.group_name || `#${student.group}`}
                     </TableCell>
                     <TableCell>
-                      <Badge
-                        variant={student.is_active ? "success" : "secondary"}
-                      >
-                        {student.is_active ? "Aktiv" : "Inaktiv"}
-                      </Badge>
+                      <div className="flex items-center gap-1.5">
+                        <Badge
+                          variant={student.is_active ? "success" : "secondary"}
+                        >
+                          {student.is_active ? "Aktiv" : "Inaktiv"}
+                        </Badge>
+                        {student.processing_restricted && (
+                          <Badge variant="outline" className="border-orange-500/30 text-orange-400">
+                            <Lock className="mr-1 h-3 w-3" />
+                            Art. 18
+                          </Badge>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell className="hidden lg:table-cell">
+                      {student.data_consent_status && (
+                        <Badge
+                          variant="outline"
+                          className={CONSENT_STATUS_COLORS[student.data_consent_status as ConsentStatus] || ""}
+                        >
+                          {student.data_consent_status === "granted" && <ShieldCheck className="mr-1 h-3 w-3" />}
+                          {student.data_consent_status === "pending" && <ShieldAlert className="mr-1 h-3 w-3" />}
+                          {student.data_consent_status === "revoked" && <ShieldOff className="mr-1 h-3 w-3" />}
+                          {CONSENT_STATUS_LABELS[student.data_consent_status as ConsentStatus] || student.data_consent_status}
+                        </Badge>
+                      )}
                     </TableCell>
                     <TableCell className="hidden lg:table-cell">
                       <Link

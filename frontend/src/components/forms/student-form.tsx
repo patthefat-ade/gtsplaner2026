@@ -8,6 +8,7 @@ import { studentSchema, type StudentFormData } from "@/lib/validations";
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -32,8 +33,11 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { DatePicker } from "@/components/ui/date-picker";
-import { Loader2 } from "lucide-react";
-import type { Student, Group } from "@/types/models";
+import { Separator } from "@/components/ui/separator";
+import { Badge } from "@/components/ui/badge";
+import { Loader2, ShieldCheck, ShieldAlert, ShieldOff } from "lucide-react";
+import type { Student, Group, ConsentStatus } from "@/types/models";
+import { CONSENT_STATUS_LABELS, CONSENT_STATUS_COLORS } from "@/types/models";
 
 interface StudentFormProps {
   open: boolean;
@@ -51,6 +55,17 @@ function parseDate(value: string | undefined | null): Date | undefined {
     return parse(value, "yyyy-MM-dd", new Date());
   } catch {
     return undefined;
+  }
+}
+
+function ConsentStatusIcon({ status }: { status: ConsentStatus }) {
+  switch (status) {
+    case "granted":
+      return <ShieldCheck className="h-4 w-4" />;
+    case "revoked":
+      return <ShieldOff className="h-4 w-4" />;
+    default:
+      return <ShieldAlert className="h-4 w-4" />;
   }
 }
 
@@ -74,6 +89,12 @@ export function StudentForm({
       enrollment_date: student?.enrollment_date || "",
       notes: student?.notes || "",
       is_active: student?.is_active ?? true,
+      data_consent_status: student?.data_consent_status || "pending",
+      data_consent_date: student?.data_consent_date || "",
+      data_consent_guardian_name: student?.data_consent_guardian_name || "",
+      processing_restricted: student?.processing_restricted ?? false,
+      restriction_reason: student?.restriction_reason || "",
+      restriction_date: student?.restriction_date || "",
     },
   });
 
@@ -87,9 +108,18 @@ export function StudentForm({
         enrollment_date: student?.enrollment_date || "",
         notes: student?.notes || "",
         is_active: student?.is_active ?? true,
+        data_consent_status: student?.data_consent_status || "pending",
+        data_consent_date: student?.data_consent_date || "",
+        data_consent_guardian_name: student?.data_consent_guardian_name || "",
+        processing_restricted: student?.processing_restricted ?? false,
+        restriction_reason: student?.restriction_reason || "",
+        restriction_date: student?.restriction_date || "",
       });
     }
   }, [open, student, form]);
+
+  const consentStatus = form.watch("data_consent_status");
+  const processingRestricted = form.watch("processing_restricted");
 
   const handleSubmit = async (data: StudentFormData) => {
     try {
@@ -113,7 +143,7 @@ export function StudentForm({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
             {isEdit ? "Kind bearbeiten" : "Neues Kind"}
@@ -124,6 +154,7 @@ export function StudentForm({
             onSubmit={form.handleSubmit(handleSubmit)}
             className="space-y-4"
           >
+            {/* ── Stammdaten ── */}
             <div className="grid grid-cols-2 gap-4">
               <FormField
                 control={form.control}
@@ -256,6 +287,174 @@ export function StudentForm({
                 </FormItem>
               )}
             />
+
+            {/* ── DSGVO Einwilligung (Art. 8) ── */}
+            <Separator />
+            <div className="space-y-1">
+              <h4 className="text-sm font-semibold flex items-center gap-2">
+                <ConsentStatusIcon status={consentStatus as ConsentStatus} />
+                Einwilligung zur Datenverarbeitung (DSGVO Art. 8)
+              </h4>
+              <p className="text-xs text-muted-foreground">
+                Fuer die Verarbeitung personenbezogener Daten von Minderjaehrigen ist die Einwilligung eines Erziehungsberechtigten erforderlich.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="data_consent_status"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Einwilligungsstatus</FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      value={field.value}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Status waehlen" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="pending">
+                          <span className="flex items-center gap-2">
+                            <ShieldAlert className="h-3 w-3 text-yellow-400" />
+                            Ausstehend
+                          </span>
+                        </SelectItem>
+                        <SelectItem value="granted">
+                          <span className="flex items-center gap-2">
+                            <ShieldCheck className="h-3 w-3 text-green-400" />
+                            Erteilt
+                          </span>
+                        </SelectItem>
+                        <SelectItem value="revoked">
+                          <span className="flex items-center gap-2">
+                            <ShieldOff className="h-3 w-3 text-red-400" />
+                            Widerrufen
+                          </span>
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="data_consent_date"
+                render={({ field }) => (
+                  <FormItem className="flex flex-col">
+                    <FormLabel>Einwilligungsdatum</FormLabel>
+                    <DatePicker
+                      value={parseDate(field.value)}
+                      onChange={(date) => {
+                        field.onChange(
+                          date ? format(date, "yyyy-MM-dd") : "",
+                        );
+                      }}
+                      placeholder="Datum der Einwilligung"
+                    />
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <FormField
+              control={form.control}
+              name="data_consent_guardian_name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Name des Erziehungsberechtigten</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="Vor- und Nachname des Erziehungsberechtigten"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormDescription>
+                    Person, die die Einwilligung erteilt hat
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {/* ── Einschränkung der Verarbeitung (Art. 18) ── */}
+            <Separator />
+            <div className="space-y-1">
+              <h4 className="text-sm font-semibold">
+                Einschraenkung der Verarbeitung (DSGVO Art. 18)
+              </h4>
+              <p className="text-xs text-muted-foreground">
+                Bei Einschraenkung duerfen die Daten nur gespeichert, aber nicht weiter verarbeitet werden.
+              </p>
+            </div>
+
+            <FormField
+              control={form.control}
+              name="processing_restricted"
+              render={({ field }) => (
+                <FormItem className="flex items-center justify-between rounded-lg border border-destructive/30 p-3">
+                  <div>
+                    <FormLabel className="cursor-pointer">Verarbeitung eingeschraenkt</FormLabel>
+                    <FormDescription>
+                      Daten werden nur gespeichert, nicht verarbeitet
+                    </FormDescription>
+                  </div>
+                  <FormControl>
+                    <Switch
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+
+            {processingRestricted && (
+              <>
+                <FormField
+                  control={form.control}
+                  name="restriction_reason"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Grund der Einschraenkung</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          placeholder="Grund fuer die Einschraenkung der Verarbeitung..."
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="restriction_date"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-col">
+                      <FormLabel>Einschraenkung seit</FormLabel>
+                      <DatePicker
+                        value={parseDate(field.value)}
+                        onChange={(date) => {
+                          field.onChange(
+                            date ? format(date, "yyyy-MM-dd") : "",
+                          );
+                        }}
+                        placeholder="Datum der Einschraenkung"
+                      />
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </>
+            )}
 
             <DialogFooter>
               <Button
