@@ -263,15 +263,20 @@ function TaskFormModal({
   const [locationId, setLocationId] = useState<string>("");
   const [saving, setSaving] = useState(false);
 
-  // Load users for assignment dropdown
+  // Load users for assignment dropdown via dedicated assignees endpoint
   const [users, setUsers] = useState<UserType[]>([]);
   useEffect(() => {
     api
-      .get<PaginatedResponse<UserType>>("/users/?page_size=200&is_active=true")
-      .then((res) => setUsers(res.data.results))
+      .get<UserType[]>("/tasks/assignees/")
+      .then((res) => setUsers(res.data))
       .catch(() => {
-        // Educators don't have access to /users/ - load colleagues via tasks
-        // They can still see the current assignee
+        // Fallback: try /users/ for backwards compatibility
+        api
+          .get<PaginatedResponse<UserType>>("/users/?page_size=200&is_active=true")
+          .then((res) => setUsers(res.data.results))
+          .catch(() => {
+            // No access - user can still see current assignee in dropdown
+          });
       });
   }, []);
 

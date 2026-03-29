@@ -5,9 +5,10 @@ Provides CRUD operations for tasks, a board endpoint for Kanban view,
 and a status change endpoint that triggers notifications.
 """
 
+from django.contrib.auth import get_user_model
 from django.db import models
 from django.utils import timezone
-from rest_framework import status, viewsets
+from rest_framework import serializers, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -21,6 +22,8 @@ from tasks.serializers import (
     TaskListSerializer,
     TaskStatusSerializer,
 )
+
+User = get_user_model()
 
 
 class TaskViewSet(ExportMixin, viewsets.ModelViewSet):
@@ -190,6 +193,60 @@ class TaskViewSet(ExportMixin, viewsets.ModelViewSet):
         }
 
         return Response(board_data)
+
+    @action(detail=False, methods=["get"], url_path="assignees")
+    def assignees(self, request):
+        """
+        Return a list of users that the current user can assign tasks to.
+
+        - SuperAdmin/Admin: all active users in their tenant
+        - LocationManager: all active users at their location(s)
+        - Educator: all active users at their location
+        """
+        ensure_tenant_context(request)
+        user = request.user
+        tenant_ids = getattr(request, "tenant_ids", [])
+        is_cross_tenant = getattr(request, "is_cross_tenant", False)
+
+        qs = User.objects.filter(is_active=True).order_by("last_name", "first_name")
+
+        if is_cross_tenant:
+            # SuperAdmin: all users
+            pass
+        elif tenant_ids:
+            if hasattr(user, "role") and user.role == "educator":
+                # Educator: users at the same location
+                if user.location_id:
+                    qs = qs.filter(location_id=user.location_id)
+                else:
+                    qs = qs.filter(organization_id__in=tenant_ids)
+            elif hasattr(user, "role") and user.role == "location_manager":
+                # LocationManager: users at their location(s)
+                if user.location_id:
+                    qs = qs.filter(
+                        models.Q(location_id=user.location_id)
+                        | models.Q(id=user.id)
+                    )
+                else:
+                    qs = qs.filter(organization_id__in=tenant_ids)
+            else:
+                # Admin: all users in tenant
+                qs = qs.filter(organization_id__in=tenant_ids)
+        else:
+            qs = qs.none()
+
+        data = [
+            {
+                "id": u.id,
+                "first_name": u.first_name,
+                "last_name": u.last_name,
+                "role": u.role,
+                "location_name": getattr(u.location, "name", None) if hasattr(u, "location") else None,
+            }
+            for u in qs.select_related("location")[:200]
+        ]
+
+        return Response(data)
 
     def _create_status_notification(self, task, old_status, new_status, changed_by):
         """Create an in-app notification for the task creator."""
