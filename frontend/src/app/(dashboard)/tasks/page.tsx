@@ -513,10 +513,10 @@ export default function TasksPage() {
     () => ({
       priority: filterPriority || undefined,
       location: filterLocation ? Number(filterLocation) : undefined,
-      // For LocationManager "mine" tab, filter by own user ID
-      assigned_to: (isLocationManager && kanbanTab === "mine" && user?.id) ? user.id : undefined,
+      // For LocationManager/Admin "mine" tab, filter by own user ID
+      assigned_to: ((isLocationManager || isAdmin) && kanbanTab === "mine" && user?.id) ? user.id : undefined,
     }),
-    [filterPriority, filterLocation, isLocationManager, kanbanTab, user?.id]
+    [filterPriority, filterLocation, isLocationManager, isAdmin, kanbanTab, user?.id]
   );
 
   const listParams = useMemo(
