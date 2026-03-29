@@ -36,17 +36,33 @@ const processQueue = (error: unknown) => {
   failedQueue = [];
 };
 
+/**
+ * Auth-related endpoints that should NOT trigger the automatic token refresh.
+ * These endpoints are called during auth flow itself, so retrying them
+ * would cause infinite loops.
+ */
+const AUTH_SKIP_URLS = [
+  "/auth/login",
+  "/auth/refresh",
+  "/auth/me",
+  "/auth/logout",
+  "/auth/2fa/login-verify",
+];
+
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
 
-    // Skip refresh for login and refresh endpoints
+    // Check if the URL matches any auth endpoint that should skip refresh
+    const shouldSkipRefresh = AUTH_SKIP_URLS.some((url) =>
+      originalRequest.url?.includes(url),
+    );
+
     if (
       error.response?.status === 401 &&
       !originalRequest._retry &&
-      !originalRequest.url?.includes("/auth/login") &&
-      !originalRequest.url?.includes("/auth/refresh") &&
+      !shouldSkipRefresh &&
       typeof window !== "undefined"
     ) {
       if (isRefreshing) {
@@ -77,8 +93,11 @@ api.interceptors.response.use(
         return api(originalRequest);
       } catch (refreshError) {
         processQueue(refreshError);
-        // Refresh failed – redirect to login
-        window.location.href = "/login";
+
+        // Refresh failed – only redirect if not already on /login to prevent loops
+        if (!window.location.pathname.startsWith("/login")) {
+          window.location.href = "/login";
+        }
         return Promise.reject(refreshError);
       } finally {
         isRefreshing = false;
