@@ -108,10 +108,6 @@ class LogoutView(APIView):
         },
     )
     def post(self, request):
-        import logging
-
-        logger = logging.getLogger(__name__)
-
         # Try to get refresh token from cookie first, then from body
         refresh_token = request.COOKIES.get(REFRESH_TOKEN_COOKIE)
         if not refresh_token:
@@ -124,14 +120,6 @@ class LogoutView(APIView):
             except (InvalidToken, TokenError):
                 # Token already blacklisted, expired, or invalid – expected
                 pass
-            except Exception as exc:
-                # Unexpected error (e.g. missing DB table, integrity error).
-                # Log it but do NOT prevent the user from logging out.
-                logger.error(
-                    "Logout: token.blacklist() failed unexpectedly: %s: %s",
-                    type(exc).__name__,
-                    exc,
-                )
 
         response = Response(
             {"detail": "Erfolgreich abgemeldet."},
