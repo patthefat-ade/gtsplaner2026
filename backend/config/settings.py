@@ -88,6 +88,7 @@ INSTALLED_APPS = [
     "events.apps.EventsConfig",
     "admin_panel.apps.AdminPanelConfig",
     "system.apps.SystemConfig",
+    "tasks.apps.TasksConfig",
 ]
 
 MIDDLEWARE = [

@@ -896,3 +896,80 @@ export interface MonthlyFinanceSummary {
   opening_balance: number;
   closing_balance: number;
 }
+
+
+/* ───── Task Management ──────────────────────────────────────────────────── */
+
+export type TaskStatus = "open" | "in_progress" | "done";
+export type TaskPriority = "low" | "medium" | "high";
+
+export const TASK_STATUS_LABELS: Record<TaskStatus, string> = {
+  open: "Offen",
+  in_progress: "In Arbeit",
+  done: "Erledigt",
+};
+
+export const TASK_PRIORITY_LABELS: Record<TaskPriority, string> = {
+  low: "Niedrig",
+  medium: "Mittel",
+  high: "Hoch",
+};
+
+export const TASK_PRIORITY_COLORS: Record<TaskPriority, string> = {
+  low: "#22C55E",
+  medium: "#F97316",
+  high: "#EF4444",
+};
+
+export interface Task {
+  id: number;
+  title: string;
+  description: string;
+  status: TaskStatus;
+  priority: TaskPriority;
+  due_date: string;
+  created_by: number;
+  created_by_name: string;
+  assigned_to: number;
+  assigned_to_name: string;
+  location: number | null;
+  location_name: string | null;
+  group: number | null;
+  group_name: string | null;
+  is_overdue: boolean;
+  completed_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TaskCreate {
+  title: string;
+  description?: string;
+  status?: TaskStatus;
+  priority?: TaskPriority;
+  due_date: string;
+  assigned_to: number;
+  location?: number | null;
+  group?: number | null;
+}
+
+export interface TaskBoard {
+  open: Task[];
+  in_progress: Task[];
+  done: Task[];
+}
+
+/* ───── In-App Notifications ─────────────────────────────────────────────── */
+
+export type NotificationType = "task_status_changed" | "task_assigned" | "task_overdue";
+
+export interface InAppNotification {
+  id: number;
+  title: string;
+  message: string;
+  notification_type: NotificationType;
+  related_task: number | null;
+  related_task_title: string | null;
+  is_read: boolean;
+  created_at: string;
+}
