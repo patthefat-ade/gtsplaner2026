@@ -107,21 +107,28 @@ urlpatterns = [
     path("api/v1/system/", include("system.urls")),
     path("api/v1/export/", include("system.urls_export")),
     path("api/v1/admin/gdpr/", include("system.urls_gdpr")),
-    # OpenAPI Schema (secured – staff only)
-    path("api/schema/", SecuredSchemaView.as_view(), name="schema"),
-    # Swagger UI (secured – staff only)
-    path(
-        "api/docs/",
-        SecuredSwaggerView.as_view(url_name="schema"),
-        name="swagger-ui",
-    ),
-    # ReDoc (secured – staff only)
-    path(
-        "api/redoc/",
-        SecuredRedocView.as_view(url_name="schema"),
-        name="redoc",
-    ),
-    # Health Check (system module)
+]
+
+# API-Dokumentation nur in Entwicklung oder für Staff-User
+if settings.DEBUG:
+    urlpatterns += [
+        # OpenAPI Schema (secured – staff only)
+        path("api/schema/", SecuredSchemaView.as_view(), name="schema"),
+        # Swagger UI (secured – staff only)
+        path(
+            "api/docs/",
+            SecuredSwaggerView.as_view(url_name="schema"),
+            name="swagger-ui",
+        ),
+        # ReDoc (secured – staff only)
+        path(
+            "api/redoc/",
+            SecuredRedocView.as_view(url_name="schema"),
+            name="redoc",
+        ),
+    ]
+# Health Check (immer verfuegbar)
+urlpatterns += [
     path("api/health/", include("system.urls_health")),
 ]
 
