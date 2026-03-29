@@ -46,6 +46,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/components/ui/toast";
 import { usePermissions } from "@/hooks/use-permissions";
+import { useAuth } from "@/hooks/use-auth";
 import { useLocations } from "@/hooks/use-locations";
 import {
   useTaskBoard,
@@ -130,13 +131,11 @@ function TaskCard({
     in_progress: "done",
     done: null,
   };
-
   const nextLabel: Record<TaskStatus, string> = {
     open: "Starten",
     in_progress: "Erledigen",
     done: "",
   };
-
   const next = nextStatus[task.status];
 
   return (
@@ -151,20 +150,17 @@ function TaskCard({
           <h4 className="font-medium text-sm leading-tight">{task.title}</h4>
           <PriorityBadge priority={task.priority} />
         </div>
-
         {task.description && (
           <p className="text-xs text-muted-foreground mb-3 line-clamp-2">
             {task.description}
           </p>
         )}
-
         <div className="flex items-center gap-2 mb-3">
           <span className="flex items-center gap-1 text-xs text-muted-foreground">
             <User className="h-3 w-3" />
             {task.assigned_to_name}
           </span>
         </div>
-
         <div className="flex items-center justify-between">
           <DueDateDisplay date={task.due_date} isOverdue={task.is_overdue} />
           {next && (
@@ -211,17 +207,17 @@ function KanbanColumn({
   canManage: boolean;
 }) {
   return (
-    <div className="flex-1 min-w-[300px]">
-      <div className={`flex items-center gap-2 mb-4 pb-2 border-b-2 ${color}`}>
+    <div className={`flex-1 min-w-[280px] border-t-2 ${color} rounded-lg bg-muted/30 p-3`}>
+      <div className="flex items-center gap-2 mb-4">
         {icon}
-        <h3 className="font-semibold">{title}</h3>
+        <h3 className="font-semibold text-sm">{title}</h3>
         <Badge variant="secondary" className="ml-auto">
           {tasks.length}
         </Badge>
       </div>
       <div className="space-y-0">
         {tasks.length === 0 ? (
-          <p className="text-sm text-muted-foreground text-center py-8">
+          <p className="text-xs text-muted-foreground text-center py-8">
             Keine Aufgaben
           </p>
         ) : (
@@ -249,6 +245,7 @@ function TaskFormModal({
   onSave,
   onDelete,
   canManage,
+  canEditAssignment,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -256,6 +253,7 @@ function TaskFormModal({
   onSave: (data: TaskCreate, id?: number) => Promise<void>;
   onDelete?: (id: number) => Promise<void>;
   canManage: boolean;
+  canEditAssignment: boolean;
 }) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -271,7 +269,10 @@ function TaskFormModal({
     api
       .get<PaginatedResponse<UserType>>("/users/?page_size=200&is_active=true")
       .then((res) => setUsers(res.data.results))
-      .catch(() => {});
+      .catch(() => {
+        // Educators don't have access to /users/ - load colleagues via tasks
+        // They can still see the current assignee
+      });
   }, []);
 
   const { data: locationsData } = useLocations();
@@ -317,6 +318,10 @@ function TaskFormModal({
     }
   };
 
+  // Determine if this is a read-only view (educator viewing task they can't edit)
+  const isEditing = !!task;
+  const canEditFields = canManage || canEditAssignment;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg">
@@ -326,8 +331,10 @@ function TaskFormModal({
           </DialogTitle>
           <DialogDescription>
             {task
-              ? "Bearbeiten Sie die Aufgabendetails."
-              : "Erstellen Sie eine neue Aufgabe und weisen Sie sie einer Pädagogin zu."}
+              ? canEditFields
+                ? "Bearbeiten Sie die Aufgabendetails."
+                : "Aufgabendetails anzeigen."
+              : "Erstellen Sie eine neue Aufgabe und weisen Sie sie zu."}
           </DialogDescription>
         </DialogHeader>
 
@@ -339,6 +346,7 @@ function TaskFormModal({
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Aufgabentitel eingeben"
+              disabled={isEditing && !canManage}
             />
           </div>
 
@@ -350,13 +358,18 @@ function TaskFormModal({
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Optionale Beschreibung"
               rows={3}
+              disabled={isEditing && !canManage}
             />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
               <Label htmlFor="task-priority">Priorität</Label>
-              <Select value={priority} onValueChange={(v) => setPriority(v as TaskPriority)}>
+              <Select
+                value={priority}
+                onValueChange={(v) => setPriority(v as TaskPriority)}
+                disabled={isEditing && !canManage}
+              >
                 <SelectTrigger id="task-priority">
                   <SelectValue />
                 </SelectTrigger>
@@ -375,29 +388,47 @@ function TaskFormModal({
                 type="date"
                 value={dueDate}
                 onChange={(e) => setDueDate(e.target.value)}
+                disabled={isEditing && !canManage}
               />
             </div>
           </div>
 
           <div>
             <Label htmlFor="task-assigned">Zuweisen an *</Label>
-            <Select value={assignedTo} onValueChange={setAssignedTo}>
+            <Select
+              value={assignedTo}
+              onValueChange={setAssignedTo}
+              disabled={isEditing && !canEditFields}
+            >
               <SelectTrigger id="task-assigned">
                 <SelectValue placeholder="Person auswählen" />
               </SelectTrigger>
               <SelectContent>
-                {users.map((u) => (
-                  <SelectItem key={u.id} value={String(u.id)}>
-                    {u.first_name} {u.last_name} ({u.role === "educator" ? "Pädagogin" : u.role === "location_manager" ? "Standortleitung" : u.role_display || u.role})
-                  </SelectItem>
-                ))}
+                {users.length > 0 ? (
+                  users.map((u) => (
+                    <SelectItem key={u.id} value={String(u.id)}>
+                      {u.first_name} {u.last_name} ({u.role === "educator" ? "Pädagogin" : u.role === "location_manager" ? "Standortleitung" : u.role_display || u.role})
+                    </SelectItem>
+                  ))
+                ) : (
+                  // Fallback: show current assignee when user list is not available
+                  task && (
+                    <SelectItem value={String(task.assigned_to)}>
+                      {task.assigned_to_name}
+                    </SelectItem>
+                  )
+                )}
               </SelectContent>
             </Select>
           </div>
 
           <div>
             <Label htmlFor="task-location">Standort</Label>
-            <Select value={locationId || "__none__"} onValueChange={(v) => setLocationId(v === "__none__" ? "" : v)}>
+            <Select
+              value={locationId || "__none__"}
+              onValueChange={(v) => setLocationId(v === "__none__" ? "" : v)}
+              disabled={isEditing && !canManage}
+            >
               <SelectTrigger id="task-location">
                 <SelectValue placeholder="Optional" />
               </SelectTrigger>
@@ -429,14 +460,16 @@ function TaskFormModal({
           )}
           <div className="flex gap-2 ml-auto">
             <Button variant="outline" onClick={() => onOpenChange(false)}>
-              Abbrechen
+              {canEditFields ? "Abbrechen" : "Schließen"}
             </Button>
-            <Button
-              onClick={handleSubmit}
-              disabled={saving || !title.trim() || !dueDate || !assignedTo}
-            >
-              {saving ? "Speichern..." : task ? "Aktualisieren" : "Erstellen"}
-            </Button>
+            {canEditFields && (
+              <Button
+                onClick={handleSubmit}
+                disabled={saving || !title.trim() || !dueDate || !assignedTo}
+              >
+                {saving ? "Speichern..." : task ? "Aktualisieren" : "Erstellen"}
+              </Button>
+            )}
           </div>
         </DialogFooter>
       </DialogContent>
@@ -449,13 +482,22 @@ function TaskFormModal({
 export default function TasksPage() {
   const toast = useToast();
   const { hasPermission } = usePermissions();
+  const { user } = useAuth();
   const canManage = hasPermission("manage_tasks");
+
+  // Educators can edit assignment on their own tasks (reassign)
+  const isEducator = user?.role === "educator";
+  const isLocationManager = user?.role === "location_manager";
+  const isAdmin = user?.role === "admin" || user?.role === "super_admin";
 
   const [view, setView] = useState<"board" | "list">("board");
   const [filterPriority, setFilterPriority] = useState<string>("");
   const [filterLocation, setFilterLocation] = useState<string>("");
   const [searchQuery, setSearchQuery] = useState("");
   const [page, setPage] = useState(1);
+
+  // Kanban tab for LocationManager: "location" (default) or "mine"
+  const [kanbanTab, setKanbanTab] = useState<"location" | "mine">("location");
 
   // Modal state
   const [modalOpen, setModalOpen] = useState(false);
@@ -466,8 +508,10 @@ export default function TasksPage() {
     () => ({
       priority: filterPriority || undefined,
       location: filterLocation ? Number(filterLocation) : undefined,
+      // For LocationManager "mine" tab, filter by own user ID
+      assigned_to: (isLocationManager && kanbanTab === "mine" && user?.id) ? user.id : undefined,
     }),
-    [filterPriority, filterLocation]
+    [filterPriority, filterLocation, isLocationManager, kanbanTab, user?.id]
   );
 
   const listParams = useMemo(
@@ -549,6 +593,16 @@ export default function TasksPage() {
     setModalOpen(true);
   };
 
+  // Determine if the current user can edit the assignment of the editing task
+  const canEditAssignment = useMemo(() => {
+    if (canManage) return true;
+    // Educators can reassign tasks that are assigned to them
+    if (isEducator && editingTask && editingTask.assigned_to === user?.id) {
+      return true;
+    }
+    return false;
+  }, [canManage, isEducator, editingTask, user?.id]);
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -590,6 +644,28 @@ export default function TasksPage() {
           )}
         </div>
       </div>
+
+      {/* Kanban Tab for LocationManager */}
+      {(isLocationManager || isAdmin) && view === "board" && (
+        <div className="flex border rounded-md w-fit">
+          <Button
+            variant={kanbanTab === "location" ? "default" : "ghost"}
+            size="sm"
+            onClick={() => setKanbanTab("location")}
+            className="rounded-r-none"
+          >
+            Standort-Aufgaben
+          </Button>
+          <Button
+            variant={kanbanTab === "mine" ? "default" : "ghost"}
+            size="sm"
+            onClick={() => setKanbanTab("mine")}
+            className="rounded-l-none"
+          >
+            Meine Aufgaben
+          </Button>
+        </div>
+      )}
 
       {/* Filters */}
       <div className="flex items-center gap-4">
@@ -764,6 +840,7 @@ export default function TasksPage() {
         onSave={handleSave}
         onDelete={canManage ? handleDelete : undefined}
         canManage={canManage}
+        canEditAssignment={canEditAssignment}
       />
     </div>
   );

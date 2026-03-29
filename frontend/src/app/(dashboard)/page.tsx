@@ -107,6 +107,24 @@ interface DashboardStats {
     in_progress_count: number;
     overdue_count: number;
   }>;
+  location_task_summary?: Array<{
+    location__id: number;
+    location__name: string;
+    open_count: number;
+    in_progress_count: number;
+    done_count: number;
+    overdue_count: number;
+    total_count: number;
+  }>;
+  location_manager_task_summary?: Array<{
+    assigned_to__id: number;
+    assigned_to__first_name: string;
+    assigned_to__last_name: string;
+    assigned_to__location__name: string;
+    open_count: number;
+    in_progress_count: number;
+    overdue_count: number;
+  }>;
 }
 
 /* ───── Hooks ───── */
@@ -524,6 +542,53 @@ function AdminDashboard({ stats, loading }: { stats?: DashboardStats; loading: b
           href="/finance/transactions"
         />
       </div>
+
+      {/* Task Overview */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <StatCard
+          title="Offene Aufgaben"
+          value={String(stats?.open_tasks ?? 0)}
+          description="In der Organisation"
+          icon={ClipboardList}
+          trend={stats?.open_tasks ? "up" : "neutral"}
+          loading={loading}
+          href="/tasks"
+        />
+        <StatCard
+          title="In Arbeit"
+          value={String(stats?.in_progress_tasks ?? 0)}
+          description="In der Organisation"
+          icon={CircleDot}
+          loading={loading}
+          href="/tasks"
+        />
+        <StatCard
+          title="Erledigt"
+          value={String(stats?.done_tasks ?? 0)}
+          description="In der Organisation"
+          icon={CheckCircle2}
+          loading={loading}
+          href="/tasks"
+        />
+        <StatCard
+          title="Überfällig"
+          value={String(stats?.overdue_tasks ?? 0)}
+          description="In der Organisation"
+          icon={AlertTriangle}
+          trend={stats?.overdue_tasks ? "down" : "neutral"}
+          loading={loading}
+          href="/tasks"
+        />
+      </div>
+
+      {/* Location Task Summary for Admin */}
+      <LocationTaskSummaryWidget stats={stats} loading={loading} />
+
+      {/* Location Manager Task Summary for Admin */}
+      <LocationManagerTaskSummaryWidget stats={stats} loading={loading} />
+
+      {/* Recent Tasks */}
+      <RecentTasks stats={stats} loading={loading} showAssignee={true} />
 
       {/* Location Overview Table */}
       <LocationStatsWidget />
@@ -1083,6 +1148,164 @@ function LocationStatsWidget() {
                   >
                     {loc.is_active ? "Aktiv" : "Inaktiv"}
                   </Badge>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </CardContent>
+    </Card>
+  );
+}
+
+/* ───── Location Task Summary Widget (for Admin) ───── */
+function LocationTaskSummaryWidget({ stats, loading }: { stats?: DashboardStats; loading: boolean }) {
+  if (loading) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Aufgaben pro Standort</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <TableSkeleton rows={4} cols={6} />
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (!stats?.location_task_summary || stats.location_task_summary.length === 0) {
+    return null;
+  }
+
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between">
+        <CardTitle className="text-base">Aufgaben pro Standort</CardTitle>
+        <Button variant="ghost" size="sm" asChild>
+          <Link href="/tasks">
+            Alle anzeigen
+            <ArrowRight className="ml-1 h-4 w-4" />
+          </Link>
+        </Button>
+      </CardHeader>
+      <CardContent>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Standort</TableHead>
+              <TableHead className="text-center">Offen</TableHead>
+              <TableHead className="text-center">In Arbeit</TableHead>
+              <TableHead className="text-center">Erledigt</TableHead>
+              <TableHead className="text-center">Überfällig</TableHead>
+              <TableHead className="text-center">Gesamt</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {stats.location_task_summary.map((loc) => (
+              <TableRow key={loc.location__id}>
+                <TableCell className="font-medium">
+                  <div className="flex items-center gap-2">
+                    <MapPin className="h-3.5 w-3.5 text-muted-foreground" />
+                    {loc.location__name}
+                  </div>
+                </TableCell>
+                <TableCell className="text-center">
+                  <Badge variant="outline">{loc.open_count}</Badge>
+                </TableCell>
+                <TableCell className="text-center">
+                  <Badge variant="warning">{loc.in_progress_count}</Badge>
+                </TableCell>
+                <TableCell className="text-center">
+                  <Badge variant="success">{loc.done_count}</Badge>
+                </TableCell>
+                <TableCell className="text-center">
+                  {loc.overdue_count > 0 ? (
+                    <Badge variant="destructive">{loc.overdue_count}</Badge>
+                  ) : (
+                    <Badge variant="outline">0</Badge>
+                  )}
+                </TableCell>
+                <TableCell className="text-center font-medium">
+                  {loc.total_count}
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </CardContent>
+    </Card>
+  );
+}
+
+/* ───── Location Manager Task Summary Widget (for Admin) ───── */
+function LocationManagerTaskSummaryWidget({ stats, loading }: { stats?: DashboardStats; loading: boolean }) {
+  if (loading) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Aufgaben je Standortleitung</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <TableSkeleton rows={4} cols={5} />
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (!stats?.location_manager_task_summary || stats.location_manager_task_summary.length === 0) {
+    return null;
+  }
+
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between">
+        <CardTitle className="text-base">Aufgaben je Standortleitung</CardTitle>
+        <Button variant="ghost" size="sm" asChild>
+          <Link href="/tasks">
+            Alle anzeigen
+            <ArrowRight className="ml-1 h-4 w-4" />
+          </Link>
+        </Button>
+      </CardHeader>
+      <CardContent>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Standortleitung</TableHead>
+              <TableHead>Standort</TableHead>
+              <TableHead className="text-center">Offen</TableHead>
+              <TableHead className="text-center">In Arbeit</TableHead>
+              <TableHead className="text-center">Überfällig</TableHead>
+              <TableHead className="text-center">Gesamt</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {stats.location_manager_task_summary.map((lm) => (
+              <TableRow key={lm.assigned_to__id}>
+                <TableCell className="font-medium">
+                  <div className="flex items-center gap-2">
+                    <UserCheck className="h-3.5 w-3.5 text-muted-foreground" />
+                    {lm.assigned_to__first_name} {lm.assigned_to__last_name}
+                  </div>
+                </TableCell>
+                <TableCell className="text-sm text-muted-foreground">
+                  {lm.assigned_to__location__name || "–"}
+                </TableCell>
+                <TableCell className="text-center">
+                  <Badge variant="outline">{lm.open_count}</Badge>
+                </TableCell>
+                <TableCell className="text-center">
+                  <Badge variant="warning">{lm.in_progress_count}</Badge>
+                </TableCell>
+                <TableCell className="text-center">
+                  {lm.overdue_count > 0 ? (
+                    <Badge variant="destructive">{lm.overdue_count}</Badge>
+                  ) : (
+                    <Badge variant="outline">0</Badge>
+                  )}
+                </TableCell>
+                <TableCell className="text-center font-medium">
+                  {lm.open_count + lm.in_progress_count}
                 </TableCell>
               </TableRow>
             ))}
