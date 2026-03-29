@@ -360,6 +360,54 @@ class DashboardStatsView(APIView):
                 ).order_by("assigned_to__last_name")
             )
 
+        # For Admin: build per-location task summary
+        location_task_summary = []
+        if group_name == GROUP_ADMIN:
+            location_task_summary = list(
+                tasks_qs.filter(
+                    location__isnull=False,
+                ).values(
+                    "location__id",
+                    "location__name",
+                ).annotate(
+                    open_count=Count("id", filter=Q(status="open")),
+                    in_progress_count=Count("id", filter=Q(status="in_progress")),
+                    done_count=Count("id", filter=Q(status="done")),
+                    overdue_count=Count(
+                        "id",
+                        filter=Q(
+                            due_date__lt=timezone.now().date(),
+                            status__in=["open", "in_progress"],
+                        ),
+                    ),
+                    total_count=Count("id"),
+                ).order_by("location__name")
+            )
+            # Also build per-location-manager summary for admin
+            location_manager_task_summary = list(
+                tasks_qs.filter(
+                    assigned_to__role="location_manager",
+                    status__in=["open", "in_progress"],
+                ).values(
+                    "assigned_to__id",
+                    "assigned_to__first_name",
+                    "assigned_to__last_name",
+                    "assigned_to__location__name",
+                ).annotate(
+                    open_count=Count("id", filter=Q(status="open")),
+                    in_progress_count=Count("id", filter=Q(status="in_progress")),
+                    overdue_count=Count(
+                        "id",
+                        filter=Q(
+                            due_date__lt=timezone.now().date(),
+                            status__in=["open", "in_progress"],
+                        ),
+                    ),
+                ).order_by("assigned_to__last_name")
+            )
+        else:
+            location_manager_task_summary = []
+
         return {
             "recent_time_entries": list(
                 time_entries_qs.filter(date__gte=seven_days_ago.date())
@@ -418,4 +466,6 @@ class DashboardStatsView(APIView):
                 )
             ),
             "educator_task_summary": educator_task_summary,
+            "location_task_summary": location_task_summary,
+            "location_manager_task_summary": location_manager_task_summary,
         }
