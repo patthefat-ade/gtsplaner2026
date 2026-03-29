@@ -19,6 +19,8 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 
+from core.cookie_utils import set_auth_cookies
+
 
 class TwoFactorSetupSerializer(serializers.Serializer):
     """Response serializer for 2FA setup."""
@@ -283,10 +285,8 @@ class TwoFactorLoginVerifyView(APIView):
         user.last_login = timezone.now()
         user.save(update_fields=["last_login"])
 
-        return Response(
+        response = Response(
             {
-                "access": str(refresh.access_token),
-                "refresh": str(refresh),
                 "user": {
                     "id": user.id,
                     "username": user.username,
@@ -299,6 +299,8 @@ class TwoFactorLoginVerifyView(APIView):
             },
             status=status.HTTP_200_OK,
         )
+        set_auth_cookies(response, str(refresh.access_token), str(refresh))
+        return response
 
 
 class TwoFactorStatusView(APIView):
