@@ -246,7 +246,6 @@ AUTH_USER_MODEL = "core.User"
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
         "core.authentication.CookieJWTAuthentication",
-        "core.authentication.QueryParameterJWTAuthentication",
     ),
     "DEFAULT_PERMISSION_CLASSES": (
         "rest_framework.permissions.IsAuthenticated",
