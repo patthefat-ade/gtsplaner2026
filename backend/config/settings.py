@@ -79,6 +79,7 @@ INSTALLED_APPS = [
     "corsheaders",
     "django_filters",
     "encrypted_fields",
+    "storages",
     # Project Apps
     "core.apps.CoreConfig",
     "finance.apps.FinanceConfig",
@@ -187,6 +188,39 @@ STATICFILES_STORAGE = "whitenoise.storage.CompressedStaticFilesStorage"
 
 MEDIA_URL = "media/"
 MEDIA_ROOT = BASE_DIR / "media"
+
+# ---------------------------------------------------------------------------
+# S3-Compatible Object Storage (DigitalOcean Spaces)
+# ---------------------------------------------------------------------------
+# Wenn AWS_STORAGE_BUCKET_NAME gesetzt ist, werden Medien-Dateien
+# (Belege, Profilbilder, Logos) auf S3-kompatiblem Storage gespeichert.
+# Andernfalls wird das lokale Dateisystem verwendet (Entwicklung).
+
+AWS_STORAGE_BUCKET_NAME = config("AWS_STORAGE_BUCKET_NAME", default="")
+
+if AWS_STORAGE_BUCKET_NAME:
+    AWS_S3_ENDPOINT_URL = config("AWS_S3_ENDPOINT_URL", default="")
+    AWS_S3_REGION_NAME = config("AWS_S3_REGION_NAME", default="fra1")
+    AWS_ACCESS_KEY_ID = config("AWS_ACCESS_KEY_ID", default="")
+    AWS_SECRET_ACCESS_KEY = config("AWS_SECRET_ACCESS_KEY", default="")
+    AWS_S3_OBJECT_PARAMETERS = {
+        "CacheControl": "max-age=86400",
+    }
+    AWS_DEFAULT_ACL = "private"
+    AWS_QUERYSTRING_AUTH = True
+    AWS_QUERYSTRING_EXPIRE = 3600  # Signierte URLs gültig für 1 Stunde
+    AWS_S3_FILE_OVERWRITE = False
+    AWS_LOCATION = "media"
+
+    STORAGES = {
+        "default": {
+            "BACKEND": "storages.backends.s3boto3.S3Boto3Storage",
+        },
+        "staticfiles": {
+            "BACKEND": "whitenoise.storage.CompressedStaticFilesStorage",
+        },
+    }
+    MEDIA_URL = f"{AWS_S3_ENDPOINT_URL}/{AWS_STORAGE_BUCKET_NAME}/media/"
 
 # ---------------------------------------------------------------------------
 # Default primary key field type
