@@ -19,6 +19,7 @@ from drf_spectacular.views import (
 from rest_framework.permissions import IsAdminUser
 
 from core.views_dashboard import DashboardStatsView
+from core.views_cross_tenant import CrossTenantStatsView
 
 
 def health_check(request):
@@ -99,6 +100,7 @@ urlpatterns = [
     path("api/v1/events/", include("events.urls")),
     path("api/v1/locations/", include("core.urls.location_urls")),
     path("api/v1/dashboard/stats/", DashboardStatsView.as_view(), name="dashboard-stats"),
+    path("api/v1/dashboard/cross-tenant/", CrossTenantStatsView.as_view(), name="cross-tenant-stats"),
     path("api/v1/admin/", include("admin_panel.urls")),
     path("api/v1/system/", include("system.urls")),
     path("api/v1/export/", include("system.urls_export")),

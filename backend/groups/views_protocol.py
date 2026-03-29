@@ -1,4 +1,6 @@
 """Views for DailyProtocol model."""
+import logging
+
 import django_filters
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
@@ -14,6 +16,8 @@ from groups.serializers_protocol import (
     DailyProtocolCreateSerializer,
     DailyProtocolSerializer,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class DailyProtocolFilter(django_filters.FilterSet):
@@ -132,6 +136,10 @@ class DailyProtocolViewSet(
         instance.is_deleted = True
         instance.save()
 
+    # ------------------------------------------------------------------
+    # Optimised bulk endpoint – replaces per-record update_or_create
+    # with set-based validation and bulk_create / bulk_update.
+    # ------------------------------------------------------------------
     @action(detail=False, methods=["post"], url_path="bulk")
     def bulk_create(self, request):
         """
@@ -156,6 +164,9 @@ class DailyProtocolViewSet(
                 ...
             ]
         }
+
+        Performance: Uses at most ~8 DB queries regardless of the number
+        of students (was O(n) before).
         """
         serializer = BulkDailyProtocolSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -186,38 +197,56 @@ class DailyProtocolViewSet(
                 status=status.HTTP_403_FORBIDDEN,
             )
 
-        created = 0
-        updated = 0
+        # 1) Collect all requested student IDs
+        requested_ids = {
+            r.get("student_id") for r in records if r.get("student_id")
+        }
 
-        for record in records:
-            student_id = record.get("student_id")
-            if not student_id:
-                continue
+        # 2) Validate students in ONE query
+        valid_group_ids = set(
+            Student.objects.filter(
+                id__in=requested_ids,
+                group_id=group_id,
+                is_deleted=False,
+            ).values_list("id", flat=True)
+        )
 
-            # Verify student belongs to group or has a transfer
-            student_exists = Student.objects.filter(
-                id=student_id, group_id=group_id, is_deleted=False
-            ).exists()
-
-            # Also check if student has a transfer to this group
-            if not student_exists:
-                has_transfer = GroupTransfer.objects.filter(
-                    student_id=student_id,
-                    target_group_id=group_id,
-                    transfer_date=date,
-                    status__in=["confirmed", "completed"],
-                    is_deleted=False,
-                ).exists()
-                if not has_transfer:
-                    continue
-
-            # Check for existing transfer
-            transfer = GroupTransfer.objects.filter(
-                student_id=student_id,
+        # 3) Check transfers for remaining students in ONE query
+        remaining_ids = requested_ids - valid_group_ids
+        transfer_map = {}
+        if remaining_ids:
+            transfers = GroupTransfer.objects.filter(
+                student_id__in=remaining_ids,
+                target_group_id=group_id,
                 transfer_date=date,
                 status__in=["confirmed", "completed"],
                 is_deleted=False,
-            ).first()
+            )
+            transfer_map = {t.student_id: t for t in transfers}
+
+        valid_ids = valid_group_ids | set(transfer_map.keys())
+
+        # 4) Load existing protocols in ONE query
+        existing_map = {
+            p.student_id: p
+            for p in DailyProtocol.objects.filter(
+                student_id__in=valid_ids,
+                date=date,
+            )
+        }
+
+        # Build record lookup
+        record_map = {r["student_id"]: r for r in records if r.get("student_id")}
+
+        to_create = []
+        to_update = []
+
+        for student_id in valid_ids:
+            record = record_map.get(student_id)
+            if record is None:
+                continue
+
+            transfer = transfer_map.get(student_id)
 
             defaults = {
                 "group_id": group_id,
@@ -235,21 +264,44 @@ class DailyProtocolViewSet(
 
             if school_year_id:
                 defaults["school_year_id"] = school_year_id
-
             if transfer:
                 defaults["transfer"] = transfer
                 defaults["effective_group_id"] = transfer.target_group_id
 
-            obj, was_created = DailyProtocol.objects.update_or_create(
-                student_id=student_id,
-                date=date,
-                defaults=defaults,
-            )
-
-            if was_created:
-                created += 1
+            if student_id in existing_map:
+                # Update existing protocol
+                protocol = existing_map[student_id]
+                for key, value in defaults.items():
+                    setattr(protocol, key, value)
+                to_update.append(protocol)
             else:
-                updated += 1
+                # Create new protocol
+                to_create.append(
+                    DailyProtocol(
+                        student_id=student_id,
+                        date=date,
+                        **defaults,
+                    )
+                )
+
+        # 5) Bulk create & bulk update (2 queries)
+        created = 0
+        updated = 0
+
+        if to_create:
+            DailyProtocol.objects.bulk_create(to_create)
+            created = len(to_create)
+        if to_update:
+            DailyProtocol.objects.bulk_update(
+                to_update,
+                fields=[
+                    "group_id", "arrival_time", "arrival_notes",
+                    "incidents", "incident_severity", "pickup_time",
+                    "picked_up_by_id", "pickup_notes", "recorded_by",
+                    "organization_id", "is_deleted", "updated_at",
+                ],
+            )
+            updated = len(to_update)
 
         return Response(
             {

@@ -11,7 +11,7 @@
  *   GET /api/v1/<resource>/export-pdf/?token=<jwt>&<filter_params>
  */
 
-export type ExportFormat = "xlsx" | "pdf";
+export type ExportFormat = "xlsx" | "pdf" | "csv";
 
 interface ExportOptions {
   /** API-Basispfad, z.B. "/groups/students" */

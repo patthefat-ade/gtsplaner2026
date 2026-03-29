@@ -7,7 +7,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Download, FileSpreadsheet, FileText } from "lucide-react";
+import { Download, FileSpreadsheet, FileText, FileDown } from "lucide-react";
 import { downloadExport, type ExportFormat } from "@/lib/export";
 import { useToast } from "@/components/ui/toast";
 
@@ -27,7 +27,7 @@ interface ExportButtonsProps {
 export function ExportButtons({
   basePath,
   params = {},
-  formats = ["xlsx", "pdf"],
+  formats = ["xlsx", "pdf", "csv"],
   variant = "outline",
   size = "sm",
 }: ExportButtonsProps) {
@@ -83,6 +83,12 @@ export function ExportButtons({
           <DropdownMenuItem onClick={() => handleExport("pdf")}>
             <FileText className="mr-2 h-4 w-4" />
             Als PDF exportieren
+          </DropdownMenuItem>
+        )}
+        {formats.includes("csv") && (
+          <DropdownMenuItem onClick={() => handleExport("csv")}>
+            <FileDown className="mr-2 h-4 w-4" />
+            Als CSV exportieren (Streaming)
           </DropdownMenuItem>
         )}
       </DropdownMenuContent>
