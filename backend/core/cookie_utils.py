@@ -82,9 +82,11 @@ def clear_auth_cookies(response: Response) -> Response:
         The response with cookies cleared.
     """
     defaults = _get_cookie_defaults()
-    # Remove httponly from kwargs for delete_cookie (not supported)
+    # delete_cookie() only accepts: path, domain, samesite
+    # It does NOT accept httponly or secure (Django 4.x+)
+    allowed_delete_keys = {"path", "domain", "samesite"}
     delete_kwargs = {
-        k: v for k, v in defaults.items() if k != "httponly"
+        k: v for k, v in defaults.items() if k in allowed_delete_keys
     }
 
     response.delete_cookie(ACCESS_TOKEN_COOKIE, **delete_kwargs)
