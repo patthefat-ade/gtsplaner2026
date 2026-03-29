@@ -1,44 +1,46 @@
 # Django Core
-Django>=4.2,<6.0
-djangorestframework>=3.14
-djangorestframework-simplejwt>=5.3
-drf-spectacular>=0.27
+Django==5.2.12
+djangorestframework==3.17.0
+djangorestframework-simplejwt==5.5.1
+drf-spectacular==0.29.0
 
 # Django Extensions
-django-cors-headers>=4.3
-django-filter>=23.5
-django-unfold>=0.30
-python-decouple>=3.8
+django-cors-headers==4.9.0
+django-filter==25.2
+django-unfold==0.86.1
+python-decouple==3.8
 
 # Security / Encryption
-django-fernet-encrypted-fields>=0.3
-cryptography>=42.0
+django-fernet-encrypted-fields==0.3.1
+cryptography==46.0.2
 
 # Database
-psycopg2-binary>=2.9
-dj-database-url>=2.1
+psycopg2-binary==2.9.11
+dj-database-url==3.1.2
 
 # Async Tasks
-celery>=5.3
-redis>=5.0
+celery==5.6.2
+redis==7.4.0
 
 # Server
-gunicorn>=21.2
-whitenoise>=6.6
+gunicorn==25.1.0
+whitenoise==6.12.0
 
-# Media
-Pillow>=10.2
+# Media / Storage
+Pillow==11.3.0
+boto3>=1.35.0
+django-storages>=1.14
 
 # Export
-openpyxl>=3.1
-reportlab>=4.0
+openpyxl==3.1.5
+reportlab==4.4.4
 
 # Testing
-pytest>=8.0
-pytest-django>=4.8
-pytest-cov>=4.1
-factory-boy>=3.3
+pytest==9.0.2
+pytest-django==4.12.0
+pytest-cov==7.1.0
+factory-boy==3.3.3
 
 # Two-Factor Authentication
-pyotp>=2.9
-qrcode>=7.4
+pyotp==2.9.0
+qrcode==8.2
