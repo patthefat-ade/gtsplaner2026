@@ -347,7 +347,7 @@ export default function ContactsPage() {
 
       {/* Create/Edit Dialog */}
       <Dialog open={formOpen} onOpenChange={setFormOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
               {editContact ? "Kontaktperson bearbeiten" : "Neue Kontaktperson"}
@@ -359,52 +359,57 @@ export default function ContactsPage() {
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
-            {!editContact && (
-              <div className="grid gap-2">
-                <Label>Schüler:in *</Label>
+            {/* Zeile 1: Schüler + Beziehung */}
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              {!editContact ? (
+                <div className="grid gap-2">
+                  <Label>Schüler:in *</Label>
+                  <Select
+                    value={formData.student?.toString() ?? ""}
+                    onValueChange={(v) =>
+                      setFormData((prev) => ({ ...prev, student: Number(v) }))
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Schüler:in auswählen" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {students.map((s) => (
+                        <SelectItem key={s.id} value={s.id.toString()}>
+                          {s.first_name} {s.last_name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              ) : null}
+              <div className={`grid gap-2 ${editContact ? "sm:col-span-2" : ""}`}>
+                <Label>Beziehung *</Label>
                 <Select
-                  value={formData.student?.toString() ?? ""}
+                  value={formData.relationship ?? ""}
                   onValueChange={(v) =>
-                    setFormData((prev) => ({ ...prev, student: Number(v) }))
+                    setFormData((prev) => ({
+                      ...prev,
+                      relationship: v as StudentContactRelationship,
+                    }))
                   }
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Schüler:in auswählen" />
+                    <SelectValue placeholder="Beziehung auswählen" />
                   </SelectTrigger>
                   <SelectContent>
-                    {students.map((s) => (
-                      <SelectItem key={s.id} value={s.id.toString()}>
-                        {s.first_name} {s.last_name}
+                    {Object.entries(RELATIONSHIP_LABELS).map(([key, label]) => (
+                      <SelectItem key={key} value={key}>
+                        {label}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
-            )}
-            <div className="grid gap-2">
-              <Label>Beziehung *</Label>
-              <Select
-                value={formData.relationship ?? ""}
-                onValueChange={(v) =>
-                  setFormData((prev) => ({
-                    ...prev,
-                    relationship: v as StudentContactRelationship,
-                  }))
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Beziehung auswählen" />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.entries(RELATIONSHIP_LABELS).map(([key, label]) => (
-                    <SelectItem key={key} value={key}>
-                      {label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+
+            {/* Zeile 2: Vorname + Nachname */}
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="grid gap-2">
                 <Label>Vorname *</Label>
                 <Input
@@ -430,54 +435,64 @@ export default function ContactsPage() {
                 />
               </div>
             </div>
-            <div className="grid gap-2">
-              <Label>Telefon</Label>
-              <Input
-                type="tel"
-                value={formData.phone ?? ""}
-                onChange={(e) =>
-                  setFormData((prev) => ({ ...prev, phone: e.target.value }))
-                }
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label>E-Mail</Label>
-              <Input
-                type="email"
-                value={formData.email ?? ""}
-                onChange={(e) =>
-                  setFormData((prev) => ({ ...prev, email: e.target.value }))
-                }
-              />
-            </div>
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label>WhatsApp verfügbar</Label>
-                <p className="text-sm text-muted-foreground">
-                  Kann über WhatsApp kontaktiert werden
-                </p>
+
+            {/* Zeile 3: Telefon + E-Mail */}
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="grid gap-2">
+                <Label>Telefon</Label>
+                <Input
+                  type="tel"
+                  value={formData.phone ?? ""}
+                  onChange={(e) =>
+                    setFormData((prev) => ({ ...prev, phone: e.target.value }))
+                  }
+                />
               </div>
-              <Switch
-                checked={formData.whatsapp_available ?? false}
-                onCheckedChange={(v) =>
-                  setFormData((prev) => ({ ...prev, whatsapp_available: v }))
-                }
-              />
-            </div>
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label>Hauptansprechperson</Label>
-                <p className="text-sm text-muted-foreground">
-                  Als primäre Kontaktperson markieren
-                </p>
+              <div className="grid gap-2">
+                <Label>E-Mail</Label>
+                <Input
+                  type="email"
+                  value={formData.email ?? ""}
+                  onChange={(e) =>
+                    setFormData((prev) => ({ ...prev, email: e.target.value }))
+                  }
+                />
               </div>
-              <Switch
-                checked={formData.is_primary ?? false}
-                onCheckedChange={(v) =>
-                  setFormData((prev) => ({ ...prev, is_primary: v }))
-                }
-              />
             </div>
+
+            {/* Zeile 4: Switches nebeneinander */}
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="flex items-center justify-between rounded-lg border p-3">
+                <div className="space-y-0.5">
+                  <Label>WhatsApp verfügbar</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Über WhatsApp erreichbar
+                  </p>
+                </div>
+                <Switch
+                  checked={formData.whatsapp_available ?? false}
+                  onCheckedChange={(v) =>
+                    setFormData((prev) => ({ ...prev, whatsapp_available: v }))
+                  }
+                />
+              </div>
+              <div className="flex items-center justify-between rounded-lg border p-3">
+                <div className="space-y-0.5">
+                  <Label>Hauptansprechperson</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Primäre Kontaktperson
+                  </p>
+                </div>
+                <Switch
+                  checked={formData.is_primary ?? false}
+                  onCheckedChange={(v) =>
+                    setFormData((prev) => ({ ...prev, is_primary: v }))
+                  }
+                />
+              </div>
+            </div>
+
+            {/* Zeile 5: Notizen (volle Breite) */}
             <div className="grid gap-2">
               <Label>Notizen</Label>
               <Textarea
@@ -486,6 +501,7 @@ export default function ContactsPage() {
                 onChange={(e) =>
                   setFormData((prev) => ({ ...prev, notes: e.target.value }))
                 }
+                rows={3}
               />
             </div>
           </div>

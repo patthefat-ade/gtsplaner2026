@@ -14,7 +14,9 @@ import {
   ChevronLeft,
   ChevronRight,
   Users,
+  NotebookPen,
 } from "lucide-react";
+import Link from "next/link";
 import { PageHeader } from "@/components/common/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -34,6 +36,12 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/toast";
@@ -422,7 +430,24 @@ export default function AttendancePage() {
                     return (
                       <TableRow key={record.student_id}>
                         <TableCell className="font-medium">
-                          {record.student_name || `Schüler:in #${record.student_id}`}
+                          <div className="flex items-center gap-2">
+                            <span>{record.student_name || `Schüler:in #${record.student_id}`}</span>
+                            <TooltipProvider delayDuration={300}>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Link
+                                    href={`/groups/daily-protocols?student_id=${record.student_id}&date=${dateStr}`}
+                                    className="inline-flex items-center text-muted-foreground hover:text-primary transition-colors"
+                                  >
+                                    <NotebookPen className="h-4 w-4" />
+                                  </Link>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>Tagesprotokoll öffnen</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          </div>
                         </TableCell>
                         <TableCell>
                           <div className="flex flex-wrap gap-1.5">

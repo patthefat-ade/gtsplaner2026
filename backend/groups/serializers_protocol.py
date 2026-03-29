@@ -14,6 +14,7 @@ class DailyProtocolSerializer(serializers.ModelSerializer):
     recorded_by_name = serializers.SerializerMethodField()
     school_year_name = serializers.SerializerMethodField()
     has_transfer = serializers.SerializerMethodField()
+    attendance_status = serializers.SerializerMethodField()
 
     class Meta:
         model = DailyProtocol
@@ -40,6 +41,7 @@ class DailyProtocolSerializer(serializers.ModelSerializer):
             "pickup_notes",
             "recorded_by",
             "recorded_by_name",
+            "attendance_status",
             "created_at",
             "updated_at",
         ]
@@ -77,6 +79,20 @@ class DailyProtocolSerializer(serializers.ModelSerializer):
 
     def get_has_transfer(self, obj) -> bool:
         return obj.transfer_id is not None
+
+    def get_attendance_status(self, obj) -> str:
+        """Return the attendance status for this student on this date."""
+        from groups.models_attendance import Attendance
+
+        try:
+            attendance = Attendance.objects.get(
+                student_id=obj.student_id,
+                date=obj.date,
+                is_deleted=False,
+            )
+            return attendance.status
+        except Attendance.DoesNotExist:
+            return ""
 
 
 class DailyProtocolCreateSerializer(serializers.ModelSerializer):

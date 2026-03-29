@@ -576,6 +576,7 @@ export interface Attendance {
   recorded_by: number | null;
   recorded_by_name: string | null;
   student_name: string;
+  protocol_id: number | null;
   created_at: string;
   updated_at: string;
 }
@@ -733,6 +734,7 @@ export interface DailyProtocol {
   pickup_notes: string;
   recorded_by: number | null;
   recorded_by_name: string;
+  attendance_status: AttendanceStatus | "";
   created_at: string;
   updated_at: string;
 }
