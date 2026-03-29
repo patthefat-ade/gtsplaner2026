@@ -12,6 +12,7 @@ from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from core.middleware import ensure_tenant_context
 from core.mixins_export import ExportMixin
 from core.pagination import StandardPagination
 from tasks.models import Task
@@ -58,6 +59,7 @@ class TaskViewSet(ExportMixin, viewsets.ModelViewSet):
 
     def get_queryset(self):
         """Filter tasks based on user role and tenant."""
+        ensure_tenant_context(self.request)
         user = self.request.user
         tenant_ids = getattr(self.request, "tenant_ids", [])
 

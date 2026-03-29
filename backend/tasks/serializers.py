@@ -73,9 +73,13 @@ class TaskCreateSerializer(serializers.ModelSerializer):
 
     def validate_assigned_to(self, value):
         """Ensure the assigned user belongs to the same organization."""
+        from core.middleware import ensure_tenant_context
+
         request = self.context.get("request")
-        if request and hasattr(request, "tenant_ids"):
-            if value.organization_id not in request.tenant_ids:
+        if request:
+            ensure_tenant_context(request)
+            tenant_ids = getattr(request, "tenant_ids", [])
+            if tenant_ids and value.organization_id not in tenant_ids:
                 raise serializers.ValidationError(
                     "Der zugewiesene Benutzer gehört nicht zu Ihrer Organisation."
                 )
