@@ -16,7 +16,7 @@ from core.views import (
     PasswordResetConfirmView,
     PasswordResetRequestView,
 )
-from core.views_debug import DebugLogoutView  # TEMPORARY – REMOVE AFTER DEBUGGING
+from core.views_debug import DebugLogoutView, DebugMinimalPostView  # TEMPORARY – REMOVE AFTER DEBUGGING
 from core.views_2fa import (
     TwoFactorDisableView,
     TwoFactorLoginVerifyView,
@@ -31,6 +31,7 @@ urlpatterns = [
     path("login/", LoginView.as_view(), name="login"),
     path("logout/", LogoutView.as_view(), name="logout"),
     path("debug-logout/", DebugLogoutView.as_view(), name="debug-logout"),  # TEMPORARY
+    path("debug-minimal/", DebugMinimalPostView.as_view(), name="debug-minimal"),  # TEMPORARY
     path("refresh/", CustomTokenRefreshView.as_view(), name="token-refresh"),
     path("me/", MeView.as_view(), name="me"),
     path("password-reset/", PasswordResetRequestView.as_view(), name="password-reset"),
