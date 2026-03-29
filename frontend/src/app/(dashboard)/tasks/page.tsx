@@ -397,12 +397,12 @@ function TaskFormModal({
 
           <div>
             <Label htmlFor="task-location">Standort</Label>
-            <Select value={locationId} onValueChange={setLocationId}>
+            <Select value={locationId || "__none__"} onValueChange={(v) => setLocationId(v === "__none__" ? "" : v)}>
               <SelectTrigger id="task-location">
                 <SelectValue placeholder="Optional" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Kein Standort</SelectItem>
+                <SelectItem value="__none__">Kein Standort</SelectItem>
                 {locations.map((loc) => (
                   <SelectItem key={loc.id} value={String(loc.id)}>
                     {loc.name}
@@ -601,23 +601,23 @@ export default function TasksPage() {
             className="max-w-xs"
           />
         )}
-        <Select value={filterPriority} onValueChange={setFilterPriority}>
+        <Select value={filterPriority || "__all__"} onValueChange={(v) => setFilterPriority(v === "__all__" ? "" : v)}>
           <SelectTrigger className="w-[160px]">
             <SelectValue placeholder="Alle Prioritäten" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">Alle Prioritäten</SelectItem>
+            <SelectItem value="__all__">Alle Prioritäten</SelectItem>
             <SelectItem value="high">Hoch</SelectItem>
             <SelectItem value="medium">Mittel</SelectItem>
             <SelectItem value="low">Niedrig</SelectItem>
           </SelectContent>
         </Select>
-        <Select value={filterLocation} onValueChange={setFilterLocation}>
+        <Select value={filterLocation || "__all__"} onValueChange={(v) => setFilterLocation(v === "__all__" ? "" : v)}>
           <SelectTrigger className="w-[200px]">
             <SelectValue placeholder="Alle Standorte" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">Alle Standorte</SelectItem>
+            <SelectItem value="__all__">Alle Standorte</SelectItem>
             {locations.map((loc) => (
               <SelectItem key={loc.id} value={String(loc.id)}>
                 {loc.name}
