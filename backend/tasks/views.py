@@ -62,17 +62,23 @@ class TaskViewSet(ExportMixin, viewsets.ModelViewSet):
         ensure_tenant_context(self.request)
         user = self.request.user
         tenant_ids = getattr(self.request, "tenant_ids", [])
+        is_cross_tenant = getattr(self.request, "is_cross_tenant", False)
 
-        qs = (
-            Task.objects.filter(organization_id__in=tenant_ids)
-            .select_related(
-                "created_by",
-                "assigned_to",
-                "location",
-                "group",
-                "organization",
-            )
+        qs = Task.objects.select_related(
+            "created_by",
+            "assigned_to",
+            "location",
+            "group",
+            "organization",
         )
+
+        # SuperAdmin: no tenant filter (cross-tenant access)
+        # Others: filter by tenant_ids
+        if not is_cross_tenant and tenant_ids:
+            qs = qs.filter(organization_id__in=tenant_ids)
+        elif not is_cross_tenant:
+            # No tenant_ids and not cross-tenant: return empty
+            return qs.none()
 
         # Educators only see their own assigned tasks
         if hasattr(user, "role") and user.role == "educator":
