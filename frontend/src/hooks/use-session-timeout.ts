@@ -3,29 +3,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 /**
- * JWT token payload interface (minimal, only what we need).
- */
-interface JWTPayload {
-  exp: number;
-  iat: number;
-}
-
-/**
- * Parse a JWT token without a library.
- * Only decodes the payload – does NOT verify the signature.
- */
-function parseJWT(token: string): JWTPayload | null {
-  try {
-    const parts = token.split(".");
-    if (parts.length !== 3) return null;
-    const payload = JSON.parse(atob(parts[1]));
-    return payload as JWTPayload;
-  } catch {
-    return null;
-  }
-}
-
-/**
  * Configuration for the session timeout warning.
  */
 interface UseSessionTimeoutOptions {
@@ -38,14 +15,23 @@ interface UseSessionTimeoutOptions {
 }
 
 /**
- * Hook that monitors the JWT access token expiry and shows a warning dialog
- * before the token expires. Provides state and actions for a timeout dialog.
+ * Session duration in seconds.
+ *
+ * Since JWT tokens are now in httpOnly cookies and cannot be parsed client-side,
+ * we use a fixed session duration that matches the backend ACCESS_TOKEN_LIFETIME.
+ * The backend default is 60 minutes.
+ */
+const SESSION_DURATION_SECONDS = 60 * 60; // 60 minutes
+
+/**
+ * Hook that monitors user activity and shows a warning dialog
+ * before the session expires. Provides state and actions for a timeout dialog.
  *
  * The hook:
- * 1. Reads the access_token from localStorage
- * 2. Parses the JWT to get the `exp` claim
- * 3. Sets a timer to show a warning dialog N seconds before expiry
- * 4. Sets a timer to auto-logout when the token expires
+ * 1. Tracks the last user activity timestamp
+ * 2. Sets a timer to show a warning dialog N seconds before session expiry
+ * 3. Sets a timer to auto-logout when the session expires
+ * 4. Resets timers on user activity (mouse, keyboard, touch)
  * 5. Provides `showWarning`, `remainingSeconds`, `extendSession`, `dismiss`
  */
 export function useSessionTimeout({
@@ -59,6 +45,7 @@ export function useSessionTimeout({
   const expiryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const isExtendingRef = useRef(false);
+  const lastActivityRef = useRef<number>(Date.now());
 
   /**
    * Clear all timers.
@@ -79,31 +66,24 @@ export function useSessionTimeout({
   }, []);
 
   /**
-   * Schedule warning and expiry timers based on the current access token.
+   * Schedule warning and expiry timers based on last activity.
    */
   const scheduleTimers = useCallback(() => {
     clearAllTimers();
 
     if (typeof window === "undefined") return;
 
-    const token = localStorage.getItem("access_token");
-    if (!token) return;
+    const now = Date.now();
+    lastActivityRef.current = now;
 
-    const payload = parseJWT(token);
-    if (!payload?.exp) return;
+    const sessionExpiresAt = now + SESSION_DURATION_SECONDS * 1000;
+    const warningAt = sessionExpiresAt - warningBeforeExpiry * 1000;
 
-    const now = Math.floor(Date.now() / 1000);
-    const secondsUntilExpiry = payload.exp - now;
-
-    // Token already expired
-    if (secondsUntilExpiry <= 0) {
-      onSessionExpired();
-      return;
-    }
+    const msUntilWarning = warningAt - now;
+    const msUntilExpiry = sessionExpiresAt - now;
 
     // Schedule warning dialog
-    const secondsUntilWarning = secondsUntilExpiry - warningBeforeExpiry;
-    if (secondsUntilWarning > 0) {
+    if (msUntilWarning > 0) {
       warningTimerRef.current = setTimeout(() => {
         setShowWarning(true);
         setRemainingSeconds(warningBeforeExpiry);
@@ -118,21 +98,7 @@ export function useSessionTimeout({
             return prev - 1;
           });
         }, 1000);
-      }, secondsUntilWarning * 1000);
-    } else {
-      // Already within warning window
-      setShowWarning(true);
-      setRemainingSeconds(Math.max(0, secondsUntilExpiry));
-
-      countdownRef.current = setInterval(() => {
-        setRemainingSeconds((prev) => {
-          if (prev <= 1) {
-            if (countdownRef.current) clearInterval(countdownRef.current);
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
+      }, msUntilWarning);
     }
 
     // Schedule auto-logout
@@ -142,7 +108,7 @@ export function useSessionTimeout({
       if (!isExtendingRef.current) {
         onSessionExpired();
       }
-    }, secondsUntilExpiry * 1000);
+    }, msUntilExpiry);
   }, [clearAllTimers, warningBeforeExpiry, onSessionExpired]);
 
   /**
@@ -153,7 +119,7 @@ export function useSessionTimeout({
     try {
       await onExtendSession();
       setShowWarning(false);
-      // Re-schedule timers with the new token
+      // Re-schedule timers with fresh session
       scheduleTimers();
     } catch {
       onSessionExpired();
@@ -169,21 +135,12 @@ export function useSessionTimeout({
     setShowWarning(false);
   }, []);
 
-  // Schedule timers on mount and when token changes
+  // Schedule timers on mount
   useEffect(() => {
     scheduleTimers();
 
-    // Listen for storage events (token refresh from another tab)
-    const handleStorage = (e: StorageEvent) => {
-      if (e.key === "access_token") {
-        scheduleTimers();
-      }
-    };
-    window.addEventListener("storage", handleStorage);
-
     return () => {
       clearAllTimers();
-      window.removeEventListener("storage", handleStorage);
     };
   }, [scheduleTimers, clearAllTimers]);
 

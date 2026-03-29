@@ -7,8 +7,12 @@ import { useSessionTimeout } from "@/hooks/use-session-timeout";
 import { SessionTimeoutDialog } from "@/components/session-timeout-dialog";
 
 /**
- * Wrapper component that monitors JWT token expiry and shows
- * a warning dialog 2 minutes before the session expires.
+ * Wrapper component that monitors session activity and shows
+ * a warning dialog before the session expires.
+ *
+ * Since JWT tokens are now in httpOnly cookies (not accessible via JS),
+ * the timeout is based on a configurable session duration rather than
+ * parsing the JWT expiry directly.
  *
  * Place this inside the dashboard layout (within AuthProvider).
  */
@@ -16,21 +20,11 @@ export function SessionTimeoutWrapper() {
   const { logout, isAuthenticated } = useAuth();
 
   /**
-   * Extend the session by refreshing the JWT token.
+   * Extend the session by refreshing the JWT token via the cookie-based endpoint.
    */
   const handleExtendSession = useCallback(async () => {
-    const refreshToken = localStorage.getItem("refresh_token");
-    if (!refreshToken) {
-      await logout();
-      return;
-    }
-
     try {
-      const data = await authApi.refreshToken(refreshToken);
-      localStorage.setItem("access_token", data.access);
-      if (data.refresh) {
-        localStorage.setItem("refresh_token", data.refresh);
-      }
+      await authApi.refreshToken();
     } catch {
       await logout();
     }

@@ -25,10 +25,11 @@ interface AuthContextType {
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 /**
- * Set a simple cookie to signal authentication status to the middleware.
+ * Set a simple cookie to signal authentication status to the Next.js middleware.
  *
- * Uses Secure flag on HTTPS to ensure the cookie is sent with server requests.
- * Uses SameSite=Lax for CSRF protection while allowing normal navigation.
+ * This is a non-httpOnly cookie that the middleware can read to decide
+ * whether to redirect to /login. The actual JWT tokens are stored in
+ * httpOnly cookies managed by the backend.
  */
 function setAuthCookie(authenticated: boolean) {
   if (typeof document === "undefined") return;
@@ -48,22 +49,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   /**
    * Check if the user is authenticated on mount.
+   *
+   * Since JWT tokens are now in httpOnly cookies (not accessible via JS),
+   * we check auth status by calling the /auth/me/ endpoint.
+   * If the cookie is valid, the backend returns the user profile.
    */
   const checkAuth = useCallback(async () => {
-    const token = localStorage.getItem("access_token");
-    if (!token) {
-      setAuthCookie(false);
-      setIsLoading(false);
-      return;
-    }
-
     try {
       const profile = await authApi.getProfile();
       setUser(profile);
       setAuthCookie(true);
     } catch {
-      localStorage.removeItem("access_token");
-      localStorage.removeItem("refresh_token");
       setAuthCookie(false);
       setUser(null);
     } finally {
@@ -76,40 +72,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [checkAuth]);
 
   /**
-   * Login with credentials and store tokens.
+   * Login with credentials.
+   * The backend sets httpOnly cookies in the response.
    * Returns the response so the caller can check requires_2fa.
    */
   const login = useCallback(
     async (credentials: LoginCredentials): Promise<LoginResponse> => {
-      // Clear any stale tokens before attempting login to prevent
-      // the request interceptor from attaching an expired token
-      // that could interfere with the login flow.
-      localStorage.removeItem("access_token");
-      localStorage.removeItem("refresh_token");
-
       const response = await authApi.login(credentials);
 
-      // If 2FA is required, don't store tokens yet – return response for 2FA page
+      // If 2FA is required, don't set auth state yet
       if (response.requires_2fa) {
         return response;
       }
 
-      // Standard login without 2FA
-      if (response.access && response.refresh) {
-        localStorage.setItem("access_token", response.access);
-        localStorage.setItem("refresh_token", response.refresh);
-        setAuthCookie(true);
+      // Standard login without 2FA – cookies are already set by the backend
+      setAuthCookie(true);
 
-        // Fetch full profile after login
-        const profile = await authApi.getProfile();
-        setUser(profile);
+      // Fetch full profile after login
+      const profile = await authApi.getProfile();
+      setUser(profile);
 
-        // Use window.location for a full page navigation to ensure
-        // the middleware sees the newly set cookie on the server request.
-        // router.push() uses client-side navigation which may not trigger
-        // a fresh server request with the updated cookies.
-        window.location.href = "/";
-      }
+      // Use window.location for a full page navigation to ensure
+      // the middleware sees the newly set cookie on the server request.
+      window.location.href = "/";
 
       return response;
     },
@@ -118,41 +103,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   /**
    * Complete login with 2FA verification.
+   * The backend sets httpOnly cookies in the response.
    */
   const loginWith2FA = useCallback(
     async (userId: number, code: string) => {
-      const response = await authApi.verify2FALogin({ user_id: userId, code });
+      await authApi.verify2FALogin({ user_id: userId, code });
 
-      if (response.access && response.refresh) {
-        localStorage.setItem("access_token", response.access);
-        localStorage.setItem("refresh_token", response.refresh);
-        setAuthCookie(true);
+      // Cookies are set by the backend response
+      setAuthCookie(true);
 
-        // Fetch full profile after login
-        const profile = await authApi.getProfile();
-        setUser(profile);
+      // Fetch full profile after login
+      const profile = await authApi.getProfile();
+      setUser(profile);
 
-        // Use window.location for a full page navigation (see login above)
-        window.location.href = "/";
-      }
+      // Use window.location for a full page navigation
+      window.location.href = "/";
     },
     [],
   );
 
   /**
-   * Logout and clear tokens.
+   * Logout: call backend to blacklist refresh token and clear cookies.
    */
   const logout = useCallback(async () => {
-    const refreshToken = localStorage.getItem("refresh_token");
     try {
-      if (refreshToken) {
-        await authApi.logout(refreshToken);
-      }
+      await authApi.logout();
     } catch {
       // Ignore errors during logout
     } finally {
-      localStorage.removeItem("access_token");
-      localStorage.removeItem("refresh_token");
       setAuthCookie(false);
       setUser(null);
       router.push("/login");
