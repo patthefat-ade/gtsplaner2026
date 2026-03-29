@@ -395,6 +395,7 @@ export interface StudentCreate {
   first_name: string;
   last_name: string;
   group: number;
+  is_active: boolean;
   date_of_birth?: string;
   enrollment_date?: string;
   notes?: string;
