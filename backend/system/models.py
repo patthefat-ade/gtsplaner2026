@@ -154,3 +154,57 @@ class EmailNotificationConfig(models.Model):
         if not self.custom_recipients:
             return []
         return [e.strip() for e in self.custom_recipients.split(",") if e.strip()]
+
+
+class InAppNotification(TenantModel):
+    """
+    In-app notification for users.
+
+    Used to notify LocationManagers when Educators change task status,
+    and for other in-app notification scenarios.
+    """
+
+    class NotificationType(models.TextChoices):
+        TASK_STATUS_CHANGED = "task_status_changed", "Aufgabenstatus geändert"
+        TASK_ASSIGNED = "task_assigned", "Aufgabe zugewiesen"
+        TASK_OVERDUE = "task_overdue", "Aufgabe überfällig"
+
+    recipient = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="notifications",
+        verbose_name="Empfänger",
+    )
+    title = models.CharField("Titel", max_length=200)
+    message = models.TextField("Nachricht")
+    notification_type = models.CharField(
+        "Typ",
+        max_length=30,
+        choices=NotificationType.choices,
+        default=NotificationType.TASK_STATUS_CHANGED,
+    )
+    related_task = models.ForeignKey(
+        "tasks.Task",
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="notifications",
+        verbose_name="Zugehörige Aufgabe",
+    )
+    is_read = models.BooleanField("Gelesen", default=False, db_index=True)
+    created_at = models.DateTimeField("Erstellt am", auto_now_add=True)
+    updated_at = models.DateTimeField("Aktualisiert am", auto_now=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(
+                fields=["recipient", "is_read"],
+                name="notif_recipient_read_idx",
+            ),
+        ]
+        verbose_name = "Benachrichtigung"
+        verbose_name_plural = "Benachrichtigungen"
+
+    def __str__(self):
+        return f"{self.title} → {self.recipient}"

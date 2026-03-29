@@ -98,6 +98,8 @@ urlpatterns = [
     path("api/v1/groups/", include("groups.urls")),
     path("api/v1/weeklyplans/", include("weeklyplans.urls")),
     path("api/v1/events/", include("events.urls")),
+    path("api/v1/tasks/", include("tasks.urls")),
+    path("api/v1/notifications/", include("system.urls_notification")),
     path("api/v1/locations/", include("core.urls.location_urls")),
     path("api/v1/dashboard/stats/", DashboardStatsView.as_view(), name="dashboard-stats"),
     path("api/v1/dashboard/cross-tenant/", CrossTenantStatsView.as_view(), name="cross-tenant-stats"),

@@ -50,6 +50,9 @@ CUSTOM_PERMISSIONS = [
     # Weekly Plans
     ("view_weeklyplans", "Wochenplaene anzeigen"),
     ("manage_weeklyplans", "Wochenplaene erstellen und bearbeiten"),
+    # Tasks
+    ("view_tasks", "Aufgaben anzeigen"),
+    ("manage_tasks", "Aufgaben erstellen und verwalten"),
     # Multi-Tenant
     ("cross_tenant_access", "Mandantenuebergreifender Zugriff"),
 ]
@@ -75,6 +78,8 @@ GROUP_PERMISSIONS = {
         # Weekly Plans: can view and manage own group plans
         "view_weeklyplans",
         "manage_weeklyplans",
+        # Tasks: can view own assigned tasks
+        "view_tasks",
     ],
     "LocationManager": [
         # Dashboard
@@ -101,6 +106,9 @@ GROUP_PERMISSIONS = {
         # Weekly Plans: full management
         "view_weeklyplans",
         "manage_weeklyplans",
+        # Tasks: full management
+        "view_tasks",
+        "manage_tasks",
     ],
     "Admin": [
         # Dashboard
@@ -127,6 +135,9 @@ GROUP_PERMISSIONS = {
         # Weekly Plans: full management
         "view_weeklyplans",
         "manage_weeklyplans",
+        # Tasks: full management
+        "view_tasks",
+        "manage_tasks",
         # Admin: user and settings management
         "manage_users",
         "view_audit_log",
@@ -164,6 +175,9 @@ GROUP_PERMISSIONS = {
         # Weekly Plans: full management
         "view_weeklyplans",
         "manage_weeklyplans",
+        # Tasks: full management
+        "view_tasks",
+        "manage_tasks",
         # Multi-Tenant: cross-tenant access
         "cross_tenant_access",
     ],

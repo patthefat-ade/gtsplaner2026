@@ -29,6 +29,7 @@ import {
   School,
   PartyPopper,
   Calculator,
+  KanbanSquare,
   type LucideIcon,
 } from "lucide-react";
 import {
@@ -185,6 +186,17 @@ const navigation: NavSection[] = [
         href: "/events",
         icon: PartyPopper,
         permission: "view_own_groups",
+      },
+    ],
+  },
+  {
+    title: "Aufgaben",
+    items: [
+      {
+        title: "Aufgaben",
+        href: "/tasks",
+        icon: KanbanSquare,
+        permission: "view_tasks",
       },
     ],
   },
