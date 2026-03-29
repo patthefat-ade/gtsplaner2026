@@ -356,15 +356,15 @@ export interface GroupMember {
   left_at?: string | null;
 }
 
-export type ConsentStatus = "pending" | "granted" | "revoked";
+export type DataConsentStatus = "pending" | "granted" | "revoked";
 
-export const CONSENT_STATUS_LABELS: Record<ConsentStatus, string> = {
+export const DATA_CONSENT_STATUS_LABELS: Record<DataConsentStatus, string> = {
   pending: "Ausstehend",
   granted: "Erteilt",
   revoked: "Widerrufen",
 };
 
-export const CONSENT_STATUS_COLORS: Record<ConsentStatus, string> = {
+export const DATA_CONSENT_STATUS_COLORS: Record<DataConsentStatus, string> = {
   pending: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30",
   granted: "bg-green-500/20 text-green-400 border-green-500/30",
   revoked: "bg-red-500/20 text-red-400 border-red-500/30",
@@ -380,7 +380,7 @@ export interface Student {
   enrollment_date: string | null;
   notes: string;
   is_active: boolean;
-  data_consent_status: ConsentStatus;
+  data_consent_status: DataConsentStatus;
   data_consent_status_display?: string;
   data_consent_date: string | null;
   data_consent_guardian_name: string;
@@ -398,7 +398,7 @@ export interface StudentCreate {
   date_of_birth?: string;
   enrollment_date?: string;
   notes?: string;
-  data_consent_status?: ConsentStatus;
+  data_consent_status?: DataConsentStatus;
   data_consent_date?: string;
   data_consent_guardian_name?: string;
   data_consent_document?: File | null;

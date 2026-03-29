@@ -36,8 +36,8 @@ import { DatePicker } from "@/components/ui/date-picker";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, ShieldCheck, ShieldAlert, ShieldOff } from "lucide-react";
-import type { Student, Group, ConsentStatus } from "@/types/models";
-import { CONSENT_STATUS_LABELS, CONSENT_STATUS_COLORS } from "@/types/models";
+import type { Student, Group, DataConsentStatus } from "@/types/models";
+import { DATA_CONSENT_STATUS_LABELS, DATA_CONSENT_STATUS_COLORS } from "@/types/models";
 
 interface StudentFormProps {
   open: boolean;
@@ -58,7 +58,7 @@ function parseDate(value: string | undefined | null): Date | undefined {
   }
 }
 
-function ConsentStatusIcon({ status }: { status: ConsentStatus }) {
+function ConsentStatusIcon({ status }: { status: DataConsentStatus }) {
   switch (status) {
     case "granted":
       return <ShieldCheck className="h-4 w-4" />;
@@ -292,7 +292,7 @@ export function StudentForm({
             <Separator />
             <div className="space-y-1">
               <h4 className="text-sm font-semibold flex items-center gap-2">
-                <ConsentStatusIcon status={consentStatus as ConsentStatus} />
+                <ConsentStatusIcon status={consentStatus as DataConsentStatus} />
                 Einwilligung zur Datenverarbeitung (DSGVO Art. 8)
               </h4>
               <p className="text-xs text-muted-foreground">

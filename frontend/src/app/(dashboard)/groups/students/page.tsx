@@ -39,8 +39,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { formatDate } from "@/lib/format";
 import { DEFAULT_PAGE_SIZE } from "@/lib/constants";
-import type { Student, ConsentStatus } from "@/types/models";
-import { CONSENT_STATUS_LABELS, CONSENT_STATUS_COLORS } from "@/types/models";
+import type { Student, DataConsentStatus } from "@/types/models";
+import { DATA_CONSENT_STATUS_LABELS, DATA_CONSENT_STATUS_COLORS } from "@/types/models";
 import type { StudentFormData } from "@/lib/validations";
 import {
   Plus,
@@ -248,12 +248,12 @@ export default function StudentsPage() {
                       {student.data_consent_status && (
                         <Badge
                           variant="outline"
-                          className={CONSENT_STATUS_COLORS[student.data_consent_status as ConsentStatus] || ""}
+                          className={DATA_CONSENT_STATUS_COLORS[student.data_consent_status as DataConsentStatus] || ""}
                         >
                           {student.data_consent_status === "granted" && <ShieldCheck className="mr-1 h-3 w-3" />}
                           {student.data_consent_status === "pending" && <ShieldAlert className="mr-1 h-3 w-3" />}
                           {student.data_consent_status === "revoked" && <ShieldOff className="mr-1 h-3 w-3" />}
-                          {CONSENT_STATUS_LABELS[student.data_consent_status as ConsentStatus] || student.data_consent_status}
+                          {DATA_CONSENT_STATUS_LABELS[student.data_consent_status as DataConsentStatus] || student.data_consent_status}
                         </Badge>
                       )}
                     </TableCell>
