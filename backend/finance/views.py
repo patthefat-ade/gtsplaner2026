@@ -21,7 +21,6 @@ from rest_framework.decorators import action
 from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.response import Response
 
-from core.middleware import ensure_tenant_context
 from core.mixins import TenantViewSetMixin
 from core.mixins_export import ExportMixin
 from core.permissions import (
@@ -343,7 +342,6 @@ class TransactionViewSet(ExportMixin, TenantViewSetMixin, viewsets.ModelViewSet)
     @action(detail=False, methods=["get"], url_path="balance/(?P<group_id>[^/.]+)")
     def balance(self, request, group_id=None):
         """Get balance summary for a specific group."""
-        ensure_tenant_context(request)
         from groups.models import Group
 
         try:
@@ -403,7 +401,6 @@ class TransactionViewSet(ExportMixin, TenantViewSetMixin, viewsets.ModelViewSet)
     @action(detail=False, methods=["get"], url_path="monthly-summary")
     def monthly_summary(self, request):
         """Monatliche Buchhaltungs-Zusammenfassung: Barbestand, Einnahmen, Ausgaben."""
-        ensure_tenant_context(request)
         year = int(request.query_params.get("year", timezone.now().year))
         group_id = request.query_params.get("group_id")
         location_id = request.query_params.get("location_id")
@@ -514,7 +511,6 @@ class TransactionViewSet(ExportMixin, TenantViewSetMixin, viewsets.ModelViewSet)
     )
     def export_csv(self, request):
         """Export transactions as CSV file with tenant-filtered data."""
-        ensure_tenant_context(request)
         qs = self.get_queryset().select_related(
             "group", "group__location", "category", "created_by"
         ).order_by("-transaction_date")

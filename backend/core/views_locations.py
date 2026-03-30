@@ -20,9 +20,7 @@ from rest_framework import permissions, serializers, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
-from core.middleware import ensure_tenant_context
 from core.models import Location, Organization, User
-from core.middleware import apply_organization_filter
 from core.permissions import (
     GROUP_ADMIN,
     GROUP_HIERARCHY,
@@ -288,12 +286,6 @@ class LocationViewSet(viewsets.ModelViewSet):
         if getattr(self, "swagger_fake_view", False):
             return Location.objects.none()
 
-        # Ensure tenant context is resolved (lazy resolution for JWT auth)
-        ensure_tenant_context(self.request)
-
-        # Apply optional ?organization_id= filter for SuperAdmin/Admin
-        apply_organization_filter(self.request)
-
         qs = Location.objects.select_related(
             "organization", "manager"
         ).filter(is_deleted=False)
@@ -327,7 +319,6 @@ class LocationViewSet(viewsets.ModelViewSet):
         LocationManager can only update their own location.
         Admin+ can update any location within tenant scope.
         """
-        ensure_tenant_context(self.request)
         instance = serializer.instance
         user = self.request.user
         level = get_user_hierarchy_level(user)
@@ -345,7 +336,6 @@ class LocationViewSet(viewsets.ModelViewSet):
 
     def perform_destroy(self, instance):
         """Soft-delete: mark as deleted instead of removing from DB."""
-        ensure_tenant_context(self.request)
         instance.is_deleted = True
         instance.is_active = False
         instance.save(update_fields=["is_deleted", "is_active", "updated_at"])

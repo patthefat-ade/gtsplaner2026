@@ -25,7 +25,6 @@ from core.cookie_utils import (
     clear_auth_cookies,
     set_auth_cookies,
 )
-from core.middleware import ensure_tenant_context
 from core.serializers import (
     LoginSerializer,
     LogoutSerializer,
@@ -230,9 +229,6 @@ class MeView(APIView):
     )
     def get(self, request):
         from core.permissions import get_user_group_name
-
-        # Ensure tenant context is resolved (lazy resolution for JWT auth)
-        ensure_tenant_context(request)
 
         serializer = UserProfileSerializer(request.user)
         data = serializer.data

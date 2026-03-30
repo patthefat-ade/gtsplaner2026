@@ -27,7 +27,6 @@ from rest_framework.views import APIView
 
 from django.contrib.auth import get_user_model
 
-from core.middleware import apply_organization_filter, ensure_tenant_context
 from core.models import Location, Organization
 from core.permissions import (
     GROUP_SUPER_ADMIN,
@@ -90,11 +89,6 @@ class DashboardStatsView(APIView):
         description="Liefert aggregierte Statistiken basierend auf dem Tenant-Kontext des Benutzers.",
     )
     def get(self, request):
-        ensure_tenant_context(request)
-
-        # Apply optional ?organization_id= filter for SuperAdmin/Admin
-        apply_organization_filter(request)
-
         user = request.user
         group_name = get_user_group_name(user)
         tenant_ids = getattr(request, "tenant_ids", [])

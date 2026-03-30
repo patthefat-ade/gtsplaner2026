@@ -10,9 +10,7 @@ from django_filters import rest_framework as django_filters
 from drf_spectacular.utils import extend_schema, extend_schema_view
 from rest_framework import permissions, viewsets
 
-from core.middleware import ensure_tenant_context
 from core.models import User
-from core.middleware import apply_organization_filter
 from core.permissions import IsSubAdminOrAbove
 from core.serializers import (
     UserCreateSerializer,
@@ -54,7 +52,7 @@ class UserViewSet(viewsets.ModelViewSet):
     """
     CRUD for user management (SubAdmin/Admin/SuperAdmin only).
 
-    Uses request.tenant_ids from ensure_tenant_context() for proper
+    Uses request.tenant_ids (set by CookieJWTAuthentication) for proper
     multi-tenant data isolation:
     - SuperAdmin: sees all users (is_cross_tenant=True), filterable via ?organization_id=
     - Admin: sees users in own organization + all sub-organizations
@@ -71,12 +69,6 @@ class UserViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         if getattr(self, "swagger_fake_view", False):
             return User.objects.none()
-
-        # Ensure tenant context is resolved (lazy resolution for JWT auth)
-        ensure_tenant_context(self.request)
-
-        # Apply optional ?organization_id= filter for SuperAdmin/Admin
-        apply_organization_filter(self.request)
 
         user = self.request.user
         qs = User.objects.select_related("location").filter(is_active=True)
