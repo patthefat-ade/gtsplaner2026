@@ -6,14 +6,15 @@ Implements a hybrid approach:
   - Legacy role field support during migration period
   - Tenant-aware object-level permissions
 
-The four-role hierarchy is mapped to Django Groups:
+The five-role hierarchy is mapped to Django Groups:
   - Educator: Basic access to own data
   - LocationManager: Access to own location's data
-  - Admin: Full access to all data within the organization
+  - SubAdmin: Full access to all data within the sub-tenant
+  - Admin: Full access to all data within the organization (main tenant)
   - SuperAdmin: Unrestricted access to all data (cross-tenant)
 
 Usage:
-    from core.permissions import HasPermission, IsLocationManagerOrAbove
+    from core.permissions import HasPermission, IsSubAdminOrAbove
 
     class MyView(APIView):
         permission_classes = [IsAuthenticated, HasPermission("manage_groups")]
@@ -26,21 +27,24 @@ from core.models import User
 # Group name constants
 GROUP_EDUCATOR = "Educator"
 GROUP_LOCATION_MANAGER = "LocationManager"
+GROUP_SUB_ADMIN = "SubAdmin"
 GROUP_ADMIN = "Admin"
 GROUP_SUPER_ADMIN = "SuperAdmin"
 
-# Hierarchy levels for comparison
+# Hierarchy levels for comparison (5 levels)
 GROUP_HIERARCHY = {
     GROUP_EDUCATOR: 1,
     GROUP_LOCATION_MANAGER: 2,
-    GROUP_ADMIN: 3,
-    GROUP_SUPER_ADMIN: 4,
+    GROUP_SUB_ADMIN: 3,
+    GROUP_ADMIN: 4,
+    GROUP_SUPER_ADMIN: 5,
 }
 
 # Mapping from legacy role field to group name
 ROLE_TO_GROUP = {
     User.Role.EDUCATOR: GROUP_EDUCATOR,
     User.Role.LOCATION_MANAGER: GROUP_LOCATION_MANAGER,
+    User.Role.SUB_ADMIN: GROUP_SUB_ADMIN,
     User.Role.ADMIN: GROUP_ADMIN,
     User.Role.SUPER_ADMIN: GROUP_SUPER_ADMIN,
 }
@@ -74,7 +78,7 @@ def get_user_group_name(user) -> str | None:
 
 
 def get_user_hierarchy_level(user) -> int:
-    """Get the hierarchy level of a user (1=Educator, 4=SuperAdmin)."""
+    """Get the hierarchy level of a user (1=Educator, 5=SuperAdmin)."""
     group_name = get_user_group_name(user)
     return GROUP_HIERARCHY.get(group_name, 0)
 
@@ -149,12 +153,30 @@ class IsLocationManager(BasePermission):
 
 
 class IsLocationManagerOrAbove(BasePermission):
-    """Allow access to LocationManager, Admin, or SuperAdmin."""
+    """Allow access to LocationManager, SubAdmin, Admin, or SuperAdmin."""
 
     message = "Zugriff nur fuer Standortleitungen oder hoehere Rollen."
 
     def has_permission(self, request, view) -> bool:
         return get_user_hierarchy_level(request.user) >= GROUP_HIERARCHY[GROUP_LOCATION_MANAGER]
+
+
+class IsSubAdmin(BasePermission):
+    """Allow access only to users with SubAdmin role."""
+
+    message = "Zugriff nur fuer Sub-Mandanten-Administratoren."
+
+    def has_permission(self, request, view) -> bool:
+        return get_user_group_name(request.user) == GROUP_SUB_ADMIN
+
+
+class IsSubAdminOrAbove(BasePermission):
+    """Allow access to SubAdmin, Admin, or SuperAdmin."""
+
+    message = "Zugriff nur fuer Sub-Mandanten-Administratoren oder hoehere Rollen."
+
+    def has_permission(self, request, view) -> bool:
+        return get_user_hierarchy_level(request.user) >= GROUP_HIERARCHY[GROUP_SUB_ADMIN]
 
 
 class IsAdmin(BasePermission):
@@ -187,7 +209,7 @@ class IsSuperAdmin(BasePermission):
 class IsOwnerOrAdmin(BasePermission):
     """
     Object-level permission: allow access if the user is the owner
-    of the object or has Admin/SuperAdmin role.
+    of the object or has SubAdmin/Admin/SuperAdmin role.
     """
 
     message = "Zugriff nur fuer den Eigentuemer oder Administratoren."
@@ -196,8 +218,8 @@ class IsOwnerOrAdmin(BasePermission):
         if not request.user or not request.user.is_authenticated:
             return False
 
-        # Admin and SuperAdmin always have access
-        if get_user_hierarchy_level(request.user) >= GROUP_HIERARCHY[GROUP_ADMIN]:
+        # SubAdmin, Admin and SuperAdmin always have access
+        if get_user_hierarchy_level(request.user) >= GROUP_HIERARCHY[GROUP_SUB_ADMIN]:
             return True
 
         # Check if user is the owner
@@ -221,8 +243,8 @@ class IsLocationMember(BasePermission):
         if not request.user or not request.user.is_authenticated:
             return False
 
-        # Admin and SuperAdmin always have access
-        if get_user_hierarchy_level(request.user) >= GROUP_HIERARCHY[GROUP_ADMIN]:
+        # SubAdmin, Admin and SuperAdmin always have access
+        if get_user_hierarchy_level(request.user) >= GROUP_HIERARCHY[GROUP_SUB_ADMIN]:
             return True
 
         # Check if user belongs to the same location
