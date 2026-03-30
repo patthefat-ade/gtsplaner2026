@@ -27,11 +27,12 @@ from rest_framework.views import APIView
 
 from django.contrib.auth import get_user_model
 
-from core.middleware import ensure_tenant_context
+from core.middleware import apply_organization_filter, ensure_tenant_context
 from core.models import Location, Organization
 from core.permissions import (
     GROUP_SUPER_ADMIN,
     GROUP_ADMIN,
+    GROUP_SUB_ADMIN,
     GROUP_LOCATION_MANAGER,
     get_user_group_name,
 )
@@ -91,6 +92,9 @@ class DashboardStatsView(APIView):
     def get(self, request):
         ensure_tenant_context(request)
 
+        # Apply optional ?organization_id= filter for SuperAdmin/Admin
+        apply_organization_filter(request)
+
         user = request.user
         group_name = get_user_group_name(user)
         tenant_ids = getattr(request, "tenant_ids", [])
@@ -125,6 +129,9 @@ class DashboardStatsView(APIView):
     def _build_querysets(self, user, group_name, tenant_ids, request):
         """Build role-specific base querysets."""
         if group_name == GROUP_SUPER_ADMIN:
+            if tenant_ids:
+                # SuperAdmin with ?organization_id= filter applied
+                return self._build_tenant_filtered_querysets(tenant_ids)
             return {
                 "locations": Location.objects.all(),
                 "groups": Group.objects.all(),
@@ -140,7 +147,7 @@ class DashboardStatsView(APIView):
                     role=User.Role.EDUCATOR, is_active=True
                 ).count(),
             }
-        elif group_name == GROUP_ADMIN:
+        elif group_name in (GROUP_ADMIN, GROUP_SUB_ADMIN):
             return {
                 "locations": Location.objects.filter(
                     organization_id__in=tenant_ids
@@ -248,6 +255,42 @@ class DashboardStatsView(APIView):
                 "educators_count": 0,
             }
 
+    def _build_tenant_filtered_querysets(self, tenant_ids):
+        """Build querysets filtered by specific tenant_ids (used by SuperAdmin with org filter)."""
+        return {
+            "locations": Location.objects.filter(
+                organization_id__in=tenant_ids
+            ),
+            "groups": Group.objects.filter(
+                organization_id__in=tenant_ids
+            ),
+            "students": Student.objects.filter(
+                organization_id__in=tenant_ids
+            ),
+            "transactions": Transaction.objects.filter(
+                organization_id__in=tenant_ids
+            ),
+            "time_entries": TimeEntry.objects.filter(
+                organization_id__in=tenant_ids
+            ),
+            "leave_requests": LeaveRequest.objects.filter(
+                organization_id__in=tenant_ids
+            ),
+            "weeklyplans": WeeklyPlan.objects.filter(
+                organization_id__in=tenant_ids,
+                is_deleted=False,
+                is_template=False,
+            ),
+            "tasks": Task.objects.filter(
+                organization_id__in=tenant_ids
+            ),
+            "educators_count": User.objects.filter(
+                role=User.Role.EDUCATOR,
+                is_active=True,
+                location__organization_id__in=tenant_ids,
+            ).count(),
+        }
+
     def _compute_aggregates(self, user, group_name, qs):
         """Compute aggregate counts from querysets."""
         transactions_qs = qs["transactions"]
@@ -311,7 +354,7 @@ class DashboardStatsView(APIView):
             time_entries_qs = TimeEntry.objects.all()
             transactions_qs = Transaction.objects.all()
             leave_requests_qs = LeaveRequest.objects.all()
-        elif group_name in (GROUP_ADMIN, GROUP_LOCATION_MANAGER):
+        elif group_name in (GROUP_ADMIN, GROUP_SUB_ADMIN, GROUP_LOCATION_MANAGER):
             time_entries_qs = TimeEntry.objects.filter(
                 organization_id__in=tenant_ids
             )
@@ -328,8 +371,13 @@ class DashboardStatsView(APIView):
 
         # Build task querysets based on role
         if group_name == GROUP_SUPER_ADMIN:
-            tasks_qs = Task.objects.all()
-        elif group_name in (GROUP_ADMIN, GROUP_LOCATION_MANAGER):
+            if tenant_ids:
+                tasks_qs = Task.objects.filter(
+                    organization_id__in=tenant_ids
+                )
+            else:
+                tasks_qs = Task.objects.all()
+        elif group_name in (GROUP_ADMIN, GROUP_SUB_ADMIN, GROUP_LOCATION_MANAGER):
             tasks_qs = Task.objects.filter(
                 organization_id__in=tenant_ids
             )
