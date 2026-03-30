@@ -12,7 +12,7 @@ python-decouple==3.8
 
 # Security / Encryption
 django-fernet-encrypted-fields==0.3.1
-cryptography==46.0.2
+cryptography==46.0.6
 
 # Database
 psycopg2-binary==2.9.11
@@ -27,7 +27,7 @@ gunicorn==25.1.0
 whitenoise==6.12.0
 
 # Media / Storage
-Pillow==11.3.0
+Pillow==12.1.1
 boto3>=1.35.0
 django-storages>=1.14
 
