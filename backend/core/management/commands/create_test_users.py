@@ -535,9 +535,73 @@ class Command(BaseCommand):
         },
     ]
 
+    # ── SubAdmin-Konfiguration ────────────────────────────────────────────
+    # One SubAdmin per Bundesland (sub-tenant).
+    # Username pattern: admin.<bundesland_short>@hilfswerk.at
+
+    SUB_ADMIN_CONFIG = {
+        "Hilfswerk Kaernten": {
+            "username": "admin.kaernten",
+            "email": "admin.kaernten@hilfswerk.at",
+            "first_name": "Karl",
+            "last_name": "Koroschetz",
+        },
+        "Hilfswerk Wien": {
+            "username": "admin.wien",
+            "email": "admin.wien@hilfswerk.at",
+            "first_name": "Wiebke",
+            "last_name": "Wagner",
+        },
+        "Hilfswerk Steiermark": {
+            "username": "admin.steiermark",
+            "email": "admin.steiermark@hilfswerk.at",
+            "first_name": "Stefan",
+            "last_name": "Stummer",
+        },
+        "Hilfswerk Tirol": {
+            "username": "admin.tirol",
+            "email": "admin.tirol@hilfswerk.at",
+            "first_name": "Thomas",
+            "last_name": "Thurner",
+        },
+        "Hilfswerk Niederoesterreich": {
+            "username": "admin.noe",
+            "email": "admin.noe@hilfswerk.at",
+            "first_name": "Nadja",
+            "last_name": "Neuhofer",
+        },
+        "Hilfswerk Oberoesterreich": {
+            "username": "admin.ooe",
+            "email": "admin.ooe@hilfswerk.at",
+            "first_name": "Otto",
+            "last_name": "Obermaier",
+        },
+        "Hilfswerk Salzburg": {
+            "username": "admin.salzburg",
+            "email": "admin.salzburg@hilfswerk.at",
+            "first_name": "Sabine",
+            "last_name": "Salzmann",
+        },
+        "Hilfswerk Burgenland": {
+            "username": "admin.burgenland",
+            "email": "admin.burgenland@hilfswerk.at",
+            "first_name": "Barbara",
+            "last_name": "Binder",
+        },
+        "Hilfswerk Vorarlberg": {
+            "username": "admin.vorarlberg",
+            "email": "admin.vorarlberg@hilfswerk.at",
+            "first_name": "Verena",
+            "last_name": "Vonbank",
+        },
+    }
+
     def _collect_all_usernames(self):
         """Dynamically collect all test usernames from config."""
         usernames = ["superadmin", "admin", "locationmanager", "educator"]
+        # SubAdmin usernames
+        for cfg in self.SUB_ADMIN_CONFIG.values():
+            usernames.append(cfg["username"])
         for bl in self.BUNDESLAENDER:
             for school in bl["schools"]:
                 usernames.append(school["manager"]["username"])
@@ -602,6 +666,13 @@ class Command(BaseCommand):
         except Exception as e:
             errors.append(f"System Users: {e}")
             self.stdout.write(self.style.WARNING(f"  WARNUNG System Users: {e}"))
+
+        # 4b. Create SubAdmin per Sub-Tenant
+        try:
+            self._create_sub_admins(bundesland_data)
+        except Exception as e:
+            errors.append(f"SubAdmins: {e}")
+            self.stdout.write(self.style.WARNING(f"  WARNUNG SubAdmins: {e}"))
 
         # 5. Create LocationManagers and Educators per School
         try:
@@ -897,6 +968,45 @@ class Command(BaseCommand):
 
         for user_data in system_users:
             self._create_user(user_data)
+
+    # ── Step 4b: SubAdmins per Sub-Tenant ─────────────────────────────────
+
+    def _create_sub_admins(self, bundesland_data):
+        """Create one SubAdmin per Bundesland (sub-tenant)."""
+        self.stdout.write("\n  [4b/10] Sub-Mandanten-Admins erstellen...")
+
+        created_count = 0
+        for bl_name, data in bundesland_data.items():
+            sub_org = data["org"]
+            config = self.SUB_ADMIN_CONFIG.get(bl_name)
+
+            if not config:
+                self.stdout.write(
+                    self.style.WARNING(f"        WARNUNG: Kein SubAdmin-Config fuer {bl_name}")
+                )
+                continue
+
+            # SubAdmin needs a location – use the first location of the sub-tenant
+            first_location = data["locations"][0]["location"] if data["locations"] else None
+            if not first_location:
+                self.stdout.write(
+                    self.style.WARNING(f"        WARNUNG: Kein Standort fuer {bl_name}")
+                )
+                continue
+
+            sub_admin_data = {
+                **config,
+                "role": User.Role.SUB_ADMIN,
+                "is_staff": True,
+                "is_superuser": False,
+                "location": first_location,
+                "organization": sub_org,
+                "group_name": "SubAdmin",
+            }
+            self._create_user(sub_admin_data)
+            created_count += 1
+
+        self.stdout.write(f"\n        Gesamt: {created_count} Sub-Mandanten-Admins erstellt.")
 
     # ── Step 5: School Users (LocationManager + Educator per School) ──────
 
