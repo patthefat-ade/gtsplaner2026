@@ -302,10 +302,9 @@ class Student(TenantModel):
         verbose_name="Einwilligungsdatum",
         help_text="Datum der Einwilligung durch den Erziehungsberechtigten",
     )
-    data_consent_guardian_name = EncryptedCharField(
+    data_consent_guardian_name = models.CharField(
         max_length=255,
         blank=True,
-        null=True,
         default="",
         verbose_name="Name des Erziehungsberechtigten",
         help_text="Name der Person, die die Einwilligung erteilt hat",
