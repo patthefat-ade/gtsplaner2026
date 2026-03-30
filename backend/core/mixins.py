@@ -16,7 +16,7 @@ Usage:
 from rest_framework import status
 from rest_framework.response import Response
 
-from core.middleware import ensure_tenant_context
+from core.middleware import apply_organization_filter, ensure_tenant_context
 
 
 class TenantViewSetMixin:
@@ -30,7 +30,10 @@ class TenantViewSetMixin:
     Behavior based on user role:
         - SuperAdmin (is_cross_tenant=True, tenant_ids=[]): No filter, sees all data
         - Admin with main tenant: Sees own org + all sub-orgs
+        - SubAdmin: Sees own sub-org + all descendants (locations)
         - LocationManager/Educator: Sees only own organization's data
+
+    SuperAdmin and Admin can use ?organization_id= to filter by sub-tenant.
 
     Also auto-sets organization_id on create operations.
     """
@@ -47,6 +50,10 @@ class TenantViewSetMixin:
         # Ensure tenant context is resolved (lazy resolution for JWT auth)
         ensure_tenant_context(self.request)
 
+        # Apply optional ?organization_id= filter for SuperAdmin/Admin
+        if hasattr(self.request, "query_params"):
+            apply_organization_filter(self.request)
+
         qs = super().get_queryset()
 
         if self.skip_tenant_filter:
@@ -55,7 +62,7 @@ class TenantViewSetMixin:
         if not hasattr(self.request, "tenant_ids"):
             return qs
 
-        # SuperAdmin: no filter needed
+        # SuperAdmin without filter: no filter needed
         if self.request.is_cross_tenant:
             return qs
 
