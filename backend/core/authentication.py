@@ -21,7 +21,7 @@ Tenant Resolution:
     request.tenant_id: The user's organization_id (or None)
     request.tenant_ids: List of organization IDs the user can access
     request.is_cross_tenant: Whether the user has cross-tenant access
-""""
+"""
 
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
