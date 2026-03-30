@@ -13,21 +13,30 @@ services:
       deploy_on_push: false  # Deployment nur über GitHub Actions CD
     dockerfile_path: backend/Dockerfile
     envs:
+      # --- Sicherheit ---
       - key: SECRET_KEY
         scope: RUN_TIME
         value: ${SECRET_KEY}
+      - key: SALT_KEY
+        scope: RUN_TIME
+        value: ${SALT_KEY}
       - key: DEBUG
         scope: RUN_TIME
         value: "False"
       - key: ALLOWED_HOSTS
         scope: RUN_TIME
         value: ${APP_URL}
+      # --- Datenbank & Cache ---
       - key: DATABASE_URL
         scope: RUN_TIME
         value: ${db.DATABASE_URL}
+      - key: VALKEY_URL
+        scope: RUN_TIME
+        value: ${redis.INTERNAL_URL}
       - key: CELERY_BROKER_URL
         scope: RUN_TIME
         value: ${redis.INTERNAL_URL}
+      # --- CORS ---
       - key: CORS_ALLOWED_ORIGINS
         scope: RUN_TIME
         value: ${frontend.URL}
@@ -67,6 +76,12 @@ workers:
       deploy_on_push: false  # Deployment nur über GitHub Actions CD
     dockerfile_path: backend/Dockerfile
     envs:
+      - key: SECRET_KEY
+        scope: RUN_TIME
+        value: ${SECRET_KEY}
+      - key: SALT_KEY
+        scope: RUN_TIME
+        value: ${SALT_KEY}
       - key: DATABASE_URL
         scope: RUN_TIME
         value: ${db.DATABASE_URL}
@@ -78,7 +93,7 @@ workers:
     run_command: celery -A config worker -l info
 
 # ---------------------------------------------------------------------------
-# Datenbanken (PostgreSQL, Redis)
+# Datenbanken (PostgreSQL, Redis/Valkey)
 # ---------------------------------------------------------------------------
 databases:
   # Managed PostgreSQL
@@ -88,7 +103,7 @@ databases:
     production: true
     instance_size_slug: db-s-1vcpu-1gb
 
-  # Managed Redis
+  # Managed Redis (genutzt als Valkey-kompatibel für Cache + Celery Broker)
   - name: redis
     engine: REDIS
     version: "7"
