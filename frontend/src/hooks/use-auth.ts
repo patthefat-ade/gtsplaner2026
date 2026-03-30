@@ -27,19 +27,23 @@ export function useAuth() {
 
 /**
  * Helper hook to check if the current user has a specific role or above.
+ *
+ * Role hierarchy (5 levels):
+ *   educator (1) < location_manager (2) < sub_admin (3) < admin (4) < super_admin (5)
  */
 export function useHasRole(
-  requiredRole: "educator" | "location_manager" | "admin" | "super_admin",
+  requiredRole: "educator" | "location_manager" | "sub_admin" | "admin" | "super_admin",
 ): boolean {
   const { user } = useAuth();
   if (!user) return false;
 
-  const roleHierarchy = {
+  const roleHierarchy: Record<string, number> = {
     educator: 1,
     location_manager: 2,
-    admin: 3,
-    super_admin: 4,
+    sub_admin: 3,
+    admin: 4,
+    super_admin: 5,
   };
 
-  return roleHierarchy[user.role] >= roleHierarchy[requiredRole];
+  return (roleHierarchy[user.role] ?? 0) >= (roleHierarchy[requiredRole] ?? 0);
 }

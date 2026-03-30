@@ -158,8 +158,8 @@ class UserCreateSerializer(serializers.ModelSerializer):
         organization = attrs.get("organization")
         location = attrs.get("location")
 
-        # Admins should have an organization
-        if role in ("admin", "super_admin") and not organization and not location:
+        # Admins/SubAdmins should have an organization
+        if role in ("admin", "super_admin", "sub_admin") and not organization and not location:
             raise serializers.ValidationError(
                 {"organization": "Admin-Benutzer muessen einer Organisation zugewiesen werden."}
             )

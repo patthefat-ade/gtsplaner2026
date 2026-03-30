@@ -65,6 +65,7 @@ type PasswordFormData = z.infer<typeof passwordSchema>;
 const ROLE_LABELS: Record<string, string> = {
   educator: "Pädagog:in",
   location_manager: "Standortleitung",
+  sub_admin: "Sub-Admin",
   admin: "Admin",
   super_admin: "Super-Admin",
 };

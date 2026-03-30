@@ -56,8 +56,9 @@ export type PermissionCodename =
 const roleHierarchy: Record<UserRole, number> = {
   educator: 1,
   location_manager: 2,
-  admin: 3,
-  super_admin: 4,
+  sub_admin: 3,
+  admin: 4,
+  super_admin: 5,
 };
 
 /**
@@ -150,9 +151,10 @@ export function getRequiredRoleForPath(pathname: string): UserRole | null {
     cross_tenant_access: "super_admin",
     // Admin+
     manage_organizations: "admin",
-    manage_users: "admin",
-    manage_settings: "admin",
-    view_audit_log: "admin",
+    // SubAdmin+
+    manage_users: "sub_admin",
+    manage_settings: "sub_admin",
+    view_audit_log: "sub_admin",
     // LocationManager+
     manage_groups: "location_manager",
     manage_students: "location_manager",

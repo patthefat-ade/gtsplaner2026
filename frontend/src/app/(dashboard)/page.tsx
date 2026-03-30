@@ -37,8 +37,15 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { api } from "@/lib/api";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 
 /* ───── Types ───── */
 interface DashboardStats {
@@ -128,19 +135,43 @@ interface DashboardStats {
 }
 
 /* ───── Hooks ───── */
-function useDashboardStats() {
+function useDashboardStats(organizationId?: number) {
   const [data, setData] = useState<DashboardStats | undefined>(undefined);
   const [error, setError] = useState<Error | undefined>(undefined);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    api.get("/dashboard/stats/")
+  const fetchStats = useCallback(() => {
+    setIsLoading(true);
+    const params = organizationId ? { organization_id: organizationId } : {};
+    api.get("/dashboard/stats/", { params })
       .then((r) => setData(r.data))
       .catch((e) => setError(e))
       .finally(() => setIsLoading(false));
-  }, []);
+  }, [organizationId]);
+
+  useEffect(() => {
+    fetchStats();
+  }, [fetchStats]);
 
   return { data, error, isLoading };
+}
+
+interface Organization {
+  id: number;
+  name: string;
+  org_type: string;
+}
+
+function useOrganizationsList() {
+  const [data, setData] = useState<Organization[]>([]);
+
+  useEffect(() => {
+    api.get("/admin/organizations/", { params: { page_size: 100 } })
+      .then((r) => setData(r.data?.results ?? []))
+      .catch(() => {});
+  }, []);
+
+  return data;
 }
 
 /* ───── Stat Card ───── */
@@ -723,7 +754,7 @@ function SuperAdminDashboard({ stats, loading }: { stats?: DashboardStats; loadi
 /* ───── Shared Widgets ───── */
 
 function RecentTimeEntries({ stats, loading }: { stats?: DashboardStats; loading: boolean }) {
-  const showUser = stats?.role === "super_admin" || stats?.role === "admin" || stats?.role === "location_manager";
+  const showUser = stats?.role === "super_admin" || stats?.role === "admin" || stats?.role === "sub_admin" || stats?.role === "location_manager";
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
@@ -1316,10 +1347,45 @@ function LocationManagerTaskSummaryWidget({ stats, loading }: { stats?: Dashboar
   );
 }
 
+/* ───── Organization Filter ───── */
+function OrganizationFilter({
+  value,
+  onChange,
+}: {
+  value: number | undefined;
+  onChange: (id: number | undefined) => void;
+}) {
+  const organizations = useOrganizationsList();
+
+  if (organizations.length === 0) return null;
+
+  return (
+    <Select
+      value={value ? String(value) : "all"}
+      onValueChange={(v) => onChange(v === "all" ? undefined : Number(v))}
+    >
+      <SelectTrigger className="w-[280px]">
+        <SelectValue placeholder="Alle Organisationen" />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value="all">Alle Organisationen (kumuliert)</SelectItem>
+        {organizations.map((org) => (
+          <SelectItem key={org.id} value={String(org.id)}>
+            {org.name}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+}
+
 /* ───── Dashboard Page ───── */
 export default function DashboardPage() {
   const { user } = useAuth();
-  const { data: stats, isLoading } = useDashboardStats();
+  const [selectedOrgId, setSelectedOrgId] = useState<number | undefined>(undefined);
+  const { data: stats, isLoading } = useDashboardStats(
+    (user?.role === "super_admin" || user?.role === "admin") ? selectedOrgId : undefined
+  );
 
   const role = user?.role;
 
@@ -1327,24 +1393,37 @@ export default function DashboardPage() {
   const roleLabels: Record<string, string> = {
     educator: "Pädagog:in",
     location_manager: "Standortleitung",
+    sub_admin: "Sub-Administrator",
     admin: "Administrator",
     super_admin: "Systemadministrator",
   };
 
   const roleLabel = roleLabels[role || ""] || "Benutzer";
+  const showOrgFilter = role === "super_admin" || role === "admin";
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title={`Willkommen, ${user?.first_name || "Benutzer"}`}
-        description={`${roleLabel} – Hier ist deine Übersicht für heute.`}
-      />
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <PageHeader
+          title={`Willkommen, ${user?.first_name || "Benutzer"}`}
+          description={`${roleLabel} – Hier ist deine Übersicht für heute.`}
+        />
+        {showOrgFilter && (
+          <OrganizationFilter
+            value={selectedOrgId}
+            onChange={setSelectedOrgId}
+          />
+        )}
+      </div>
 
       {role === "educator" && (
         <EducatorDashboard stats={stats} loading={isLoading} />
       )}
       {role === "location_manager" && (
         <LocationManagerDashboard stats={stats} loading={isLoading} />
+      )}
+      {role === "sub_admin" && (
+        <AdminDashboard stats={stats} loading={isLoading} />
       )}
       {role === "admin" && (
         <AdminDashboard stats={stats} loading={isLoading} />

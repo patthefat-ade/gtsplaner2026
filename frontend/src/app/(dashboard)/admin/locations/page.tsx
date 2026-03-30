@@ -67,7 +67,7 @@ export default function LocationsPage() {
   const toast = useToast();
   const { hasPermission, hasRole } = usePermissions();
   const canManage = hasPermission("manage_locations");
-  const canCreate = hasRole("admin");
+  const canCreate = hasRole("sub_admin");
 
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);

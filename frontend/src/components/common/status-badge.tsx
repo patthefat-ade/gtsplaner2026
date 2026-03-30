@@ -36,6 +36,7 @@ export function RoleBadge({ role }: { role: string }) {
   const roleLabels: Record<string, string> = {
     educator: "Pädagog:in",
     location_manager: "Standortleitung",
+    sub_admin: "Sub-Admin",
     admin: "Admin",
     super_admin: "Super Admin",
   };

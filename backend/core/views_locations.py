@@ -22,11 +22,13 @@ from rest_framework.response import Response
 
 from core.middleware import ensure_tenant_context
 from core.models import Location, Organization, User
+from core.middleware import apply_organization_filter
 from core.permissions import (
     GROUP_ADMIN,
     GROUP_HIERARCHY,
     GROUP_LOCATION_MANAGER,
-    IsAdminOrAbove,
+    GROUP_SUB_ADMIN,
+    IsSubAdminOrAbove,
     IsEducator,
     IsLocationManagerOrAbove,
     get_user_hierarchy_level,
@@ -279,8 +281,8 @@ class LocationViewSet(viewsets.ModelViewSet):
         if self.action in ["update", "partial_update"]:
             # LocationManager can update own location, Admin+ can update any
             return [permissions.IsAuthenticated(), IsLocationManagerOrAbove()]
-        # Create and delete: Admin+ only
-        return [permissions.IsAuthenticated(), IsAdminOrAbove()]
+        # Create and delete: SubAdmin+ only
+        return [permissions.IsAuthenticated(), IsSubAdminOrAbove()]
 
     def get_queryset(self):
         if getattr(self, "swagger_fake_view", False):
@@ -289,6 +291,9 @@ class LocationViewSet(viewsets.ModelViewSet):
         # Ensure tenant context is resolved (lazy resolution for JWT auth)
         ensure_tenant_context(self.request)
 
+        # Apply optional ?organization_id= filter for SuperAdmin/Admin
+        apply_organization_filter(self.request)
+
         qs = Location.objects.select_related(
             "organization", "manager"
         ).filter(is_deleted=False)
@@ -296,13 +301,13 @@ class LocationViewSet(viewsets.ModelViewSet):
         user = self.request.user
         level = get_user_hierarchy_level(user)
 
-        # SuperAdmin: see all locations
+        # SuperAdmin: see all locations (or filtered if ?organization_id= set)
         if getattr(self.request, "is_cross_tenant", False):
             return qs
 
-        # Admin: see locations within tenant scope
+        # Admin/SubAdmin: see locations within tenant scope
         tenant_ids = getattr(self.request, "tenant_ids", [])
-        if level >= GROUP_HIERARCHY[GROUP_ADMIN] and tenant_ids:
+        if level >= GROUP_HIERARCHY[GROUP_SUB_ADMIN] and tenant_ids:
             return qs.filter(organization_id__in=tenant_ids)
 
         # LocationManager: see only managed locations
@@ -328,7 +333,7 @@ class LocationViewSet(viewsets.ModelViewSet):
         level = get_user_hierarchy_level(user)
 
         # LocationManager: can only update own location
-        if level < GROUP_HIERARCHY[GROUP_ADMIN]:
+        if level < GROUP_HIERARCHY[GROUP_SUB_ADMIN]:
             if instance.manager_id != user.id:
                 from rest_framework.exceptions import PermissionDenied
 

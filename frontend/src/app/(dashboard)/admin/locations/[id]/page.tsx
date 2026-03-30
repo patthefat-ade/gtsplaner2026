@@ -388,6 +388,7 @@ function EducatorsTab({ locationId }: { locationId: number }) {
   const roleLabels: Record<string, string> = {
     educator: "Pädagog:in",
     location_manager: "Standortleitung",
+    sub_admin: "Sub-Admin",
     admin: "Admin",
     super_admin: "Super Admin",
   };

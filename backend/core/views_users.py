@@ -12,7 +12,8 @@ from rest_framework import permissions, viewsets
 
 from core.middleware import ensure_tenant_context
 from core.models import User
-from core.permissions import IsAdminOrAbove
+from core.middleware import apply_organization_filter
+from core.permissions import IsSubAdminOrAbove
 from core.serializers import (
     UserCreateSerializer,
     UserDetailSerializer,
@@ -51,12 +52,13 @@ class UserFilter(django_filters.FilterSet):
 )
 class UserViewSet(viewsets.ModelViewSet):
     """
-    CRUD for user management (Admin/SuperAdmin only).
+    CRUD for user management (SubAdmin/Admin/SuperAdmin only).
 
     Uses request.tenant_ids from ensure_tenant_context() for proper
     multi-tenant data isolation:
-    - SuperAdmin: sees all users (is_cross_tenant=True)
+    - SuperAdmin: sees all users (is_cross_tenant=True), filterable via ?organization_id=
     - Admin: sees users in own organization + all sub-organizations
+    - SubAdmin: sees users in own sub-organization + descendants
     - Other roles: no access (empty queryset)
     """
 
@@ -64,7 +66,7 @@ class UserViewSet(viewsets.ModelViewSet):
     search_fields = ["username", "email", "first_name", "last_name"]
     ordering_fields = ["username", "email", "last_name", "role", "date_joined", "last_login"]
     ordering = ["last_name", "first_name"]
-    permission_classes = [permissions.IsAuthenticated, IsAdminOrAbove]
+    permission_classes = [permissions.IsAuthenticated, IsSubAdminOrAbove]
 
     def get_queryset(self):
         if getattr(self, "swagger_fake_view", False):
@@ -73,6 +75,9 @@ class UserViewSet(viewsets.ModelViewSet):
         # Ensure tenant context is resolved (lazy resolution for JWT auth)
         ensure_tenant_context(self.request)
 
+        # Apply optional ?organization_id= filter for SuperAdmin/Admin
+        apply_organization_filter(self.request)
+
         user = self.request.user
         qs = User.objects.select_related("location").filter(is_active=True)
 
@@ -80,10 +85,10 @@ class UserViewSet(viewsets.ModelViewSet):
         if getattr(self.request, "is_cross_tenant", False):
             return qs
 
-        # Admin: use tenant_ids from TenantMiddleware
-        # This includes the admin's own organization + all sub-organizations
+        # Admin/SubAdmin: use tenant_ids from TenantMiddleware
+        # This includes the user's own organization + all sub-organizations
         tenant_ids = getattr(self.request, "tenant_ids", [])
-        if user.role == "admin" and tenant_ids:
+        if user.role in ("admin", "sub_admin") and tenant_ids:
             return qs.filter(location__organization_id__in=tenant_ids)
 
         # Fallback: no access
