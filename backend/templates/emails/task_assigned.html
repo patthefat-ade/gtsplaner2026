@@ -1,0 +1,42 @@
+{% extends "emails/base.html" %}
+{% block title %}Neue Aufgabe zugewiesen – GTS Planer{% endblock %}
+{% block content %}
+<p>Hallo {{ assigned_to_name }},</p>
+
+<p>Ihnen wurde eine neue Aufgabe im GTS Planer zugewiesen:</p>
+
+<table class="detail-table">
+  <tr>
+    <td>Titel</td>
+    <td>{{ task_title }}</td>
+  </tr>
+  <tr>
+    <td>Priorit&auml;t</td>
+    <td>{{ priority_display }}</td>
+  </tr>
+  <tr>
+    <td>Stichtag</td>
+    <td>{{ due_date }}</td>
+  </tr>
+  <tr>
+    <td>Erstellt von</td>
+    <td>{{ created_by_name }}</td>
+  </tr>
+  {% if location_name %}
+  <tr>
+    <td>Standort</td>
+    <td>{{ location_name }}</td>
+  </tr>
+  {% endif %}
+</table>
+
+{% if description %}
+<div class="info-box">
+  <p><strong>Beschreibung:</strong> {{ description }}</p>
+</div>
+{% endif %}
+
+<p style="text-align: center;">
+  <a href="{{ frontend_url }}/tasks" class="btn">&Ouml;ffne Aufgaben</a>
+</p>
+{% endblock %}

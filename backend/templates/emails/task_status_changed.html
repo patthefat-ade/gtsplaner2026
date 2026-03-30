@@ -1,0 +1,30 @@
+{% extends "emails/base.html" %}
+{% block title %}Aufgabenstatus geändert – GTS Planer{% endblock %}
+{% block content %}
+<p>Hallo {{ recipient_name }},</p>
+
+<p>Der Status einer Ihrer Aufgaben wurde ge&auml;ndert:</p>
+
+<table class="detail-table">
+  <tr>
+    <td>Aufgabe</td>
+    <td>{{ task_title }}</td>
+  </tr>
+  <tr>
+    <td>Alter Status</td>
+    <td>{{ old_status_display }}</td>
+  </tr>
+  <tr>
+    <td>Neuer Status</td>
+    <td>{{ new_status_display }}</td>
+  </tr>
+  <tr>
+    <td>Ge&auml;ndert von</td>
+    <td>{{ changed_by_name }}</td>
+  </tr>
+</table>
+
+<p style="text-align: center;">
+  <a href="{{ frontend_url }}/tasks" class="btn">&Ouml;ffne Aufgaben</a>
+</p>
+{% endblock %}
