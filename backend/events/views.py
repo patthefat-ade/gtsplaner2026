@@ -11,7 +11,6 @@ from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
-from core.middleware import ensure_tenant_context
 from core.mixins import TenantViewSetMixin
 from core.mixins_export import ExportMixin
 from core.permissions import IsEducator, require_permission
@@ -95,7 +94,6 @@ class EventViewSet(ExportMixin, TenantViewSetMixin, viewsets.ModelViewSet):
         return qs
 
     def perform_create(self, serializer):
-        ensure_tenant_context(self.request)
         serializer.save(
             created_by=self.request.user,
             organization=self.request.tenant,

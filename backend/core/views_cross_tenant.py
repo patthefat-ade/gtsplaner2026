@@ -28,7 +28,6 @@ from rest_framework.views import APIView
 
 from django.contrib.auth import get_user_model
 
-from core.middleware import ensure_tenant_context
 from core.models import Location, Organization
 from core.permissions import (
     GROUP_ADMIN,
@@ -77,8 +76,6 @@ class CrossTenantStatsView(APIView):
         },
     )
     def get(self, request):
-        ensure_tenant_context(request)
-
         user = request.user
         group_name = get_user_group_name(user)
 
