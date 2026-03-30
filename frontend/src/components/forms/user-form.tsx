@@ -42,7 +42,7 @@ const userFormSchema = z.object({
   email: z.string().email("Ungültige E-Mail-Adresse"),
   first_name: z.string().min(1, "Vorname ist erforderlich"),
   last_name: z.string().min(1, "Nachname ist erforderlich"),
-  role: z.enum(["educator", "location_manager", "admin", "super_admin"], {
+  role: z.enum(["educator", "location_manager", "sub_admin", "admin", "super_admin"], {
     error: "Rolle ist erforderlich",
   }),
   organization: z.number().optional(),
@@ -101,8 +101,8 @@ export function UserForm({
     return locations.filter((loc) => loc.organization === selectedOrg);
   }, [locations, selectedOrg]);
 
-  // Show organization dropdown for admin/super_admin roles
-  const showOrgField = selectedRole === "admin" || selectedRole === "super_admin";
+  // Show organization dropdown for sub_admin/admin/super_admin roles
+  const showOrgField = selectedRole === "sub_admin" || selectedRole === "admin" || selectedRole === "super_admin";
 
   React.useEffect(() => {
     if (open) {

@@ -7,14 +7,15 @@ import { useAuth } from "@/hooks/use-auth";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
-  requiredRole?: "educator" | "location_manager" | "admin" | "super_admin";
+  requiredRole?: "educator" | "location_manager" | "sub_admin" | "admin" | "super_admin";
 }
 
-const roleHierarchy = {
+const roleHierarchy: Record<string, number> = {
   educator: 1,
   location_manager: 2,
-  admin: 3,
-  super_admin: 4,
+  sub_admin: 3,
+  admin: 4,
+  super_admin: 5,
 };
 
 /**
@@ -53,7 +54,7 @@ export function ProtectedRoute({
   // Role check
   if (
     requiredRole &&
-    roleHierarchy[user.role] < roleHierarchy[requiredRole]
+    (roleHierarchy[user.role] ?? 0) < (roleHierarchy[requiredRole] ?? 0)
   ) {
     return (
       <div className="flex min-h-screen items-center justify-center">

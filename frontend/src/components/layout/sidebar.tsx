@@ -373,6 +373,7 @@ export function Sidebar({ collapsed = false }: SidebarProps) {
               <p className="truncate text-xs text-muted-foreground">
                 {user.role === "educator" && "Pädagog:in"}
                 {user.role === "location_manager" && "Standortleitung"}
+                {user.role === "sub_admin" && "Sub-Admin"}
                 {user.role === "admin" && "Admin"}
                 {user.role === "super_admin" && "Super Admin"}
               </p>

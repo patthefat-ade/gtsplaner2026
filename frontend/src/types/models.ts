@@ -8,7 +8,7 @@
 
 // ─── Enums ───────────────────────────────────────────────────────────────────
 
-export type UserRole = "educator" | "location_manager" | "admin" | "super_admin";
+export type UserRole = "educator" | "location_manager" | "sub_admin" | "admin" | "super_admin";
 export type TransactionType = "income" | "expense";
 export type TransactionStatus = "pending" | "approved" | "rejected";
 export type LeaveRequestStatus = "pending" | "approved" | "rejected" | "cancelled";

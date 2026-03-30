@@ -21,7 +21,7 @@ export interface AuthUser {
   email: string;
   first_name: string;
   last_name: string;
-  role: "educator" | "location_manager" | "admin" | "super_admin";
+  role: "educator" | "location_manager" | "sub_admin" | "admin" | "super_admin";
   group: string;
   location: number | null;
   organization_id: number | null;

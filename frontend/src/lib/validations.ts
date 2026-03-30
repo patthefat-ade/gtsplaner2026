@@ -200,7 +200,7 @@ export const userCreateSchema = z
     email: z.string().email("Ungültige E-Mail-Adresse"),
     first_name: requiredString("Vorname"),
     last_name: requiredString("Nachname"),
-    role: z.enum(["educator", "location_manager", "admin", "super_admin"], {
+    role: z.enum(["educator", "location_manager", "sub_admin", "admin", "super_admin"], {
       error: "Rolle ist erforderlich",
     }),
     location: z.number().optional(),
@@ -227,7 +227,7 @@ export const userEditSchema = z.object({
   email: z.string().email("Ungültige E-Mail-Adresse"),
   first_name: requiredString("Vorname"),
   last_name: requiredString("Nachname"),
-  role: z.enum(["educator", "location_manager", "admin", "super_admin"], {
+  role: z.enum(["educator", "location_manager", "sub_admin", "admin", "super_admin"], {
     error: "Rolle ist erforderlich",
   }),
   location: z.number().optional(),

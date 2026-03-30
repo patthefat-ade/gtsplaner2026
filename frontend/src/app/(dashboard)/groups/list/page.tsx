@@ -80,7 +80,7 @@ export default function GroupsListPage() {
   const { data: locationsData } = useLocations({ page_size: 200 });
   const locations = locationsData?.results ?? [];
   const { hasRole } = usePermissions();
-  const isAdmin = hasRole("admin") || hasRole("super_admin");
+  const isAdmin = hasRole("sub_admin") || hasRole("admin") || hasRole("super_admin");
 
   const createMutation = useCreateGroup();
   const updateMutation = useUpdateGroup();

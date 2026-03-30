@@ -61,6 +61,7 @@ import {
 const ROLE_LABELS: Record<string, string> = {
   educator: "Pädagog:in",
   location_manager: "Standortleitung",
+  sub_admin: "Sub-Admin",
   admin: "Admin",
   super_admin: "Super-Admin",
 };
@@ -199,6 +200,7 @@ export default function UsersPage() {
                 <SelectItem value="all">Alle Rollen</SelectItem>
                 <SelectItem value="educator">Pädagog:in</SelectItem>
                 <SelectItem value="location_manager">Standortleitung</SelectItem>
+                <SelectItem value="sub_admin">Sub-Admin</SelectItem>
                 <SelectItem value="admin">Admin</SelectItem>
                 <SelectItem value="super_admin">Super-Admin</SelectItem>
               </SelectContent>
