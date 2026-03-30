@@ -1,7 +1,7 @@
 """
 Management command to create Django Permission Groups and custom permissions.
 
-Creates the four role-based groups (Educator, LocationManager, Admin, SuperAdmin)
+Creates the five role-based groups (Educator, LocationManager, SubAdmin, Admin, SuperAdmin)
 and assigns the appropriate custom permissions to each group.
 
 Usage:
@@ -110,6 +110,40 @@ GROUP_PERMISSIONS = {
         "view_tasks",
         "manage_tasks",
     ],
+    "SubAdmin": [
+        # Dashboard
+        "view_dashboard",
+        # Groups: full management within sub-tenant
+        "view_own_groups",
+        "manage_groups",
+        "view_students",
+        "manage_students",
+        # Locations: full management within sub-tenant
+        "view_locations",
+        "manage_locations",
+        # Finance: full management within sub-tenant
+        "view_own_transactions",
+        "create_transactions",
+        "manage_transactions",
+        "approve_transactions",
+        "manage_categories",
+        "view_reports",
+        # Timetracking: full management within sub-tenant
+        "view_own_timeentries",
+        "manage_timeentries",
+        "approve_leave",
+        # Weekly Plans: full management within sub-tenant
+        "view_weeklyplans",
+        "manage_weeklyplans",
+        # Tasks: full management within sub-tenant
+        "view_tasks",
+        "manage_tasks",
+        # Admin: user management within sub-tenant
+        "manage_users",
+        "view_audit_log",
+        "manage_settings",
+        # NOTE: SubAdmin does NOT get manage_organizations or cross_tenant_access
+    ],
     "Admin": [
         # Dashboard
         "view_dashboard",
@@ -187,6 +221,7 @@ GROUP_PERMISSIONS = {
 ROLE_TO_GROUP = {
     User.Role.EDUCATOR: "Educator",
     User.Role.LOCATION_MANAGER: "LocationManager",
+    User.Role.SUB_ADMIN: "SubAdmin",
     User.Role.ADMIN: "Admin",
     User.Role.SUPER_ADMIN: "SuperAdmin",
 }
