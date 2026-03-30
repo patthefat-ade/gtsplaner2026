@@ -16,6 +16,7 @@ import qrcode
 from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework import permissions, serializers, status
 from rest_framework.response import Response
+from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 
@@ -233,22 +234,41 @@ class TwoFactorLoginVerifyView(APIView):
     Verify a TOTP code during the login process.
     Called after initial login returns requires_2fa=true.
     Returns JWT tokens upon successful verification.
+
+    Rate limited to 5 attempts per minute (OWASP A04).
+    Account locked after 5 failed 2FA attempts for 30 minutes.
     """
 
     permission_classes = [permissions.AllowAny]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "login"
     serializer_class = TwoFactorLoginSerializer
 
+    def _get_client_ip(self, request) -> str:
+        """Extract client IP from the request."""
+        x_forwarded_for = request.META.get("HTTP_X_FORWARDED_FOR")
+        if x_forwarded_for:
+            return x_forwarded_for.split(",")[0].strip()
+        return request.META.get("REMOTE_ADDR", "")
+
     @extend_schema(
-        tags=["Auth – 2FA"],
+        tags=["Auth \u2013 2FA"],
         summary="2FA Login-Verifizierung",
-        description="Verifiziert den TOTP-Code während des Login-Prozesses und gibt JWT-Tokens zurück.",
+        description="Verifiziert den TOTP-Code w\u00e4hrend des Login-Prozesses und gibt JWT-Tokens zur\u00fcck.",
         request=TwoFactorLoginSerializer,
         responses={
             200: OpenApiResponse(description="Login erfolgreich mit 2FA"),
-            400: OpenApiResponse(description="Ungültiger Code"),
+            400: OpenApiResponse(description="Ung\u00fcltiger Code"),
+            429: OpenApiResponse(description="Zu viele Versuche"),
         },
     )
     def post(self, request):
+        from core.security import (
+            clear_2fa_attempts,
+            is_account_locked,
+            record_failed_2fa,
+        )
+
         serializer = TwoFactorLoginSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
@@ -256,6 +276,15 @@ class TwoFactorLoginVerifyView(APIView):
 
         user_id = serializer.validated_data["user_id"]
         code = serializer.validated_data["code"]
+        ip_address = self._get_client_ip(request)
+
+        # Check 2FA lockout (OWASP A04)
+        if is_account_locked(f"2fa:{user_id}"):
+            return Response(
+                {"detail": "Zu viele fehlgeschlagene 2FA-Versuche. "
+                 "Bitte versuchen Sie es in 30 Minuten erneut."},
+                status=status.HTTP_429_TOO_MANY_REQUESTS,
+            )
 
         try:
             user = User.objects.get(pk=user_id, is_active=True, is_deleted=False)
@@ -267,16 +296,21 @@ class TwoFactorLoginVerifyView(APIView):
 
         if not user.is_2fa_enabled or not user.totp_secret:
             return Response(
-                {"detail": "2FA ist für diesen Benutzer nicht aktiviert."},
+                {"detail": "2FA ist f\u00fcr diesen Benutzer nicht aktiviert."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
         totp = pyotp.TOTP(user.totp_secret)
         if not totp.verify(code, valid_window=1):
+            # Record failed 2FA attempt (OWASP A09)
+            record_failed_2fa(user_id, ip_address)
             return Response(
-                {"detail": "Ungültiger Code. Bitte versuchen Sie es erneut."},
+                {"detail": "Ung\u00fcltiger Code. Bitte versuchen Sie es erneut."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
+
+        # Clear failed 2FA attempts on success
+        clear_2fa_attempts(user_id)
 
         # Generate JWT tokens
         from django.utils import timezone

@@ -11,6 +11,13 @@ Caching strategy:
 - Aggregate counts are cached for 2 minutes per user/role combination
 - Recent items (last 7 days) are always fetched fresh
 - Cache is invalidated on relevant write operations via cache_utils
+
+Performance optimizations (Sprint 58):
+- Use .count() on lazy querysets instead of .all().count()
+- Use .only() to limit fetched columns where applicable
+- Use .values() for recent data to avoid full model instantiation
+- Consolidated aggregate queries with single .aggregate() calls
+- Deferred educators_count to avoid early evaluation
 """
 
 import hashlib
@@ -121,89 +128,100 @@ class DashboardStatsView(APIView):
         return Response(aggregate_stats, status=status.HTTP_200_OK)
 
     def _build_querysets(self, user, group_name, tenant_ids, request):
-        """Build role-specific base querysets."""
+        """
+        Build role-specific base querysets.
+
+        Performance: All querysets are lazy (not evaluated) until .count()
+        or .aggregate() is called in _compute_aggregates. The educators_count
+        is deferred as a queryset instead of being eagerly evaluated.
+        """
         if group_name == GROUP_SUPER_ADMIN:
             if tenant_ids:
-                # SuperAdmin with ?organization_id= filter applied
                 return self._build_tenant_filtered_querysets(tenant_ids)
             return {
-                "locations": Location.objects.all(),
-                "groups": Group.objects.all(),
-                "students": Student.objects.all(),
-                "transactions": Transaction.objects.all(),
-                "time_entries": TimeEntry.objects.all(),
-                "leave_requests": LeaveRequest.objects.all(),
+                "locations": Location.objects.only("id"),
+                "groups": Group.objects.only("id"),
+                "students": Student.objects.only("id"),
+                "transactions": Transaction.objects.only(
+                    "id", "amount", "transaction_type", "status"
+                ),
+                "time_entries": TimeEntry.objects.only("id"),
+                "leave_requests": LeaveRequest.objects.only("id", "status"),
                 "weeklyplans": WeeklyPlan.objects.filter(
                     is_deleted=False, is_template=False
+                ).only("id"),
+                "tasks": Task.objects.only(
+                    "id", "status", "due_date"
                 ),
-                "tasks": Task.objects.all(),
-                "educators_count": User.objects.filter(
+                "educators_qs": User.objects.filter(
                     role=User.Role.EDUCATOR, is_active=True
-                ).count(),
+                ).only("id"),
             }
         elif group_name in (GROUP_ADMIN, GROUP_SUB_ADMIN):
             return {
                 "locations": Location.objects.filter(
                     organization_id__in=tenant_ids
-                ),
+                ).only("id"),
                 "groups": Group.objects.filter(
                     organization_id__in=tenant_ids
-                ),
+                ).only("id"),
                 "students": Student.objects.filter(
                     organization_id__in=tenant_ids
-                ),
+                ).only("id"),
                 "transactions": Transaction.objects.filter(
                     organization_id__in=tenant_ids
-                ),
+                ).only("id", "amount", "transaction_type", "status"),
                 "time_entries": TimeEntry.objects.filter(
                     organization_id__in=tenant_ids
-                ),
+                ).only("id"),
                 "leave_requests": LeaveRequest.objects.filter(
                     organization_id__in=tenant_ids
-                ),
+                ).only("id", "status"),
                 "weeklyplans": WeeklyPlan.objects.filter(
                     organization_id__in=tenant_ids,
                     is_deleted=False,
                     is_template=False,
-                ),
+                ).only("id"),
                 "tasks": Task.objects.filter(
                     organization_id__in=tenant_ids
-                ),
-                "educators_count": User.objects.filter(
+                ).only("id", "status", "due_date"),
+                "educators_qs": User.objects.filter(
                     role=User.Role.EDUCATOR,
                     is_active=True,
                     location__organization_id__in=tenant_ids,
-                ).count(),
+                ).only("id"),
             }
         elif group_name == GROUP_LOCATION_MANAGER:
             user_location = getattr(user, "location", None)
             if user_location:
                 return {
-                    "locations": Location.objects.filter(id=user_location.id),
+                    "locations": Location.objects.filter(
+                        id=user_location.id
+                    ).only("id"),
                     "groups": Group.objects.filter(
                         organization_id__in=tenant_ids
-                    ),
+                    ).only("id"),
                     "students": Student.objects.filter(
                         organization_id__in=tenant_ids
-                    ),
+                    ).only("id"),
                     "transactions": Transaction.objects.filter(
                         organization_id__in=tenant_ids
-                    ),
+                    ).only("id", "amount", "transaction_type", "status"),
                     "time_entries": TimeEntry.objects.filter(
                         organization_id__in=tenant_ids
-                    ),
+                    ).only("id"),
                     "leave_requests": LeaveRequest.objects.filter(
                         organization_id__in=tenant_ids
-                    ),
+                    ).only("id", "status"),
                     "weeklyplans": WeeklyPlan.objects.filter(
                         organization_id__in=tenant_ids,
                         is_deleted=False,
                         is_template=False,
-                    ),
+                    ).only("id"),
                     "tasks": Task.objects.filter(
                         organization_id__in=tenant_ids
-                    ),
-                    "educators_count": 0,
+                    ).only("id", "status", "due_date"),
+                    "educators_qs": User.objects.none(),
                 }
             else:
                 return {
@@ -215,14 +233,14 @@ class DashboardStatsView(APIView):
                     "leave_requests": LeaveRequest.objects.none(),
                     "weeklyplans": WeeklyPlan.objects.none(),
                     "tasks": Task.objects.none(),
-                    "educators_count": 0,
+                    "educators_qs": User.objects.none(),
                 }
         else:
             # Educator
             groups_qs = (
                 Group.objects.filter(
                     Q(members__user=user) | Q(leader=user)
-                ).distinct()
+                ).distinct().only("id")
                 if tenant_ids
                 else Group.objects.none()
             )
@@ -232,21 +250,29 @@ class DashboardStatsView(APIView):
             return {
                 "locations": Location.objects.filter(
                     id=getattr(user, "location_id", 0)
-                ),
+                ).only("id"),
                 "groups": groups_qs,
                 "students": (
-                    Student.objects.filter(group_id__in=educator_group_ids)
+                    Student.objects.filter(
+                        group_id__in=educator_group_ids
+                    ).only("id")
                     if educator_group_ids
                     else Student.objects.none()
                 ),
-                "transactions": Transaction.objects.filter(created_by=user),
-                "time_entries": TimeEntry.objects.filter(user=user),
-                "leave_requests": LeaveRequest.objects.filter(user=user),
+                "transactions": Transaction.objects.filter(
+                    created_by=user
+                ).only("id", "amount", "transaction_type", "status"),
+                "time_entries": TimeEntry.objects.filter(user=user).only("id"),
+                "leave_requests": LeaveRequest.objects.filter(
+                    user=user
+                ).only("id", "status"),
                 "weeklyplans": WeeklyPlan.objects.filter(
                     created_by=user, is_deleted=False, is_template=False
-                ),
-                "tasks": Task.objects.filter(assigned_to=user),
-                "educators_count": 0,
+                ).only("id"),
+                "tasks": Task.objects.filter(
+                    assigned_to=user
+                ).only("id", "status", "due_date"),
+                "educators_qs": User.objects.none(),
             }
 
     def _build_tenant_filtered_querysets(self, tenant_ids):
@@ -254,39 +280,44 @@ class DashboardStatsView(APIView):
         return {
             "locations": Location.objects.filter(
                 organization_id__in=tenant_ids
-            ),
+            ).only("id"),
             "groups": Group.objects.filter(
                 organization_id__in=tenant_ids
-            ),
+            ).only("id"),
             "students": Student.objects.filter(
                 organization_id__in=tenant_ids
-            ),
+            ).only("id"),
             "transactions": Transaction.objects.filter(
                 organization_id__in=tenant_ids
-            ),
+            ).only("id", "amount", "transaction_type", "status"),
             "time_entries": TimeEntry.objects.filter(
                 organization_id__in=tenant_ids
-            ),
+            ).only("id"),
             "leave_requests": LeaveRequest.objects.filter(
                 organization_id__in=tenant_ids
-            ),
+            ).only("id", "status"),
             "weeklyplans": WeeklyPlan.objects.filter(
                 organization_id__in=tenant_ids,
                 is_deleted=False,
                 is_template=False,
-            ),
+            ).only("id"),
             "tasks": Task.objects.filter(
                 organization_id__in=tenant_ids
-            ),
-            "educators_count": User.objects.filter(
+            ).only("id", "status", "due_date"),
+            "educators_qs": User.objects.filter(
                 role=User.Role.EDUCATOR,
                 is_active=True,
                 location__organization_id__in=tenant_ids,
-            ).count(),
+            ).only("id"),
         }
 
     def _compute_aggregates(self, user, group_name, qs):
-        """Compute aggregate counts from querysets."""
+        """
+        Compute aggregate counts from querysets.
+
+        Performance: Uses .count() on lazy querysets and single .aggregate()
+        calls to minimize database round-trips.
+        """
         transactions_qs = qs["transactions"]
 
         # Use a single aggregate call for financial totals
@@ -302,7 +333,7 @@ class DashboardStatsView(APIView):
             ),
         )
 
-        # Task aggregates
+        # Task aggregates in a single query
         tasks_qs = qs["tasks"]
         task_stats = tasks_qs.aggregate(
             open_tasks=Count("id", filter=Q(status="open")),
@@ -325,7 +356,7 @@ class DashboardStatsView(APIView):
             "transactions_count": transactions_qs.count(),
             "time_entries_count": qs["time_entries"].count(),
             "weeklyplans_count": qs["weeklyplans"].count(),
-            "educators_count": qs["educators_count"],
+            "educators_count": qs["educators_qs"].count(),
             "pending_leave_requests": qs["leave_requests"]
             .filter(status="pending")
             .count(),
@@ -339,7 +370,12 @@ class DashboardStatsView(APIView):
         }
 
     def _get_recent_data(self, user, group_name, tenant_ids):
-        """Fetch fresh recent data (not cached)."""
+        """
+        Fetch fresh recent data (not cached).
+
+        Performance: Uses .values() to avoid full model instantiation
+        and limits results with [:5] slicing.
+        """
         now = timezone.now()
         seven_days_ago = now - timezone.timedelta(days=7)
 

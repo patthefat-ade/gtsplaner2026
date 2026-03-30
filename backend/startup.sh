@@ -43,10 +43,24 @@ echo "============================================"
 echo "Starting Gunicorn server..."
 echo "============================================"
 
-# Start Gunicorn
+# Start Gunicorn with optimized settings
+# - workers: 2 (optimal for basic-xxs with 512MB RAM; 2*CPU+1 formula)
+# - worker-class: gthread (threaded workers for I/O-bound Django app)
+# - threads: 4 (handle concurrent requests per worker)
+# - timeout: 120 (generous for slow DB queries)
+# - graceful-timeout: 30 (allow workers to finish requests on restart)
+# - keep-alive: 5 (reuse connections from DigitalOcean LB)
+# - max-requests: 1000 (recycle workers to prevent memory leaks)
+# - max-requests-jitter: 50 (stagger restarts to avoid thundering herd)
 exec gunicorn config.wsgi:application \
     --bind 0.0.0.0:8000 \
-    --workers 3 \
+    --workers "${GUNICORN_WORKERS:-2}" \
+    --worker-class gthread \
+    --threads "${GUNICORN_THREADS:-4}" \
     --timeout 120 \
+    --graceful-timeout 30 \
+    --keep-alive 5 \
+    --max-requests 1000 \
+    --max-requests-jitter 50 \
     --access-logfile - \
     --error-logfile -
