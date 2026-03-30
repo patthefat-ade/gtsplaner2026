@@ -61,6 +61,11 @@ if not DEBUG:
     SECURE_HSTS_PRELOAD = True
     X_FRAME_OPTIONS = "DENY"
     SECURE_REFERRER_POLICY = "strict-origin-when-cross-origin"
+    # SSL Redirect – DigitalOcean App Platform terminiert TLS am Load Balancer,
+    # daher wird SECURE_SSL_REDIRECT nicht aktiviert (der LB leitet bereits um).
+    # SECURE_SSL_REDIRECT wird über die Umgebungsvariable gesteuert, falls
+    # die App jemals direkt exponiert wird.
+    SECURE_SSL_REDIRECT = config("SECURE_SSL_REDIRECT", default=False, cast=bool)
     # Cookie-Sicherheit
     SESSION_COOKIE_HTTPONLY = True
     # CSRF-Cookie muss für JavaScript lesbar sein (httpOnly=False),
@@ -180,7 +185,10 @@ else:
 
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
-    {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"},
+    {
+        "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
+        "OPTIONS": {"min_length": 10},
+    },
     {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
     {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
 ]
@@ -329,7 +337,7 @@ SPECTACULAR_SETTINGS = {
         "Verwaltung von Ganztagsschul-Gruppen, Wochenplänen, Finanzen und Zeiterfassung. "
         "Django + Next.js Headless Architecture."
     ),
-    "VERSION": "2.4.0",
+    "VERSION": "2.23.0",
     "SERVE_INCLUDE_SCHEMA": False,
     "COMPONENT_SPLIT_REQUEST": True,
     "SCHEMA_PATH_PREFIX": r"/api/v1",
@@ -615,6 +623,16 @@ LOGGING = {
         "kassenbuch": {
             "handlers": ["console"],
             "level": "DEBUG" if DEBUG else "INFO",
+            "propagate": False,
+        },
+        "kassenbuch.security": {
+            "handlers": ["console"],
+            "level": "WARNING",
+            "propagate": False,
+        },
+        "kassenbuch.notifications": {
+            "handlers": ["console"],
+            "level": "INFO",
             "propagate": False,
         },
     },

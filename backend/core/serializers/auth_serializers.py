@@ -65,9 +65,46 @@ class LoginSerializer(serializers.Serializer):
         help_text="Passwort",
     )
 
+    def _get_client_ip(self) -> str:
+        """Extract client IP from the request."""
+        request = self.context.get("request")
+        if not request:
+            return ""
+        x_forwarded_for = request.META.get("HTTP_X_FORWARDED_FOR")
+        if x_forwarded_for:
+            return x_forwarded_for.split(",")[0].strip()
+        return request.META.get("REMOTE_ADDR", "")
+
+    def _get_user_agent(self) -> str:
+        """Extract User-Agent from the request."""
+        request = self.context.get("request")
+        if not request:
+            return ""
+        return request.META.get("HTTP_USER_AGENT", "")
+
     def validate(self, attrs: dict) -> dict:
+        from core.security import (
+            is_account_locked,
+            record_failed_login,
+            record_successful_login,
+        )
+
         username = attrs.get("username", "")
         password = attrs.get("password", "")
+        ip_address = self._get_client_ip()
+        user_agent = self._get_user_agent()
+
+        # Check account lockout (OWASP A04)
+        if is_account_locked(username):
+            raise serializers.ValidationError(
+                "Dieses Konto ist vorübergehend gesperrt. "
+                "Bitte versuchen Sie es in 30 Minuten erneut."
+            )
+        if is_account_locked(f"ip:{ip_address}"):
+            raise serializers.ValidationError(
+                "Zu viele fehlgeschlagene Anmeldeversuche von dieser IP-Adresse. "
+                "Bitte versuchen Sie es später erneut."
+            )
 
         # Allow login with email or username
         user = None
@@ -89,6 +126,8 @@ class LoginSerializer(serializers.Serializer):
             )
 
         if user is None:
+            # Record failed attempt (OWASP A09)
+            record_failed_login(username, ip_address, user_agent)
             raise serializers.ValidationError(
                 "Ungültige Anmeldedaten. Bitte überprüfen Sie Benutzername und Passwort."
             )
@@ -102,6 +141,9 @@ class LoginSerializer(serializers.Serializer):
             raise serializers.ValidationError(
                 "Dieses Konto wurde gelöscht."
             )
+
+        # Clear failed attempts on successful authentication
+        record_successful_login(username, ip_address)
 
         attrs["user"] = user
         return attrs
