@@ -5,6 +5,8 @@ Provides CRUD operations for tasks, a board endpoint for Kanban view,
 and a status change endpoint that triggers notifications.
 """
 
+import logging
+
 from django.contrib.auth import get_user_model
 from django.db import models
 from django.utils import timezone
@@ -23,6 +25,7 @@ from tasks.serializers import (
 )
 
 User = get_user_model()
+logger = logging.getLogger("kassenbuch.tasks")
 
 
 class TaskViewSet(ExportMixin, viewsets.ModelViewSet):
@@ -104,21 +107,43 @@ class TaskViewSet(ExportMixin, viewsets.ModelViewSet):
         )
 
     def create(self, request, *args, **kwargs):
-        """Create task and return full detail serializer."""
+        """Create task, send email notification, and return full detail serializer."""
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         self.perform_create(serializer)
+
+        task = serializer.instance
+
+        # Send email notification to the assigned user (async via Celery)
+        if task.assigned_to and task.assigned_to != request.user:
+            self._send_task_assigned_email(task)
+
+        # Create in-app notification for the assigned user
+        if task.assigned_to and task.assigned_to != request.user:
+            self._create_assignment_notification(task)
+
         # Return the full detail serializer
-        detail_serializer = TaskListSerializer(serializer.instance)
+        detail_serializer = TaskListSerializer(task)
         return Response(detail_serializer.data, status=status.HTTP_201_CREATED)
 
     def update(self, request, *args, **kwargs):
         """Update task and return full detail serializer."""
         partial = kwargs.pop("partial", False)
         instance = self.get_object()
+        old_assigned_to = instance.assigned_to_id
         serializer = self.get_serializer(instance, data=request.data, partial=partial)
         serializer.is_valid(raise_exception=True)
         self.perform_update(serializer)
+
+        # If the task was reassigned to a different user, send notification
+        if (
+            instance.assigned_to_id != old_assigned_to
+            and instance.assigned_to
+            and instance.assigned_to != request.user
+        ):
+            self._send_task_assigned_email(instance)
+            self._create_assignment_notification(instance)
+
         detail_serializer = TaskListSerializer(instance)
         return Response(detail_serializer.data)
 
@@ -157,6 +182,8 @@ class TaskViewSet(ExportMixin, viewsets.ModelViewSet):
         # Create in-app notification for the task creator
         if task.created_by != request.user:
             self._create_status_notification(task, old_status, new_status, request.user)
+            # Send email notification for status change (async via Celery)
+            self._send_task_status_email(task, old_status, new_status, request.user)
 
         detail_serializer = TaskListSerializer(task)
         return Response(detail_serializer.data)
@@ -244,6 +271,54 @@ class TaskViewSet(ExportMixin, viewsets.ModelViewSet):
         ]
 
         return Response(data)
+
+    # -----------------------------------------------------------------------
+    # Private helpers
+    # -----------------------------------------------------------------------
+
+    def _send_task_assigned_email(self, task):
+        """Send an async email notification for task assignment."""
+        from system.tasks import send_task_assigned_email
+
+        try:
+            send_task_assigned_email.delay(task.pk)
+        except Exception:
+            logger.warning(
+                "Celery/Redis unavailable – sending task assignment email synchronously"
+            )
+            send_task_assigned_email(task.pk)
+
+    def _send_task_status_email(self, task, old_status, new_status, changed_by):
+        """Send an async email notification for task status change."""
+        from system.tasks import send_task_status_changed_email
+
+        try:
+            send_task_status_changed_email.delay(
+                task.pk, old_status, new_status, changed_by.pk
+            )
+        except Exception:
+            logger.warning(
+                "Celery/Redis unavailable – sending task status email synchronously"
+            )
+            send_task_status_changed_email(
+                task.pk, old_status, new_status, changed_by.pk
+            )
+
+    def _create_assignment_notification(self, task):
+        """Create an in-app notification for task assignment."""
+        from system.models import InAppNotification
+
+        InAppNotification.objects.create(
+            recipient=task.assigned_to,
+            title=f"Neue Aufgabe: {task.title}",
+            message=(
+                f"{task.created_by.get_full_name()} hat Ihnen die Aufgabe "
+                f'"{task.title}" zugewiesen.'
+            ),
+            notification_type="task_assigned",
+            related_task=task,
+            organization=task.organization,
+        )
 
     def _create_status_notification(self, task, old_status, new_status, changed_by):
         """Create an in-app notification for the task creator."""

@@ -1,0 +1,44 @@
+{% extends "emails/base.html" %}
+{% block title %}Transaktion {{ status_display }} – GTS Planer{% endblock %}
+{% block content %}
+<p>Hallo {{ user.first_name }},</p>
+
+<p>Ihre Transaktion wurde <strong>{{ status_display }}</strong>:</p>
+
+<table class="detail-table">
+  <tr>
+    <td>Transaktion</td>
+    <td>#{{ transaction.id }} &ndash; {{ transaction.description }}</td>
+  </tr>
+  <tr>
+    <td>Betrag</td>
+    <td>&euro; {{ transaction.amount }}</td>
+  </tr>
+  <tr>
+    <td>Datum</td>
+    <td>{{ transaction.transaction_date }}</td>
+  </tr>
+  {% if transaction.group %}
+  <tr>
+    <td>Gruppe</td>
+    <td>{{ transaction.group.name }}</td>
+  </tr>
+  {% endif %}
+  {% if transaction.category %}
+  <tr>
+    <td>Kategorie</td>
+    <td>{{ transaction.category.name }}</td>
+  </tr>
+  {% endif %}
+  {% if approved_by %}
+  <tr>
+    <td>Bearbeitet von</td>
+    <td>{{ approved_by.get_full_name }}</td>
+  </tr>
+  {% endif %}
+</table>
+
+<p style="text-align: center;">
+  <a href="{{ frontend_url }}/finance/transactions" class="btn">&Ouml;ffne Transaktionen</a>
+</p>
+{% endblock %}
