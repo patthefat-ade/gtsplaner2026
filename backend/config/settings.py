@@ -18,14 +18,26 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = config("SECRET_KEY", default="django-insecure-dev-key")
 
-# Fernet encryption key for field-level encryption of personal data (GDPR/DSGVO)
-# Generate with: python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
-FERNET_KEYS = [
-    config("FERNET_KEY", default="ZL-7EfMwbBMSRCnDqGgVbkVcCwJLPOlXKaJCgAMiWnA="),
-]
-
-# Salt Key für django-fernet-encrypted-fields (verhindert Abhängigkeit von SECRET_KEY)
-SALT_KEY = config("SALT_KEY", default="gtsplaner-salt-key-change-in-production")
+# ── Field-Level Encryption (DSGVO Art. 32) ──────────────────────────────────
+# django-fernet-encrypted-fields derives the Fernet key from:
+#   PBKDF2HMAC(SECRET_KEY + SALT_KEY)
+#
+# CRITICAL: Changing SECRET_KEY or SALT_KEY invalidates ALL encrypted data.
+# If SECRET_KEY must be rotated, add the old key to SECRET_KEY_FALLBACKS
+# so MultiFernet can still decrypt existing data.
+#
+# To add fallback keys for key rotation:
+#   SECRET_KEY_FALLBACKS = ["old-secret-key-here"]
+# ─────────────────────────────────────────────────────────────────────────────
+SALT_KEY = config(
+    "SALT_KEY",
+    default="gtsplaner-salt-key-change-in-production",
+)
+SECRET_KEY_FALLBACKS = config(
+    "SECRET_KEY_FALLBACKS",
+    default="",
+    cast=lambda v: [k.strip() for k in v.split(",") if k.strip()] if v else [],
+)
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config("DEBUG", default=False, cast=bool)
