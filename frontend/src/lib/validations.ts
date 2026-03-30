@@ -143,10 +143,10 @@ export const studentSchema = z.object({
   enrollment_date: optionalString(),
   notes: optionalString(),
   is_active: z.boolean(),
-  data_consent_status: z.enum(["pending", "granted", "revoked"]).default("pending"),
+  data_consent_status: z.enum(["pending", "granted", "revoked"]).optional(),
   data_consent_date: optionalString(),
   data_consent_guardian_name: optionalString(),
-  processing_restricted: z.boolean().default(false),
+  processing_restricted: z.boolean().optional(),
   restriction_reason: optionalString(),
   restriction_date: optionalString(),
 });
