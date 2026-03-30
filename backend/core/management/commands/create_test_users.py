@@ -14,10 +14,11 @@ Designed to be fully idempotent – safe to run multiple times without
 creating duplicates or leaving stale data.
 
 Usage:
-    python manage.py create_test_users
+    python manage.py create_test_users --force
 """
 
 import datetime
+import logging
 import random
 from decimal import Decimal
 
@@ -32,6 +33,9 @@ from timetracking.models import LeaveRequest, LeaveType, TimeEntry, WorkingHours
 from weeklyplans.models import WeeklyPlan, WeeklyPlanEntry
 
 
+logger = logging.getLogger("gtsplaner.seed")
+
+
 class Command(BaseCommand):
     help = (
         "Erstellt realistische Multi-Tenant-Testumgebung: "
@@ -39,6 +43,13 @@ class Command(BaseCommand):
     )
 
     PASSWORD = "Test123!"
+
+    def add_arguments(self, parser):
+        parser.add_argument(
+            "--force",
+            action="store_true",
+            help="Bestaetige das Loeschen und Neuerstellen aller Testdaten.",
+        )
 
     # ── Bundesland-Konfiguration ──────────────────────────────────────────
     # Each Bundesland can have multiple schools (locations).
@@ -534,9 +545,23 @@ class Command(BaseCommand):
         return usernames
 
     def handle(self, *args, **options):
+        if not options["force"]:
+            self.stdout.write(
+                self.style.ERROR(
+                    "ABGEBROCHEN: Dieses Command loescht und erstellt Testdaten.\n"
+                    "Verwende --force um die Ausfuehrung zu bestaetigen."
+                )
+            )
+            return
+
         self.stdout.write("\n" + "=" * 80)
         self.stdout.write("GTS Planer – Hilfswerk Oesterreich Testumgebung")
         self.stdout.write("=" * 80)
+
+        logger.info(
+            "Seed-Command gestartet (--force). "
+            "Testdaten werden geloescht und neu erstellt."
+        )
 
         self.ALL_TEST_USERNAMES = self._collect_all_usernames()
         errors = []
@@ -642,11 +667,28 @@ class Command(BaseCommand):
             )
         self.stdout.write("=" * 80 + "\n")
 
+        if errors:
+            logger.warning(
+                "Seed-Command abgeschlossen mit %d Warnungen: %s",
+                len(errors),
+                "; ".join(errors),
+            )
+        else:
+            logger.info("Seed-Command erfolgreich abgeschlossen.")
+
     # ── Step 0: Cleanup ───────────────────────────────────────────────────
 
     def _cleanup_old_data(self):
         """Remove old test data to avoid FK constraint violations."""
         self.stdout.write("\n  [0/10] Alte Testdaten bereinigen...")
+
+        # Delete StudentContacts (encrypted, FK to Student)
+        from groups.models_contacts import StudentContact
+        sc_count = StudentContact.objects.count()
+        if sc_count > 0:
+            StudentContact.objects.all().delete()
+            self.stdout.write(f"        {sc_count} StudentContacts geloescht.")
+            logger.info("Cleanup: %d StudentContacts geloescht.", sc_count)
 
         try:
             # 1. Nullify location FK on all test users
