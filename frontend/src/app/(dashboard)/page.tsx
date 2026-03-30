@@ -483,7 +483,7 @@ function LocationManagerDashboard({ stats, loading }: { stats?: DashboardStats; 
 }
 
 /* ───── Admin Dashboard ───── */
-function AdminDashboard({ stats, loading }: { stats?: DashboardStats; loading: boolean }) {
+function AdminDashboard({ stats, loading, organizationId }: { stats?: DashboardStats; loading: boolean; organizationId?: number }) {
   const balance = (stats?.total_income ?? 0) - (stats?.total_expense ?? 0);
 
   return (
@@ -622,7 +622,7 @@ function AdminDashboard({ stats, loading }: { stats?: DashboardStats; loading: b
       <RecentTasks stats={stats} loading={loading} showAssignee={true} />
 
       {/* Location Overview Table */}
-      <LocationStatsWidget />
+      <LocationStatsWidget organizationId={organizationId} />
 
       {/* Recent Data */}
       <div className="grid gap-6 lg:grid-cols-2">
@@ -637,7 +637,7 @@ function AdminDashboard({ stats, loading }: { stats?: DashboardStats; loading: b
 }
 
 /* ───── SuperAdmin Dashboard ───── */
-function SuperAdminDashboard({ stats, loading }: { stats?: DashboardStats; loading: boolean }) {
+function SuperAdminDashboard({ stats, loading, organizationId }: { stats?: DashboardStats; loading: boolean; organizationId?: number }) {
   const balance = (stats?.total_income ?? 0) - (stats?.total_expense ?? 0);
 
   return (
@@ -737,7 +737,7 @@ function SuperAdminDashboard({ stats, loading }: { stats?: DashboardStats; loadi
       </div>
 
       {/* Location Overview Table */}
-      <LocationStatsWidget />
+      <LocationStatsWidget organizationId={organizationId} />
 
       {/* Recent Data */}
       <div className="grid gap-6 lg:grid-cols-2">
@@ -1092,8 +1092,10 @@ function EducatorTaskSummaryWidget({ stats, loading }: { stats?: DashboardStats;
 }
 
 /* ───── Location Stats Widget ───── */
-function LocationStatsWidget() {
-  const { data: locations, isLoading } = useLocations({ page_size: 100 });
+function LocationStatsWidget({ organizationId }: { organizationId?: number }) {
+  const params: Record<string, string | number> = { page_size: 100 };
+  if (organizationId) params.organization_id = organizationId;
+  const { data: locations, isLoading } = useLocations(params);
 
   if (isLoading) {
     return (
@@ -1426,10 +1428,10 @@ export default function DashboardPage() {
         <AdminDashboard stats={stats} loading={isLoading} />
       )}
       {role === "admin" && (
-        <AdminDashboard stats={stats} loading={isLoading} />
+        <AdminDashboard stats={stats} loading={isLoading} organizationId={selectedOrgId} />
       )}
       {role === "super_admin" && (
-        <SuperAdminDashboard stats={stats} loading={isLoading} />
+        <SuperAdminDashboard stats={stats} loading={isLoading} organizationId={selectedOrgId} />
       )}
       {!role && (
         <div className="text-center text-muted-foreground py-12">
