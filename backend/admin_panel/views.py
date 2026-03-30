@@ -11,7 +11,7 @@ from rest_framework import permissions, serializers, viewsets
 
 from core.middleware import ensure_tenant_context
 from core.models import Organization
-from core.permissions import IsAdminOrAbove, IsSuperAdmin
+from core.permissions import IsSubAdminOrAbove, IsSuperAdmin
 from system.models import AuditLog, SystemSetting
 
 
@@ -100,10 +100,20 @@ class AuditLogViewSet(viewsets.ReadOnlyModelViewSet):
     search_fields = ["model_name", "action", "ip_address"]
     ordering_fields = ["created_at", "action", "model_name"]
     ordering = ["-created_at"]
-    permission_classes = [permissions.IsAuthenticated, IsAdminOrAbove]
+    permission_classes = [permissions.IsAuthenticated, IsSubAdminOrAbove]
 
     def get_queryset(self):
-        return AuditLog.objects.select_related("user").all()
+        ensure_tenant_context(self.request)
+        qs = AuditLog.objects.select_related("user").all()
+
+        # SubAdmin/Admin: filter audit logs by tenant scope
+        if not getattr(self.request, "is_cross_tenant", False):
+            tenant_ids = getattr(self.request, "tenant_ids", [])
+            if tenant_ids:
+                qs = qs.filter(
+                    user__location__organization_id__in=tenant_ids
+                )
+        return qs
 
 
 # ---------------------------------------------------------------------------
@@ -133,13 +143,13 @@ class SystemSettingViewSet(viewsets.ModelViewSet):
             return SystemSetting.objects.none()
 
         user = self.request.user
-        if user.role in ["admin", "super_admin"]:
+        if user.role in ["admin", "super_admin", "sub_admin"]:
             return SystemSetting.objects.all()
         return SystemSetting.objects.filter(is_public=True)
 
     def get_permissions(self):
         if self.action in ["list", "retrieve"]:
-            return [permissions.IsAuthenticated(), IsAdminOrAbove()]
+            return [permissions.IsAuthenticated(), IsSubAdminOrAbove()]
         return [permissions.IsAuthenticated(), IsSuperAdmin()]
 
 
@@ -213,6 +223,7 @@ class OrganizationViewSet(viewsets.ModelViewSet):
     """
     CRUD for organizations.
 
+    - SubAdmin: read-only access to own sub-organization
     - Admin: read-only access (list, retrieve) filtered by tenant
     - SuperAdmin: full CRUD access across all organizations
     """
@@ -224,7 +235,7 @@ class OrganizationViewSet(viewsets.ModelViewSet):
 
     def get_permissions(self):
         if self.action in ["list", "retrieve"]:
-            return [permissions.IsAuthenticated(), IsAdminOrAbove()]
+            return [permissions.IsAuthenticated(), IsSubAdminOrAbove()]
         return [permissions.IsAuthenticated(), IsSuperAdmin()]
 
     def get_queryset(self):
