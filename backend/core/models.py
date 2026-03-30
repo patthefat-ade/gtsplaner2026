@@ -27,7 +27,7 @@ class User(AbstractUser):
     Custom User model with role-based access control.
 
     Extends Django's AbstractUser with additional fields for the
-    four-role hierarchy: Educator, LocationManager, Admin, SuperAdmin.
+    five-role hierarchy: Educator, LocationManager, SubAdmin, Admin, SuperAdmin.
 
     Sensitive fields (phone) are encrypted at rest.
     Note: first_name, last_name, email are inherited from AbstractUser
@@ -39,6 +39,7 @@ class User(AbstractUser):
     class Role(models.TextChoices):
         EDUCATOR = "educator", "Pädagogin"
         LOCATION_MANAGER = "location_manager", "Standortleitung"
+        SUB_ADMIN = "sub_admin", "Sub-Mandanten-Admin"
         ADMIN = "admin", "Admin"
         SUPER_ADMIN = "super_admin", "Super Admin"
 
@@ -122,6 +123,11 @@ class User(AbstractUser):
     def is_location_manager(self) -> bool:
         """Check if user has Location Manager role."""
         return self.role == self.Role.LOCATION_MANAGER
+
+    @property
+    def is_sub_admin(self) -> bool:
+        """Check if user has Sub-Admin role."""
+        return self.role == self.Role.SUB_ADMIN
 
     @property
     def is_admin_role(self) -> bool:
