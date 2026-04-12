@@ -2,12 +2,18 @@
 import logging
 
 import django_filters
+from django.db.models import Q
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from core.mixins import TenantViewSetMixin
 from core.mixins_export import ExportMixin
+from core.permissions import (
+    GROUP_HIERARCHY,
+    GROUP_LOCATION_MANAGER,
+    get_user_hierarchy_level,
+)
 from groups.models import Group, Student
 from groups.models_protocol import DailyProtocol
 from groups.models_transfer import GroupTransfer
@@ -74,6 +80,20 @@ class DailyProtocolViewSet(
         "school_year",
     )
     filterset_class = DailyProtocolFilter
+
+    def get_queryset(self):
+        if getattr(self, "swagger_fake_view", False):
+            return DailyProtocol.objects.none()
+        qs = super().get_queryset()
+        user = self.request.user
+        level = get_user_hierarchy_level(user)
+        if level >= GROUP_HIERARCHY[GROUP_LOCATION_MANAGER]:
+            return qs
+        # Educator: nur Protokolle eigener Gruppen
+        return qs.filter(
+            Q(group__members__user=user) | Q(group__leader=user)
+        ).distinct()
+
     search_fields = []
     ordering_fields = ["date", "arrival_time", "pickup_time", "incident_severity"]
     ordering = ["-date"]

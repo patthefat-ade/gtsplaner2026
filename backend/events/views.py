@@ -13,7 +13,13 @@ from rest_framework.response import Response
 
 from core.mixins import TenantViewSetMixin
 from core.mixins_export import ExportMixin
-from core.permissions import IsEducator, require_permission
+from core.permissions import (
+    GROUP_HIERARCHY,
+    GROUP_LOCATION_MANAGER,
+    IsEducator,
+    get_user_hierarchy_level,
+    require_permission,
+)
 
 from .models import Event, EventParticipant
 from .serializers import (
@@ -91,7 +97,14 @@ class EventViewSet(ExportMixin, TenantViewSetMixin, viewsets.ModelViewSet):
                 distinct=True,
             ),
         )
-        return qs
+        user = self.request.user
+        level = get_user_hierarchy_level(user)
+        if level >= GROUP_HIERARCHY[GROUP_LOCATION_MANAGER]:
+            return qs
+        # Educator: nur Veranstaltungen eigener Gruppen
+        return qs.filter(
+            Q(groups__members__user=user) | Q(groups__leader=user)
+        ).distinct()
 
     def perform_create(self, serializer):
         serializer.save(
