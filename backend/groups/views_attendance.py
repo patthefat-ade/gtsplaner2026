@@ -22,7 +22,12 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from core.mixins import TenantViewSetMixin
-from core.permissions import IsEducator
+from core.permissions import (
+    GROUP_HIERARCHY,
+    GROUP_LOCATION_MANAGER,
+    IsEducator,
+    get_user_hierarchy_level,
+)
 from groups.models import Group, Student
 from groups.models_attendance import Attendance
 from groups.models_protocol import DailyProtocol
@@ -101,9 +106,17 @@ class AttendanceViewSet(TenantViewSetMixin, viewsets.ModelViewSet):
         if getattr(self, "swagger_fake_view", False):
             return Attendance.objects.none()
         qs = super().get_queryset()
-        return qs.filter(is_deleted=False).select_related(
+        qs = qs.filter(is_deleted=False).select_related(
             "student", "group", "recorded_by"
         )
+        user = self.request.user
+        level = get_user_hierarchy_level(user)
+        if level >= GROUP_HIERARCHY[GROUP_LOCATION_MANAGER]:
+            return qs
+        # Educator: nur Anwesenheit eigener Gruppen
+        return qs.filter(
+            Q(group__members__user=user) | Q(group__leader=user)
+        ).distinct()
 
     def get_serializer_class(self):
         if self.action == "create":
