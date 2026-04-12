@@ -133,6 +133,10 @@ class TransactionExportView(ExportMixin, APIView):
             "category", "group", "created_by", "approved_by"
         ).filter(is_deleted=False)
 
+        # Tenant-Filter: Mandantentrennung sicherstellen
+        if not getattr(request, "is_cross_tenant", False) and hasattr(request, "tenant_ids") and request.tenant_ids:
+            queryset = queryset.filter(organization_id__in=request.tenant_ids)
+
         # Apply user location filter (non-superadmin)
         if request.user.role != "super_admin" and request.user.location:
             queryset = queryset.filter(group__location=request.user.location)
@@ -223,6 +227,10 @@ class TimeEntryExportView(ExportMixin, APIView):
         # Build queryset
         queryset = TimeEntry.objects.select_related("user", "group").filter(is_deleted=False)
 
+        # Tenant-Filter: Mandantentrennung sicherstellen
+        if not getattr(request, "is_cross_tenant", False) and hasattr(request, "tenant_ids") and request.tenant_ids:
+            queryset = queryset.filter(organization_id__in=request.tenant_ids)
+
         # Apply user location filter
         if request.user.role != "super_admin" and request.user.location:
             queryset = queryset.filter(group__location=request.user.location)
@@ -310,6 +318,10 @@ class LeaveRequestExportView(ExportMixin, APIView):
         queryset = LeaveRequest.objects.select_related(
             "user", "leave_type", "approved_by"
         ).filter(is_deleted=False)
+
+        # Tenant-Filter: Mandantentrennung sicherstellen
+        if not getattr(request, "is_cross_tenant", False) and hasattr(request, "tenant_ids") and request.tenant_ids:
+            queryset = queryset.filter(organization_id__in=request.tenant_ids)
 
         # Apply user location filter
         if request.user.role != "super_admin" and request.user.location:
