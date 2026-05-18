@@ -7,8 +7,10 @@ import {
   useUpdateCategory,
   useDeleteCategory,
 } from "@/hooks/use-finance";
+import { useLocations } from "@/hooks/use-locations";
 import { useDebounce } from "@/hooks/use-debounce";
 import { useToast } from "@/components/ui/toast";
+import { useAuth } from "@/hooks/use-auth";
 import { PageHeader } from "@/components/common/page-header";
 import { EmptyState } from "@/components/common/empty-state";
 import { Pagination } from "@/components/common/pagination";
@@ -36,6 +38,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { formatDate } from "@/lib/format";
 import { DEFAULT_PAGE_SIZE } from "@/lib/constants";
 import type { TransactionCategory } from "@/types/models";
@@ -47,16 +56,30 @@ import {
   MoreHorizontal,
   Pencil,
   Trash2,
+  MapPin,
 } from "lucide-react";
 import { usePermissions } from "@/hooks/use-permissions";
 
 export default function CategoriesPage() {
   const toast = useToast();
+  const { user } = useAuth();
   const { canCreate } = usePermissions();
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
   const [search, setSearch] = useState("");
+  const [locationFilter, setLocationFilter] = useState<string>("all");
   const debouncedSearch = useDebounce(search, 300);
+
+  // Check if user can see multiple locations (admin/super_admin)
+  const isMultiLocation =
+    user?.role === "super_admin" ||
+    user?.role === "admin" ||
+    user?.role === "sub_admin";
+
+  // Fetch locations for filter (only for multi-location users)
+  const { data: locationsData } = useLocations(
+    isMultiLocation ? { page_size: 100 } : undefined
+  );
 
   // Form dialog state
   const [formOpen, setFormOpen] = useState(false);
@@ -71,6 +94,9 @@ export default function CategoriesPage() {
     page_size: pageSize,
   };
   if (debouncedSearch) params.search = debouncedSearch;
+  if (locationFilter && locationFilter !== "all") {
+    params.location = locationFilter;
+  }
 
   const { data, isLoading, error, refetch } = useCategories(params);
   const createMutation = useCreateCategory();
@@ -148,20 +174,44 @@ export default function CategoriesPage() {
         )}
       </PageHeader>
 
-      {/* Search */}
+      {/* Search & Filter */}
       <Card>
         <CardContent className="pt-6">
-          <div className="relative max-w-sm">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              placeholder="Kategorie suchen..."
-              value={search}
-              onChange={(e) => {
-                setSearch(e.target.value);
-                setPage(1);
-              }}
-              className="pl-9"
-            />
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+            <div className="relative max-w-sm flex-1">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder="Kategorie suchen..."
+                value={search}
+                onChange={(e) => {
+                  setSearch(e.target.value);
+                  setPage(1);
+                }}
+                className="pl-9"
+              />
+            </div>
+            {isMultiLocation && locationsData?.results && (
+              <Select
+                value={locationFilter}
+                onValueChange={(value) => {
+                  setLocationFilter(value);
+                  setPage(1);
+                }}
+              >
+                <SelectTrigger className="w-[220px]">
+                  <MapPin className="mr-2 h-4 w-4 text-muted-foreground" />
+                  <SelectValue placeholder="Alle Standorte" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Alle Standorte</SelectItem>
+                  {locationsData.results.map((loc) => (
+                    <SelectItem key={loc.id} value={String(loc.id)}>
+                      {loc.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -174,6 +224,11 @@ export default function CategoriesPage() {
                 <TableRow>
                   <TableHead>Name</TableHead>
                   <TableHead>Typ</TableHead>
+                  {isMultiLocation && (
+                    <TableHead className="hidden lg:table-cell">
+                      Standort
+                    </TableHead>
+                  )}
                   <TableHead className="hidden md:table-cell">
                     Beschreibung
                   </TableHead>
@@ -191,6 +246,14 @@ export default function CategoriesPage() {
                     <TableCell>
                       <StatusBadge status={cat.category_type} />
                     </TableCell>
+                    {isMultiLocation && (
+                      <TableCell className="hidden lg:table-cell">
+                        <Badge variant="outline" className="font-normal">
+                          <MapPin className="mr-1 h-3 w-3" />
+                          {cat.location_name || "–"}
+                        </Badge>
+                      </TableCell>
+                    )}
                     <TableCell className="hidden max-w-[300px] truncate md:table-cell">
                       {cat.description || "–"}
                     </TableCell>

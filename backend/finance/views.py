@@ -92,10 +92,11 @@ class TransactionCategoryFilter(django_filters.FilterSet):
         choices=TransactionCategory.CategoryType.choices
     )
     is_active = django_filters.BooleanFilter()
+    location = django_filters.NumberFilter(field_name="location_id")
 
     class Meta:
         model = TransactionCategory
-        fields = ["category_type", "is_active"]
+        fields = ["category_type", "is_active", "location"]
 
 
 # ---------------------------------------------------------------------------
