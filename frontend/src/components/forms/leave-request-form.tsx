@@ -136,7 +136,7 @@ export function LeaveRequestForm({
                 <FormItem>
                   <FormLabel>Abwesenheitstyp</FormLabel>
                   <Select
-                    onValueChange={field.onChange}
+                    onValueChange={(value) => field.onChange(Number(value))}
                     defaultValue={field.value ? String(field.value) : undefined}
                   >
                     <FormControl>

@@ -170,7 +170,7 @@ export function GroupForm({
                 <FormItem>
                   <FormLabel>Schuljahr</FormLabel>
                   <Select
-                    onValueChange={field.onChange}
+                    onValueChange={(value) => field.onChange(Number(value))}
                     defaultValue={field.value ? String(field.value) : undefined}
                   >
                     <FormControl>
@@ -199,7 +199,7 @@ export function GroupForm({
                   <FormItem>
                     <FormLabel>Gruppenleitung (optional)</FormLabel>
                     <Select
-                      onValueChange={field.onChange}
+                      onValueChange={(value) => field.onChange(Number(value))}
                       defaultValue={
                         field.value ? String(field.value) : undefined
                       }

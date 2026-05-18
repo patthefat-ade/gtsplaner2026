@@ -192,7 +192,7 @@ export function StudentForm({
                 <FormItem>
                   <FormLabel>Gruppe</FormLabel>
                   <Select
-                    onValueChange={field.onChange}
+                    onValueChange={(value) => field.onChange(Number(value))}
                     defaultValue={field.value ? String(field.value) : undefined}
                   >
                     <FormControl>
