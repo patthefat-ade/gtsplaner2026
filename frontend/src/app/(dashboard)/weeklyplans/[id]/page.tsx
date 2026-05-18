@@ -409,7 +409,7 @@ export default function WeeklyPlanDetailPage() {
           {isEditing ? (
             <>
               <Select value={editStatus} onValueChange={setEditStatus}>
-                <SelectTrigger className="w-[160px]">
+                <SelectTrigger className="w-full sm:w-[160px]">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>

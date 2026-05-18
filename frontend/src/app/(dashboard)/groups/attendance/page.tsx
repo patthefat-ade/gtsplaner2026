@@ -305,7 +305,7 @@ export default function AttendancePage() {
             >
               <ChevronLeft className="h-4 w-4" />
             </Button>
-            <div className="min-w-[220px] rounded-md border bg-background px-3 py-2 text-center text-sm">
+            <div className="min-w-[140px] sm:min-w-[220px] rounded-md border bg-background px-3 py-2 text-center text-sm">
               {formatDateDisplay(selectedDate)}
             </div>
             <Button

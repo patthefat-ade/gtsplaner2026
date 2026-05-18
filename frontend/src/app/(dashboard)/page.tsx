@@ -1366,7 +1366,7 @@ function OrganizationFilter({
       value={value ? String(value) : "all"}
       onValueChange={(v) => onChange(v === "all" ? undefined : Number(v))}
     >
-      <SelectTrigger className="w-[280px]">
+      <SelectTrigger className="w-full sm:w-[280px]">
         <SelectValue placeholder="Alle Organisationen" />
       </SelectTrigger>
       <SelectContent>

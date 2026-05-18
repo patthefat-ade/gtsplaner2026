@@ -33,12 +33,12 @@ export default function DashboardLayout({
             </aside>
 
             {/* Main Content */}
-            <div className="flex flex-1 flex-col">
+            <div className="flex min-w-0 flex-1 flex-col">
               <Header
                 sidebarCollapsed={sidebarCollapsed}
                 onToggleSidebar={() => setSidebarCollapsed(!sidebarCollapsed)}
               />
-              <main className="flex-1 p-4 sm:p-6">
+              <main className="flex-1 overflow-x-hidden p-4 sm:p-6">
                 <RouteGuard>{children}</RouteGuard>
               </main>
             </div>

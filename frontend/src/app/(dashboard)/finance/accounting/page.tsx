@@ -85,7 +85,7 @@ export default function AccountingPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Buchhaltung</h1>
           <p className="text-sm text-muted-foreground">
@@ -100,7 +100,7 @@ export default function AccountingPage() {
         <CardContent className="pt-6">
           <div className="flex flex-wrap gap-4">
             <Select value={year} onValueChange={setYear}>
-              <SelectTrigger className="w-[140px]">
+              <SelectTrigger className="w-full sm:w-[140px]">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -115,7 +115,7 @@ export default function AccountingPage() {
               value={groupId}
               onValueChange={(v) => setGroupId(v === "all" ? "" : v)}
             >
-              <SelectTrigger className="w-[220px]">
+              <SelectTrigger className="w-full sm:w-[220px]">
                 <SelectValue placeholder="Alle Gruppen" />
               </SelectTrigger>
               <SelectContent>

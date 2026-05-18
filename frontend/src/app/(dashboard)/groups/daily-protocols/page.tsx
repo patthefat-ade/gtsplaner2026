@@ -430,7 +430,7 @@ export default function DailyProtocolsPage() {
                     value={selectedGroup}
                     onValueChange={setSelectedGroup}
                   >
-                    <SelectTrigger className="w-[220px]">
+                    <SelectTrigger className="w-full sm:w-[220px]">
                       <SelectValue placeholder="Gruppe wählen" />
                     </SelectTrigger>
                     <SelectContent>
@@ -448,7 +448,7 @@ export default function DailyProtocolsPage() {
                     type="date"
                     value={selectedDate}
                     onChange={(e) => setSelectedDate(e.target.value)}
-                    className="w-[180px]"
+                    className="w-full sm:w-[180px]"
                   />
                 </div>
                 <Button
@@ -658,7 +658,7 @@ export default function DailyProtocolsPage() {
                       setListPage(1);
                     }}
                   >
-                    <SelectTrigger className="w-[220px]">
+                    <SelectTrigger className="w-full sm:w-[220px]">
                       <SelectValue placeholder="Alle Gruppen" />
                     </SelectTrigger>
                     <SelectContent>
@@ -680,7 +680,7 @@ export default function DailyProtocolsPage() {
                       setFilterDate(e.target.value);
                       setListPage(1);
                     }}
-                    className="w-[180px]"
+                    className="w-full sm:w-[180px]"
                   />
                 </div>
                 <div className="space-y-1">
@@ -692,7 +692,7 @@ export default function DailyProtocolsPage() {
                       setListPage(1);
                     }}
                   >
-                    <SelectTrigger className="w-[160px]">
+                    <SelectTrigger className="w-full sm:w-[160px]">
                       <SelectValue placeholder="Alle" />
                     </SelectTrigger>
                     <SelectContent>
