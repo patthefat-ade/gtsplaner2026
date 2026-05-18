@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import {
   KanbanSquare,
   List,
@@ -13,6 +13,7 @@ import {
   Trash2,
   Edit,
   ChevronRight,
+  GripVertical,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -70,6 +71,23 @@ import {
 import api from "@/lib/api";
 import type { User as UserType, PaginatedResponse } from "@/types/models";
 
+// Drag & Drop
+import {
+  DndContext,
+  DragOverlay,
+  closestCorners,
+  PointerSensor,
+  TouchSensor,
+  useSensor,
+  useSensors,
+  type DragStartEvent,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import { useDraggable, useDroppable } from "@dnd-kit/core";
+
+// Confetti
+import confetti from "canvas-confetti";
+
 /* ───── Helper Components ────────────────────────────────────────────────── */
 
 function PriorityBadge({ priority }: { priority: TaskPriority }) {
@@ -113,9 +131,41 @@ function DueDateDisplay({ date, isOverdue }: { date: string; isOverdue: boolean 
   );
 }
 
-/* ───── Kanban Card ──────────────────────────────────────────────────────── */
+/* ───── Fire Confetti ──────────────────────────────────────────────────────── */
 
-function TaskCard({
+function fireConfetti() {
+  // Fire from the center
+  confetti({
+    particleCount: 150,
+    spread: 80,
+    origin: { y: 0.6, x: 0.5 },
+    colors: ["#22c55e", "#16a34a", "#4ade80", "#86efac", "#fbbf24", "#f59e0b"],
+  });
+  // Fire from left
+  setTimeout(() => {
+    confetti({
+      particleCount: 50,
+      angle: 60,
+      spread: 55,
+      origin: { x: 0, y: 0.65 },
+      colors: ["#22c55e", "#16a34a", "#4ade80"],
+    });
+  }, 150);
+  // Fire from right
+  setTimeout(() => {
+    confetti({
+      particleCount: 50,
+      angle: 120,
+      spread: 55,
+      origin: { x: 1, y: 0.65 },
+      colors: ["#22c55e", "#16a34a", "#4ade80"],
+    });
+  }, 300);
+}
+
+/* ───── Draggable Task Card ────────────────────────────────────────────────── */
+
+function DraggableTaskCard({
   task,
   onStatusChange,
   onEdit,
@@ -126,6 +176,18 @@ function TaskCard({
   onEdit: (task: Task) => void;
   canManage: boolean;
 }) {
+  const { attributes, listeners, setNodeRef, transform, isDragging } =
+    useDraggable({
+      id: `task-${task.id}`,
+      data: { task },
+    });
+
+  const style = transform
+    ? {
+        transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
+      }
+    : undefined;
+
   const nextStatus: Record<TaskStatus, TaskStatus | null> = {
     open: "in_progress",
     in_progress: "done",
@@ -139,12 +201,77 @@ function TaskCard({
   const next = nextStatus[task.status];
 
   return (
-    <Card
-      className={`mb-3 cursor-pointer transition-all hover:ring-1 hover:ring-primary/50 ${
-        task.is_overdue ? "border-red-500/50" : ""
-      }`}
-      onClick={() => onEdit(task)}
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`transition-opacity ${isDragging ? "opacity-40" : "opacity-100"}`}
     >
+      <Card
+        className={`mb-3 cursor-pointer transition-all hover:ring-1 hover:ring-primary/50 ${
+          task.is_overdue ? "border-red-500/50" : ""
+        }`}
+        onClick={() => onEdit(task)}
+      >
+        <CardContent className="p-4">
+          <div className="flex items-start justify-between gap-2 mb-2">
+            <div className="flex items-center gap-2">
+              {/* Drag handle */}
+              <button
+                {...attributes}
+                {...listeners}
+                className="cursor-grab active:cursor-grabbing touch-none text-muted-foreground hover:text-foreground p-0.5 -ml-1 rounded"
+                onClick={(e) => e.stopPropagation()}
+                aria-label="Aufgabe ziehen"
+              >
+                <GripVertical className="h-4 w-4" />
+              </button>
+              <h4 className="font-medium text-sm leading-tight">{task.title}</h4>
+            </div>
+            <PriorityBadge priority={task.priority} />
+          </div>
+          {task.description && (
+            <p className="text-xs text-muted-foreground mb-3 line-clamp-2">
+              {task.description}
+            </p>
+          )}
+          <div className="flex items-center gap-2 mb-3">
+            <span className="flex items-center gap-1 text-xs text-muted-foreground">
+              <User className="h-3 w-3" />
+              {task.assigned_to_name}
+            </span>
+          </div>
+          <div className="flex items-center justify-between">
+            <DueDateDisplay date={task.due_date} isOverdue={task.is_overdue} />
+            {next && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 text-xs"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onStatusChange(task.id, next);
+                }}
+              >
+                {task.status === "open" ? (
+                  <Clock className="h-3 w-3 mr-1" />
+                ) : (
+                  <CheckCircle2 className="h-3 w-3 mr-1" />
+                )}
+                {nextLabel[task.status]}
+              </Button>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+/* ───── Drag Overlay Card (shown while dragging) ───────────────────────────── */
+
+function TaskCardOverlay({ task }: { task: Task }) {
+  return (
+    <Card className="mb-3 shadow-xl ring-2 ring-primary/50 rotate-2 scale-105">
       <CardContent className="p-4">
         <div className="flex items-start justify-between gap-2 mb-2">
           <h4 className="font-medium text-sm leading-tight">{task.title}</h4>
@@ -155,41 +282,21 @@ function TaskCard({
             {task.description}
           </p>
         )}
-        <div className="flex items-center gap-2 mb-3">
+        <div className="flex items-center gap-2">
           <span className="flex items-center gap-1 text-xs text-muted-foreground">
             <User className="h-3 w-3" />
             {task.assigned_to_name}
           </span>
-        </div>
-        <div className="flex items-center justify-between">
-          <DueDateDisplay date={task.due_date} isOverdue={task.is_overdue} />
-          {next && (
-            <Button
-              size="sm"
-              variant="outline"
-              className="h-7 text-xs"
-              onClick={(e) => {
-                e.stopPropagation();
-                onStatusChange(task.id, next);
-              }}
-            >
-              {task.status === "open" ? (
-                <Clock className="h-3 w-3 mr-1" />
-              ) : (
-                <CheckCircle2 className="h-3 w-3 mr-1" />
-              )}
-              {nextLabel[task.status]}
-            </Button>
-          )}
         </div>
       </CardContent>
     </Card>
   );
 }
 
-/* ───── Kanban Column ────────────────────────────────────────────────────── */
+/* ───── Droppable Kanban Column ────────────────────────────────────────────── */
 
-function KanbanColumn({
+function DroppableKanbanColumn({
+  status,
   title,
   icon,
   tasks,
@@ -198,6 +305,7 @@ function KanbanColumn({
   onEdit,
   canManage,
 }: {
+  status: TaskStatus;
   title: string;
   icon: React.ReactNode;
   tasks: Task[];
@@ -206,8 +314,19 @@ function KanbanColumn({
   onEdit: (task: Task) => void;
   canManage: boolean;
 }) {
+  const { isOver, setNodeRef } = useDroppable({
+    id: status,
+  });
+
   return (
-    <div className={`flex-1 min-w-[240px] sm:min-w-[280px] border-t-2 ${color} rounded-lg bg-muted/30 p-3`}>
+    <div
+      ref={setNodeRef}
+      className={`flex-1 min-w-[240px] sm:min-w-[280px] border-t-2 ${color} rounded-lg p-3 transition-colors ${
+        isOver
+          ? "bg-primary/10 ring-2 ring-primary/30"
+          : "bg-muted/30"
+      }`}
+    >
       <div className="flex items-center gap-2 mb-4">
         {icon}
         <h3 className="font-semibold text-sm">{title}</h3>
@@ -215,14 +334,14 @@ function KanbanColumn({
           {tasks.length}
         </Badge>
       </div>
-      <div className="space-y-0">
+      <div className="space-y-0 min-h-[100px]">
         {tasks.length === 0 ? (
           <p className="text-xs text-muted-foreground text-center py-8">
-            Keine Aufgaben
+            {isOver ? "Hier ablegen" : "Keine Aufgaben"}
           </p>
         ) : (
           tasks.map((task) => (
-            <TaskCard
+            <DraggableTaskCard
               key={task.id}
               task={task}
               onStatusChange={onStatusChange}
@@ -351,10 +470,9 @@ function TaskFormModal({
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Aufgabentitel eingeben"
-              disabled={isEditing && !canManage}
+              disabled={!canEditFields}
             />
           </div>
-
           <div>
             <Label htmlFor="task-desc">Beschreibung</Label>
             <Textarea
@@ -363,17 +481,16 @@ function TaskFormModal({
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Optionale Beschreibung"
               rows={3}
-              disabled={isEditing && !canManage}
+              disabled={!canEditFields}
             />
           </div>
-
           <div className="grid grid-cols-2 gap-4">
             <div>
               <Label htmlFor="task-priority">Priorität</Label>
               <Select
                 value={priority}
                 onValueChange={(v) => setPriority(v as TaskPriority)}
-                disabled={isEditing && !canManage}
+                disabled={!canEditFields}
               >
                 <SelectTrigger id="task-priority">
                   <SelectValue />
@@ -385,7 +502,6 @@ function TaskFormModal({
                 </SelectContent>
               </Select>
             </div>
-
             <div>
               <Label htmlFor="task-due">Stichtag *</Label>
               <Input
@@ -393,89 +509,75 @@ function TaskFormModal({
                 type="date"
                 value={dueDate}
                 onChange={(e) => setDueDate(e.target.value)}
-                disabled={isEditing && !canManage}
+                disabled={!canEditFields}
               />
             </div>
           </div>
-
-          <div>
-            <Label htmlFor="task-assigned">Zuweisen an *</Label>
-            <Select
-              value={assignedTo}
-              onValueChange={setAssignedTo}
-              disabled={isEditing && !canEditFields}
-            >
-              <SelectTrigger id="task-assigned">
-                <SelectValue placeholder="Person auswählen" />
-              </SelectTrigger>
-              <SelectContent>
-                {users.length > 0 ? (
-                  users.map((u) => (
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="task-assignee">Zugewiesen an *</Label>
+              <Select
+                value={assignedTo}
+                onValueChange={setAssignedTo}
+                disabled={!canEditFields}
+              >
+                <SelectTrigger id="task-assignee">
+                  <SelectValue placeholder="Person wählen" />
+                </SelectTrigger>
+                <SelectContent>
+                  {users.map((u) => (
                     <SelectItem key={u.id} value={String(u.id)}>
-                      {u.first_name} {u.last_name} ({u.role === "educator" ? "Pädagogin" : u.role === "location_manager" ? "Standortleitung" : u.role_display || u.role})
+                      {u.first_name} {u.last_name}
                     </SelectItem>
-                  ))
-                ) : (
-                  // Fallback: show current assignee when user list is not available
-                  task && (
-                    <SelectItem value={String(task.assigned_to)}>
-                      {task.assigned_to_name}
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="task-location">Standort</Label>
+              <Select
+                value={locationId || "__none__"}
+                onValueChange={(v) => setLocationId(v === "__none__" ? "" : v)}
+                disabled={!canEditFields}
+              >
+                <SelectTrigger id="task-location">
+                  <SelectValue placeholder="Standort wählen" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">Kein Standort</SelectItem>
+                  {locations.map((loc) => (
+                    <SelectItem key={loc.id} value={String(loc.id)}>
+                      {loc.name}
                     </SelectItem>
-                  )
-                )}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div>
-            <Label htmlFor="task-location">Standort</Label>
-            <Select
-              value={locationId || "__none__"}
-              onValueChange={(v) => setLocationId(v === "__none__" ? "" : v)}
-              disabled={isEditing && !canManage}
-            >
-              <SelectTrigger id="task-location">
-                <SelectValue placeholder="Optional" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="__none__">Kein Standort</SelectItem>
-                {locations.map((loc) => (
-                  <SelectItem key={loc.id} value={String(loc.id)}>
-                    {loc.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </div>
 
-        <DialogFooter className="flex justify-between">
-          {task && canManage && onDelete && (
+        <DialogFooter className="flex flex-col-reverse sm:flex-row gap-2">
+          {isEditing && canManage && onDelete && (
             <Button
               variant="destructive"
-              size="sm"
               onClick={() => {
-                onDelete(task.id);
+                if (task) onDelete(task.id);
                 onOpenChange(false);
               }}
+              className="sm:mr-auto"
             >
               <Trash2 className="h-4 w-4 mr-1" />
               Löschen
             </Button>
           )}
-          <div className="flex gap-2 ml-auto">
-            <Button variant="outline" onClick={() => onOpenChange(false)}>
-              {canEditFields ? "Abbrechen" : "Schließen"}
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Abbrechen
+          </Button>
+          {canEditFields && (
+            <Button onClick={handleSubmit} disabled={saving || !title.trim() || !dueDate || !assignedTo}>
+              {saving ? "Speichern..." : task ? "Aktualisieren" : "Erstellen"}
             </Button>
-            {canEditFields && (
-              <Button
-                onClick={handleSubmit}
-                disabled={saving || !title.trim() || !dueDate || !assignedTo}
-              >
-                {saving ? "Speichern..." : task ? "Aktualisieren" : "Erstellen"}
-              </Button>
-            )}
-          </div>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -507,6 +609,18 @@ export default function TasksPage() {
   // Modal state
   const [modalOpen, setModalOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
+
+  // Drag state
+  const [activeTask, setActiveTask] = useState<Task | null>(null);
+
+  // DnD sensors with activation constraint to distinguish click from drag
+  const pointerSensor = useSensor(PointerSensor, {
+    activationConstraint: { distance: 8 },
+  });
+  const touchSensor = useSensor(TouchSensor, {
+    activationConstraint: { delay: 200, tolerance: 5 },
+  });
+  const sensors = useSensors(pointerSensor, touchSensor);
 
   // Data hooks
   const boardParams = useMemo(
@@ -556,13 +670,56 @@ export default function TasksPage() {
     refetchList();
   };
 
-  const handleStatusChange = async (taskId: number, newStatus: TaskStatus) => {
-    const result = await changeStatus(taskId, newStatus);
-    if (result) {
-      toast.success("Status geändert", `Aufgabe auf "${TASK_STATUS_LABELS[newStatus]}" gesetzt.`);
-      refetchAll();
+  const handleStatusChange = useCallback(
+    async (taskId: number, newStatus: TaskStatus) => {
+      const result = await changeStatus(taskId, newStatus);
+      if (result) {
+        toast.success("Status geändert", `Aufgabe auf "${TASK_STATUS_LABELS[newStatus]}" gesetzt.`);
+        refetchAll();
+        // Fire confetti when task is marked as done
+        if (newStatus === "done") {
+          fireConfetti();
+        }
+      }
+    },
+    [changeStatus, toast, refetchAll]
+  );
+
+  /* ───── Drag & Drop Handlers ─────────────────────────────────────────── */
+
+  const handleDragStart = useCallback((event: DragStartEvent) => {
+    const { active } = event;
+    const task = active.data.current?.task as Task | undefined;
+    if (task) {
+      setActiveTask(task);
     }
-  };
+  }, []);
+
+  const handleDragEnd = useCallback(
+    (event: DragEndEvent) => {
+      const { active, over } = event;
+      setActiveTask(null);
+
+      if (!over) return;
+
+      const task = active.data.current?.task as Task | undefined;
+      if (!task) return;
+
+      const targetStatus = over.id as TaskStatus;
+
+      // Only change status if dropped on a different column
+      if (task.status !== targetStatus) {
+        handleStatusChange(task.id, targetStatus);
+      }
+    },
+    [handleStatusChange]
+  );
+
+  const handleDragCancel = useCallback(() => {
+    setActiveTask(null);
+  }, []);
+
+  /* ───── Other Handlers ───────────────────────────────────────────────── */
 
   const handleSave = async (data: TaskCreate, id?: number) => {
     if (id) {
@@ -710,37 +867,53 @@ export default function TasksPage() {
 
       <Separator />
 
-      {/* Board View */}
+      {/* Board View with Drag & Drop */}
       {view === "board" && (
-        <div className="flex gap-3 sm:gap-6 overflow-x-auto pb-4">
-          <KanbanColumn
-            title="Offen"
-            icon={<AlertCircle className="h-5 w-5 text-blue-400" />}
-            tasks={boardData?.open || []}
-            color="border-blue-500"
-            onStatusChange={handleStatusChange}
-            onEdit={handleEdit}
-            canManage={canManage}
-          />
-          <KanbanColumn
-            title="In Arbeit"
-            icon={<Clock className="h-5 w-5 text-yellow-400" />}
-            tasks={boardData?.in_progress || []}
-            color="border-yellow-500"
-            onStatusChange={handleStatusChange}
-            onEdit={handleEdit}
-            canManage={canManage}
-          />
-          <KanbanColumn
-            title="Erledigt"
-            icon={<CheckCircle2 className="h-5 w-5 text-green-400" />}
-            tasks={boardData?.done || []}
-            color="border-green-500"
-            onStatusChange={handleStatusChange}
-            onEdit={handleEdit}
-            canManage={canManage}
-          />
-        </div>
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCorners}
+          onDragStart={handleDragStart}
+          onDragEnd={handleDragEnd}
+          onDragCancel={handleDragCancel}
+        >
+          <div className="flex gap-3 sm:gap-6 overflow-x-auto pb-4">
+            <DroppableKanbanColumn
+              status="open"
+              title="Offen"
+              icon={<AlertCircle className="h-5 w-5 text-blue-400" />}
+              tasks={boardData?.open || []}
+              color="border-blue-500"
+              onStatusChange={handleStatusChange}
+              onEdit={handleEdit}
+              canManage={canManage}
+            />
+            <DroppableKanbanColumn
+              status="in_progress"
+              title="In Arbeit"
+              icon={<Clock className="h-5 w-5 text-yellow-400" />}
+              tasks={boardData?.in_progress || []}
+              color="border-yellow-500"
+              onStatusChange={handleStatusChange}
+              onEdit={handleEdit}
+              canManage={canManage}
+            />
+            <DroppableKanbanColumn
+              status="done"
+              title="Erledigt"
+              icon={<CheckCircle2 className="h-5 w-5 text-green-400" />}
+              tasks={boardData?.done || []}
+              color="border-green-500"
+              onStatusChange={handleStatusChange}
+              onEdit={handleEdit}
+              canManage={canManage}
+            />
+          </div>
+
+          {/* Drag Overlay – rendered outside columns for smooth animation */}
+          <DragOverlay>
+            {activeTask ? <TaskCardOverlay task={activeTask} /> : null}
+          </DragOverlay>
+        </DndContext>
       )}
 
       {/* List View */}
