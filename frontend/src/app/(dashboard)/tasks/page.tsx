@@ -207,7 +207,7 @@ function KanbanColumn({
   canManage: boolean;
 }) {
   return (
-    <div className={`flex-1 min-w-[280px] border-t-2 ${color} rounded-lg bg-muted/30 p-3`}>
+    <div className={`flex-1 min-w-[240px] sm:min-w-[280px] border-t-2 ${color} rounded-lg bg-muted/30 p-3`}>
       <div className="flex items-center gap-2 mb-4">
         {icon}
         <h3 className="font-semibold text-sm">{title}</h3>
@@ -611,14 +611,14 @@ export default function TasksPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Aufgaben</h1>
           <p className="text-muted-foreground">
             Aufgaben verwalten und im Kanban-Board organisieren
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {/* View Toggle */}
           <div className="flex border rounded-md">
             <Button
@@ -673,17 +673,17 @@ export default function TasksPage() {
       )}
 
       {/* Filters */}
-      <div className="flex items-center gap-4">
+      <div className="flex flex-wrap items-center gap-4">
         {view === "list" && (
           <Input
             placeholder="Aufgaben suchen..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="max-w-xs"
+            className="w-full sm:max-w-xs"
           />
         )}
         <Select value={filterPriority || "__all__"} onValueChange={(v) => setFilterPriority(v === "__all__" ? "" : v)}>
-          <SelectTrigger className="w-[160px]">
+          <SelectTrigger className="w-full sm:w-[160px]">
             <SelectValue placeholder="Alle Prioritäten" />
           </SelectTrigger>
           <SelectContent>
@@ -694,7 +694,7 @@ export default function TasksPage() {
           </SelectContent>
         </Select>
         <Select value={filterLocation || "__all__"} onValueChange={(v) => setFilterLocation(v === "__all__" ? "" : v)}>
-          <SelectTrigger className="w-[200px]">
+          <SelectTrigger className="w-full sm:w-[200px]">
             <SelectValue placeholder="Alle Standorte" />
           </SelectTrigger>
           <SelectContent>
@@ -712,7 +712,7 @@ export default function TasksPage() {
 
       {/* Board View */}
       {view === "board" && (
-        <div className="flex gap-6 overflow-x-auto pb-4">
+        <div className="flex gap-3 sm:gap-6 overflow-x-auto pb-4">
           <KanbanColumn
             title="Offen"
             icon={<AlertCircle className="h-5 w-5 text-blue-400" />}

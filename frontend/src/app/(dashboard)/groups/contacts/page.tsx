@@ -218,7 +218,7 @@ export default function ContactsPage() {
                 setPage(1);
               }}
             >
-              <SelectTrigger className="w-[200px]">
+              <SelectTrigger className="w-full sm:w-[200px]">
                 <SelectValue placeholder="Beziehung" />
               </SelectTrigger>
               <SelectContent>

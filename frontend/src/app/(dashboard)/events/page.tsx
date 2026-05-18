@@ -114,7 +114,7 @@ export default function EventsPage() {
       <Card>
         <CardContent className="pt-6">
           <div className="flex flex-wrap gap-4">
-            <div className="relative flex-1 min-w-[200px]">
+            <div className="relative flex-1 min-w-0 sm:min-w-[200px]">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 placeholder="Suchen..."
@@ -133,7 +133,7 @@ export default function EventsPage() {
                 setPage(1);
               }}
             >
-              <SelectTrigger className="w-[180px]">
+              <SelectTrigger className="w-full sm:w-[180px]">
                 <SelectValue placeholder="Alle Typen" />
               </SelectTrigger>
               <SelectContent>
@@ -152,7 +152,7 @@ export default function EventsPage() {
                 setPage(1);
               }}
             >
-              <SelectTrigger className="w-[180px]">
+              <SelectTrigger className="w-full sm:w-[180px]">
                 <SelectValue placeholder="Alle Status" />
               </SelectTrigger>
               <SelectContent>

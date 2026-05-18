@@ -239,7 +239,7 @@ export default function FinanceReportsPage() {
               value={locationId}
               onValueChange={(v) => setLocationId(v)}
             >
-              <SelectTrigger className="w-[200px]">
+              <SelectTrigger className="w-full sm:w-[200px]">
                 <SelectValue placeholder="Standort" />
               </SelectTrigger>
               <SelectContent>
@@ -257,7 +257,7 @@ export default function FinanceReportsPage() {
             value={String(year)}
             onValueChange={(v) => setYear(Number(v))}
           >
-            <SelectTrigger className="w-[120px]">
+            <SelectTrigger className="w-full sm:w-[120px]">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
