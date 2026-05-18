@@ -138,7 +138,14 @@ class LeaveTypeViewSet(TenantViewSetMixin, viewsets.ModelViewSet):
         if getattr(self, "swagger_fake_view", False):
             return LeaveType.objects.none()
         qs = super().get_queryset()
-        return qs.all()
+
+        # Educators and LocationManagers should only see leave types
+        # for their own location to avoid duplicates across locations
+        user = self.request.user
+        if user.role in ("educator", "location_manager") and user.location_id:
+            qs = qs.filter(location_id=user.location_id)
+
+        return qs
 
     def get_permissions(self):
         if self.action in ["list", "retrieve"]:
