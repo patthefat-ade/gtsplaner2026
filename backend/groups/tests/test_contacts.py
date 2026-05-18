@@ -20,7 +20,7 @@ from groups.models_contacts import StudentContact
 @pytest.fixture
 def org(db) -> Organization:
     return Organization.objects.create(
-        name="Hilfswerk Kaernten",
+        name="Hilfswerk Kärnten",
         email="hw@test.at",
         street="Teststr 1",
         city="Klagenfurt",
@@ -55,7 +55,7 @@ def group(org: Organization, loc: Location, school_year: SchoolYear) -> Group:
         organization=org,
         location=loc,
         school_year=school_year,
-        name="Gruene Gruppe",
+        name="Grüne Gruppe",
     )
 
 
