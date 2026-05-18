@@ -3,8 +3,7 @@ Data migration to fix all missing Umlaute and English month names in seeded data
 Corrects:
 - TransactionCategory names and descriptions
 - Transaction descriptions (English months → German months)
-- WeeklyPlanEntry titles
-- Event titles
+- WeeklyPlanEntry activity names
 """
 
 from django.db import migrations
@@ -77,17 +76,20 @@ def fix_transaction_descriptions(apps, schema_editor):
 
 
 def fix_weeklyplan_entries(apps, schema_editor):
-    """Fix Umlaute in WeeklyPlanEntry titles."""
+    """Fix Umlaute in WeeklyPlanEntry activity names."""
     WeeklyPlanEntry = apps.get_model("weeklyplans", "WeeklyPlanEntry")
 
+    # WeeklyPlanEntry uses 'activity' field, not 'title'
     entry_replacements = {
         "Lernfoerderung": "Lernförderung",
         "Fruehstueck": "Frühstück",
         "Yoga fuer Kinder": "Yoga für Kinder",
     }
 
-    for old_title, new_title in entry_replacements.items():
-        WeeklyPlanEntry.objects.filter(title=old_title).update(title=new_title)
+    for old_activity, new_activity in entry_replacements.items():
+        WeeklyPlanEntry.objects.filter(activity=old_activity).update(
+            activity=new_activity
+        )
 
 
 def noop(apps, schema_editor):

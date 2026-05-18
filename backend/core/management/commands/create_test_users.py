@@ -758,71 +758,112 @@ class Command(BaseCommand):
 
     def _cleanup_old_data(self):
         """Remove old test data to avoid FK constraint violations."""
+        from django.db import transaction
+
         self.stdout.write("\n  [0/10] Alte Testdaten bereinigen...")
 
         # Delete StudentContacts (encrypted, FK to Student)
         from groups.models_contacts import StudentContact
-        sc_count = StudentContact.objects.count()
-        if sc_count > 0:
-            StudentContact.objects.all().delete()
-            self.stdout.write(f"        {sc_count} StudentContacts geloescht.")
-            logger.info("Cleanup: %d StudentContacts geloescht.", sc_count)
-
         try:
-            # 1. Nullify location FK on all test users
-            old_users = User.objects.filter(username__in=self.ALL_TEST_USERNAMES)
-            count = old_users.count()
-            if count > 0:
-                old_users.update(location=None)
-                self.stdout.write(f"        {count} Benutzer: location auf NULL gesetzt.")
-
-            # 2. Nullify leader FK on all groups led by test users
-            from groups.models import Group as GrpModel
-            grp_count = GrpModel.objects.filter(
-                leader__username__in=self.ALL_TEST_USERNAMES
-            ).update(leader=None)
-            if grp_count:
-                self.stdout.write(f"        {grp_count} Gruppen: leader auf NULL gesetzt.")
-
-            # 3. Nullify manager FK on all locations managed by test users
-            loc_mgr_count = Location.objects.filter(
-                manager__username__in=self.ALL_TEST_USERNAMES
-            ).update(manager=None)
-            if loc_mgr_count:
-                self.stdout.write(f"        {loc_mgr_count} Standorte: manager auf NULL gesetzt.")
-
-            # 4. Remove GroupMember entries for legacy users
-            gm_count = GroupMember.objects.filter(
-                user__username__in=["locationmanager", "educator"]
-            ).delete()[0]
-            if gm_count:
-                self.stdout.write(f"        {gm_count} GroupMember-Eintraege geloescht.")
-
-            # 5. Delete non-Hilfswerk locations (legacy)
-            old_locations = Location.objects.exclude(
-                organization__name__startswith="Hilfswerk"
-            ).exclude(name="Hauptstandort Wien")
-            loc_count = old_locations.count()
-            if loc_count > 0:
-                old_locations.delete()
-                self.stdout.write(f"        {loc_count} alte Standorte geloescht.")
-
-            # 6. Delete legacy users (old generic test accounts)
-            legacy_users = User.objects.filter(
-                username__in=["locationmanager", "educator"]
-            )
-            legacy_count = legacy_users.count()
-            if legacy_count > 0:
-                legacy_users.delete()
-                self.stdout.write(f"        {legacy_count} Legacy-Benutzer geloescht.")
-
-            if count == 0 and loc_count == 0 and legacy_count == 0:
-                self.stdout.write("        Keine alten Daten gefunden.")
-
+            with transaction.atomic():
+                sc_count = StudentContact.objects.count()
+                if sc_count > 0:
+                    StudentContact.objects.all().delete()
+                    self.stdout.write(f"        {sc_count} StudentContacts geloescht.")
+                    logger.info("Cleanup: %d StudentContacts geloescht.", sc_count)
         except Exception as e:
             self.stdout.write(
-                self.style.WARNING(f"        Cleanup-Fehler (wird fortgesetzt): {e}")
+                self.style.WARNING(f"        StudentContacts Cleanup-Fehler: {e}")
             )
+
+        # 1. Nullify location FK on all test users
+        try:
+            with transaction.atomic():
+                old_users = User.objects.filter(username__in=self.ALL_TEST_USERNAMES)
+                count = old_users.count()
+                if count > 0:
+                    old_users.update(location=None)
+                    self.stdout.write(f"        {count} Benutzer: location auf NULL gesetzt.")
+        except Exception as e:
+            self.stdout.write(
+                self.style.WARNING(f"        User-Cleanup-Fehler: {e}")
+            )
+            count = 0
+
+        # 2. Nullify leader FK on all groups led by test users
+        try:
+            with transaction.atomic():
+                from groups.models import Group as GrpModel
+                grp_count = GrpModel.objects.filter(
+                    leader__username__in=self.ALL_TEST_USERNAMES
+                ).update(leader=None)
+                if grp_count:
+                    self.stdout.write(f"        {grp_count} Gruppen: leader auf NULL gesetzt.")
+        except Exception as e:
+            self.stdout.write(
+                self.style.WARNING(f"        Group-Leader-Cleanup-Fehler: {e}")
+            )
+
+        # 3. Nullify manager FK on all locations managed by test users
+        try:
+            with transaction.atomic():
+                loc_mgr_count = Location.objects.filter(
+                    manager__username__in=self.ALL_TEST_USERNAMES
+                ).update(manager=None)
+                if loc_mgr_count:
+                    self.stdout.write(f"        {loc_mgr_count} Standorte: manager auf NULL gesetzt.")
+        except Exception as e:
+            self.stdout.write(
+                self.style.WARNING(f"        Location-Manager-Cleanup-Fehler: {e}")
+            )
+
+        # 4. Remove GroupMember entries for legacy users
+        try:
+            with transaction.atomic():
+                gm_count = GroupMember.objects.filter(
+                    user__username__in=["locationmanager", "educator"]
+                ).delete()[0]
+                if gm_count:
+                    self.stdout.write(f"        {gm_count} GroupMember-Eintraege geloescht.")
+        except Exception as e:
+            self.stdout.write(
+                self.style.WARNING(f"        GroupMember-Cleanup-Fehler: {e}")
+            )
+
+        # 5. Delete non-Hilfswerk locations (legacy)
+        loc_count = 0
+        try:
+            with transaction.atomic():
+                old_locations = Location.objects.exclude(
+                    organization__name__startswith="Hilfswerk"
+                ).exclude(name="Hauptstandort Wien")
+                loc_count = old_locations.count()
+                if loc_count > 0:
+                    old_locations.delete()
+                    self.stdout.write(f"        {loc_count} alte Standorte geloescht.")
+        except Exception as e:
+            self.stdout.write(
+                self.style.WARNING(f"        Location-Cleanup-Fehler: {e}")
+            )
+
+        # 6. Delete legacy users (old generic test accounts)
+        legacy_count = 0
+        try:
+            with transaction.atomic():
+                legacy_users = User.objects.filter(
+                    username__in=["locationmanager", "educator"]
+                )
+                legacy_count = legacy_users.count()
+                if legacy_count > 0:
+                    legacy_users.delete()
+                    self.stdout.write(f"        {legacy_count} Legacy-Benutzer geloescht.")
+        except Exception as e:
+            self.stdout.write(
+                self.style.WARNING(f"        Legacy-User-Cleanup-Fehler: {e}")
+            )
+
+        if count == 0 and loc_count == 0 and legacy_count == 0:
+            self.stdout.write("        Keine alten Daten gefunden.")
 
     # ── Step 1: Permission Groups ─────────────────────────────────────────
 

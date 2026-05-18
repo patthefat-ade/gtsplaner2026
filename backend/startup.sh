@@ -35,7 +35,7 @@ python manage.py setup_permissions --reset --migrate-users || {
 # Running it in the background ensures Gunicorn starts immediately and
 # the health check passes within the timeout window.
 echo "[4/4] Creating/updating test users (background)..."
-python manage.py create_test_users > /tmp/seed_output.log 2>&1 &
+python manage.py create_test_users --force > /tmp/seed_output.log 2>&1 &
 SEED_PID=$!
 echo "  Seed process started (PID: $SEED_PID), continuing with server start..."
 
