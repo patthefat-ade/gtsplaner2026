@@ -4,6 +4,10 @@ Corrects:
 - TransactionCategory names and descriptions
 - Transaction descriptions (English months → German months)
 - WeeklyPlanEntry activity names
+
+IMPORTANT: Uses QuerySet.update() and raw SQL instead of .save() to avoid
+triggering post_save signals (AuditLog) which fail during migrations because
+the signal handler cannot determine organization_id from the migration context.
 """
 
 from django.db import migrations
@@ -55,24 +59,33 @@ def fix_transaction_categories(apps, schema_editor):
 
 
 def fix_transaction_descriptions(apps, schema_editor):
-    """Fix English month names in Transaction descriptions."""
-    Transaction = apps.get_model("finance", "Transaction")
+    """
+    Fix English month names in Transaction descriptions.
 
+    Uses raw SQL REPLACE() to avoid triggering post_save signals.
+    The AuditLog signal handler fails during migrations because it cannot
+    determine organization_id without a request context.
+    """
+    db_alias = schema_editor.connection.alias
+
+    # Replace English month names with German equivalents using SQL REPLACE
     for eng_month, ger_month in GERMAN_MONTHS.items():
         if eng_month == ger_month:
             continue
-        # Find transactions with English month names in description
-        txs = Transaction.objects.filter(description__contains=eng_month)
-        for tx in txs:
-            tx.description = tx.description.replace(eng_month, ger_month)
-            tx.save(update_fields=["description"])
+        # Use raw SQL to avoid triggering Django signals
+        schema_editor.execute(
+            "UPDATE finance_transaction SET description = REPLACE(description, %s, %s) "
+            "WHERE description LIKE %s",
+            [eng_month, ger_month, f"%{eng_month}%"],
+        )
 
     # Also fix category names in descriptions
     for old_name, new_name in CATEGORY_REPLACEMENTS.items():
-        txs = Transaction.objects.filter(description__contains=old_name)
-        for tx in txs:
-            tx.description = tx.description.replace(old_name, new_name)
-            tx.save(update_fields=["description"])
+        schema_editor.execute(
+            "UPDATE finance_transaction SET description = REPLACE(description, %s, %s) "
+            "WHERE description LIKE %s",
+            [old_name, new_name, f"%{old_name}%"],
+        )
 
 
 def fix_weeklyplan_entries(apps, schema_editor):
