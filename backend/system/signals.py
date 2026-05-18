@@ -16,10 +16,17 @@ management commands), ``user=None`` is stored.
 
 Organization is automatically resolved from the instance if available,
 allowing proper tenant-scoping of audit entries.
+
+**Migration safety:** During migrations, model instances are lightweight
+proxies without full field access. The signal handler detects this via
+the ``__fake__`` module name and skips audit logging to prevent
+IntegrityErrors (e.g. organization_id=NULL on NOT NULL columns).
 """
 
 import logging
+import sys
 
+from django.db import transaction
 from django.db.models.signals import post_delete, post_save
 from django.dispatch import receiver
 
@@ -47,6 +54,17 @@ TRACKED_MODELS = [
     "groups.DailyProtocol",
     "system.SystemSetting",
 ]
+
+
+def _is_running_migration():
+    """
+    Detect if the current process is running database migrations.
+
+    During migrations, Django uses fake model classes from the
+    '__fake__' module. We also check if 'migrate' is in sys.argv
+    as a fallback.
+    """
+    return "migrate" in sys.argv
 
 
 def _get_model_label(instance):
@@ -109,6 +127,15 @@ def audit_post_save(sender, instance, created, **kwargs):
     if sender.__name__ == "AuditLog":
         return
 
+    # Skip audit logging during migrations to prevent IntegrityErrors
+    # (migration model proxies may not have organization_id populated)
+    if _is_running_migration():
+        return
+
+    # Also skip if the instance comes from a fake migration module
+    if getattr(instance.__class__.__module__, "", "").startswith("__fake__"):
+        return
+
     # ── Deduplication: skip if middleware already logged this request ──
     from system.middleware import is_audit_logged_by_middleware
 
@@ -142,14 +169,18 @@ def audit_post_save(sender, instance, created, **kwargs):
         except Exception:
             pass
 
-        AuditLog.objects.create(
-            user=user,
-            action=action,
-            model_name=model_name,
-            object_id=object_id,
-            changes=changes,
-            organization=organization,
-        )
+        # Use a savepoint so that a failed AuditLog insert does not
+        # abort the outer transaction (which would cause
+        # TransactionManagementError on subsequent queries).
+        with transaction.atomic():
+            AuditLog.objects.create(
+                user=user,
+                action=action,
+                model_name=model_name,
+                object_id=object_id,
+                changes=changes,
+                organization=organization,
+            )
     except Exception as e:
         logger.error(f"Failed to create audit log via signal: {e}")
 
@@ -160,7 +191,15 @@ def audit_post_delete(sender, instance, **kwargs):
     if not _should_track(instance):
         return
 
+    # Avoid recursive logging
     if sender.__name__ == "AuditLog":
+        return
+
+    # Skip during migrations
+    if _is_running_migration():
+        return
+
+    if getattr(instance.__class__.__module__, "", "").startswith("__fake__"):
         return
 
     # ── Deduplication ──
@@ -182,19 +221,19 @@ def audit_post_delete(sender, instance, **kwargs):
             "action": "Eintrag geloescht",
             "model": model_name,
         }
-
         try:
             changes["display"] = str(instance)[:200]
         except Exception:
             pass
 
-        AuditLog.objects.create(
-            user=user,
-            action="delete",
-            model_name=model_name,
-            object_id=object_id,
-            changes=changes,
-            organization=organization,
-        )
+        with transaction.atomic():
+            AuditLog.objects.create(
+                user=user,
+                action="delete",
+                model_name=model_name,
+                object_id=object_id,
+                changes=changes,
+                organization=organization,
+            )
     except Exception as e:
         logger.error(f"Failed to create audit log via signal: {e}")
