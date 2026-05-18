@@ -147,6 +147,10 @@ export interface TransactionCategory {
   /** Whether this is a system-defined category */
   is_system_category?: boolean;
   is_active: boolean;
+  /** Location ID this category belongs to */
+  location_id?: number;
+  /** Location name for display */
+  location_name?: string;
   created_at: string;
 }
 

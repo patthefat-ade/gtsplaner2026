@@ -29,6 +29,13 @@ class FinanceUserCompactSerializer(serializers.Serializer):
 class TransactionCategoryListSerializer(serializers.ModelSerializer):
     """Serializer for listing transaction categories."""
 
+    location_name = serializers.CharField(
+        source="location.name", read_only=True
+    )
+    location_id = serializers.IntegerField(
+        source="location.id", read_only=True
+    )
+
     class Meta:
         model = TransactionCategory
         fields = [
@@ -40,9 +47,11 @@ class TransactionCategoryListSerializer(serializers.ModelSerializer):
             "icon",
             "is_system_category",
             "is_active",
+            "location_id",
+            "location_name",
             "created_at",
         ]
-        read_only_fields = ["id", "created_at"]
+        read_only_fields = ["id", "created_at", "location_id", "location_name"]
 
 
 class TransactionCategoryCreateSerializer(serializers.ModelSerializer):
