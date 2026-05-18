@@ -59,7 +59,7 @@ import {
   ArrowLeft,
   Users,
   GraduationCap,
-  Wallet,
+  Coins,
   Plus,
   UserPlus,
   Trash2,
@@ -193,7 +193,7 @@ export default function GroupDetailPage({
             <CardTitle className="text-sm font-medium text-muted-foreground">
               Kontostand
             </CardTitle>
-            <Wallet className="h-4 w-4 text-muted-foreground" />
+            <Coins className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div

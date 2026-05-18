@@ -47,7 +47,7 @@ import {
   CheckCircle,
   XCircle,
   Clock,
-  DollarSign,
+  Coins,
   UserPlus,
   FileText,
 } from "lucide-react";
@@ -285,7 +285,7 @@ export default function EventDetailPage() {
           <Card>
             <CardContent className="pt-6">
               <div className="flex items-center gap-3">
-                <DollarSign className="h-8 w-8 text-primary" />
+                <Coins className="h-8 w-8 text-primary" />
                 <div>
                   <p className="text-2xl font-bold">
                     {stats.total_cost ? `€${stats.total_cost}` : "–"}

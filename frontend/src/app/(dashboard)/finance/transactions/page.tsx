@@ -65,7 +65,7 @@ import type { Transaction } from "@/types/models";
 import type { TransactionFormData } from "@/lib/validations";
 import {
   Plus,
-  Wallet,
+  Coins,
   MoreHorizontal,
   Check,
   X,
@@ -414,7 +414,7 @@ export default function TransactionsPage() {
         </Card>
       ) : (
         <EmptyState
-          icon={Wallet}
+          icon={Coins}
           title="Keine Transaktionen"
           description={
             debouncedSearch

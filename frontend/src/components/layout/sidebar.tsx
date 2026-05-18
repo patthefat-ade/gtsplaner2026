@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 import { usePermissions, type PermissionCodename } from "@/hooks/use-permissions";
 import {
   LayoutDashboard,
-  Wallet,
+  Coins,
   Receipt,
   Clock,
   CalendarOff,
@@ -81,7 +81,7 @@ const navigation: NavSection[] = [
       {
         title: "Transaktionen",
         href: "/finance/transactions",
-        icon: Wallet,
+        icon: Coins,
         // All roles can see transactions (view_own_transactions)
         permission: "view_own_transactions",
       },

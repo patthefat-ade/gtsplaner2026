@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/table";
 import { formatCurrency, formatDate } from "@/lib/format";
 import {
-  Wallet,
+  Coins,
   Clock,
   Users,
   AlertCircle,
@@ -265,7 +265,7 @@ function EducatorDashboard({ stats, loading }: { stats?: DashboardStats; loading
           title="Meine Transaktionen"
           value={String(stats?.transactions_count ?? 0)}
           description="Von dir erstellt"
-          icon={Wallet}
+          icon={Coins}
           loading={loading}
           href="/finance/transactions"
         />
@@ -348,7 +348,7 @@ function EducatorDashboard({ stats, loading }: { stats?: DashboardStats; loading
             </Button>
             <Button variant="outline" className="h-auto flex-col gap-2 py-4" asChild>
               <Link href="/finance/transactions">
-                <Wallet className="h-5 w-5" />
+                <Coins className="h-5 w-5" />
                 <span className="text-xs">Transaktion erfassen</span>
               </Link>
             </Button>
@@ -415,7 +415,7 @@ function LocationManagerDashboard({ stats, loading }: { stats?: DashboardStats; 
           title="Ausstehende Transaktionen"
           value={String(stats?.pending_transactions ?? 0)}
           description="Warten auf Genehmigung"
-          icon={Wallet}
+          icon={Coins}
           loading={loading}
           href="/finance/transactions"
         />
@@ -568,7 +568,7 @@ function AdminDashboard({ stats, loading, organizationId }: { stats?: DashboardS
           title="Ausstehende Transaktionen"
           value={String(stats?.pending_transactions ?? 0)}
           description="Warten auf Genehmigung"
-          icon={Wallet}
+          icon={Coins}
           loading={loading}
           href="/finance/transactions"
         />
@@ -730,7 +730,7 @@ function SuperAdminDashboard({ stats, loading, organizationId }: { stats?: Dashb
           title="Ausstehende Transaktionen"
           value={String(stats?.pending_transactions ?? 0)}
           description="Systemweit"
-          icon={Wallet}
+          icon={Coins}
           loading={loading}
           href="/finance/transactions"
         />

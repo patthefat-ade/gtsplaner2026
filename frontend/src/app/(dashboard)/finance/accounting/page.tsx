@@ -21,11 +21,10 @@ import {
 } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-  Wallet,
+  Coins,
   TrendingUp,
   TrendingDown,
   ArrowRightLeft,
-  DollarSign,
 } from "lucide-react";
 import type { MonthlyFinanceSummary } from "@/types/models";
 
@@ -136,7 +135,7 @@ export default function AccountingPage() {
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center gap-3">
-              <Wallet className="h-8 w-8 text-blue-500" />
+              <Coins className="h-8 w-8 text-blue-500" />
               <div>
                 <p className="text-lg font-bold">{fmt(openingBalance)}</p>
                 <p className="text-xs text-muted-foreground">Anfangsbestand</p>
@@ -182,7 +181,7 @@ export default function AccountingPage() {
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center gap-3">
-              <DollarSign className="h-8 w-8 text-emerald-600" />
+              <Coins className="h-8 w-8 text-emerald-600" />
               <div>
                 <p className="text-lg font-bold">{fmt(closingBalance)}</p>
                 <p className="text-xs text-muted-foreground">Endbestand</p>

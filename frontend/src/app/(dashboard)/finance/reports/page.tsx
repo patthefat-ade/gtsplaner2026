@@ -38,7 +38,7 @@ import {
   TrendingUp,
   ArrowUpRight,
   ArrowDownRight,
-  Wallet,
+  Coins,
   Loader2,
   Download,
 } from "lucide-react";
@@ -298,7 +298,7 @@ export default function FinanceReportsPage() {
         <Card>
           <CardContent className="flex items-center gap-4 p-6">
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-500/10">
-              <Wallet className="h-5 w-5 text-blue-500" />
+              <Coins className="h-5 w-5 text-blue-500" />
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Saldo</p>
