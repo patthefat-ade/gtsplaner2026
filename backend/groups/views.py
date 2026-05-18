@@ -210,7 +210,7 @@ class GroupViewSet(TenantViewSetMixin, viewsets.ModelViewSet):
         return GroupListSerializer
 
     def get_permissions(self):
-        if self.action in ["list", "retrieve"]:
+        if self.action in ["list", "retrieve", "list_members", "list_students"]:
             return [permissions.IsAuthenticated(), IsEducator()]
         return [
             permissions.IsAuthenticated(),

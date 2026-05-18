@@ -173,7 +173,7 @@ class Organization(models.Model):
     Represents an organization in a hierarchical multi-tenant structure.
 
     Hierarchy:
-        Main tenant (e.g., Hilfswerk Kaernten) -> org_type='main'
+        Main tenant (e.g., Hilfswerk Kärnten) -> org_type='main'
           Sub tenant (e.g., VS Klagenfurt)     -> org_type='sub', parent=main
           Sub tenant (e.g., VS Villach)         -> org_type='sub', parent=main
 

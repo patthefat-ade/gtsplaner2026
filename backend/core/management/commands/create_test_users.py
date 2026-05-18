@@ -3,8 +3,8 @@ Management command to create a realistic multi-tenant test environment.
 
 Creates the Hilfswerk Oesterreich hierarchy:
   - Main tenant: Hilfswerk Oesterreich (Hauptstandort Wien)
-  - 9 Sub-tenants: one per Bundesland (Kaernten, Wien, NOe, Tirol, etc.)
-  - Kaernten: 3 Schulstandorte (VS Annabichl, VS Woelfnitz, VS St. Ruprecht)
+  - 9 Sub-tenants: one per Bundesland (Kärnten, Wien, NOe, Tirol, etc.)
+  - Kärnten: 3 Schulstandorte (VS Annabichl, VS Wölfnitz, VS St. Ruprecht)
   - Wien: 2 Schulstandorte (VS Donaustadt, VS Favoriten)
   - Other Bundeslaender: 1 Schulstandort each
   - Each Schulstandort has a LocationManager, an Educator, a Group, and Students
@@ -56,7 +56,7 @@ class Command(BaseCommand):
 
     BUNDESLAENDER = [
         {
-            "name": "Hilfswerk Kaernten",
+            "name": "Hilfswerk Kärnten",
             "city": "Klagenfurt",
             "postal_code": "9020",
             "street": "8.-Mai-Strasse 47",
@@ -82,7 +82,7 @@ class Command(BaseCommand):
                         "first_name": "Amalia",
                         "last_name": "Bogdan",
                     },
-                    "group_name": "Gruene Gruppe",
+                    "group_name": "Grüne Gruppe",
                     "students": [
                         {"first_name": "Lena", "last_name": "Koller", "class": "1a"},
                         {"first_name": "Maximilian", "last_name": "Steiner", "class": "1a"},
@@ -113,10 +113,10 @@ class Command(BaseCommand):
                     ],
                 },
                 {
-                    "name": "VS Woelfnitz",
+                    "name": "VS Wölfnitz",
                     "city": "Klagenfurt",
                     "postal_code": "9020",
-                    "street": "Woelfnitzstrasse 1",
+                    "street": "Wölfnitzstraße 1",
                     "email": "vs.woelfnitz@klagenfurt.at",
                     "phone": "+43 463 281 45",
                     "manager": {
@@ -540,7 +540,7 @@ class Command(BaseCommand):
     # Username pattern: admin.<bundesland_short>@hilfswerk.at
 
     SUB_ADMIN_CONFIG = {
-        "Hilfswerk Kaernten": {
+        "Hilfswerk Kärnten": {
             "username": "admin.kaernten",
             "email": "admin.kaernten@hilfswerk.at",
             "first_name": "Karl",
