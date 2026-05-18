@@ -129,7 +129,7 @@ export function TimeEntryForm({
                 <FormItem>
                   <FormLabel>Gruppe</FormLabel>
                   <Select
-                    onValueChange={field.onChange}
+                    onValueChange={(value) => field.onChange(Number(value))}
                     defaultValue={field.value ? String(field.value) : undefined}
                   >
                     <FormControl>
@@ -210,7 +210,13 @@ export function TimeEntryForm({
                   <FormItem>
                     <FormLabel>Pause (Min.)</FormLabel>
                     <FormControl>
-                      <Input type="number" min="0" step="5" {...field} />
+                      <Input
+                        type="number"
+                        min="0"
+                        step="5"
+                        {...field}
+                        onChange={(e) => field.onChange(Number(e.target.value) || 0)}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
