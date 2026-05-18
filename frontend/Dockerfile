@@ -7,7 +7,7 @@
 FROM node:22-alpine AS deps
 WORKDIR /app
 COPY package.json pnpm-lock.yaml* ./
-RUN corepack enable pnpm && pnpm install --frozen-lockfile
+RUN corepack enable && corepack prepare --activate && pnpm install --frozen-lockfile
 
 # --- Stage 2: Build ---
 FROM node:22-alpine AS builder
@@ -17,7 +17,7 @@ COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
 # Produktions-API-URL wird zur Build-Zeit eingebettet
 ENV NEXT_PUBLIC_API_URL=https://api.gtsplaner.app/api/v1
-RUN corepack enable pnpm && pnpm build
+RUN corepack enable && corepack prepare --activate && pnpm build
 
 # --- Stage 3: Production ---
 FROM node:22-alpine AS runner
