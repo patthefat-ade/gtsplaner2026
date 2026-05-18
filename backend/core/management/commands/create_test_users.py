@@ -22,6 +22,13 @@ import logging
 import random
 from decimal import Decimal
 
+# Deutsche Monatsnamen für Transaktionsbeschreibungen
+GERMAN_MONTHS = {
+    1: "Jänner", 2: "Februar", 3: "März", 4: "April",
+    5: "Mai", 6: "Juni", 7: "Juli", 8: "August",
+    9: "September", 10: "Oktober", 11: "November", 12: "Dezember",
+}
+
 from django.contrib.auth.models import Group as AuthGroup
 from django.core.management.base import BaseCommand
 from django.utils import timezone
@@ -1293,15 +1300,15 @@ class Command(BaseCommand):
     EXPENSE_CATEGORIES = [
         {"name": "Bastelmaterial", "color": "#FF6B6B", "description": "Bastel- und Kreativmaterial"},
         {"name": "Ausflüge", "color": "#4ECDC4", "description": "Ausflüge und Exkursionen"},
-        {"name": "Verpflegung", "color": "#45B7D1", "description": "Snacks und Getraenke"},
-        {"name": "Sportgeraete", "color": "#96CEB4", "description": "Sportgeraete und Zubehoer"},
-        {"name": "Bueromaterial", "color": "#FFEAA7", "description": "Buerobedarf und Druckmaterial"},
+        {"name": "Verpflegung", "color": "#45B7D1", "description": "Snacks und Getränke"},
+        {"name": "Sportgeräte", "color": "#96CEB4", "description": "Sportgeräte und Zubehör"},
+        {"name": "Büromaterial", "color": "#FFEAA7", "description": "Bürobedarf und Druckmaterial"},
         {"name": "Spiele", "color": "#DDA0DD", "description": "Gesellschaftsspiele und Spielzeug"},
     ]
 
     INCOME_CATEGORIES = [
-        {"name": "Elternbeitraege", "color": "#2ECC71", "description": "Monatliche Elternbeitraege"},
-        {"name": "Foerderungen", "color": "#3498DB", "description": "Oeffentliche Foerderungen"},
+        {"name": "Elternbeiträge", "color": "#2ECC71", "description": "Monatliche Elternbeiträge"},
+        {"name": "Förderungen", "color": "#3498DB", "description": "Öffentliche Förderungen"},
         {"name": "Spenden", "color": "#E67E22", "description": "Spenden und Zuwendungen"},
     ]
 
@@ -1398,7 +1405,7 @@ class Command(BaseCommand):
                         "Kreativworkshop",
                         "Sportprogramm",
                         "Freizeitbetreuung",
-                        "Lernfoerderung",
+                        "Lernförderung",
                         "Projektarbeit",
                     ]
 
@@ -1485,9 +1492,9 @@ class Command(BaseCommand):
                 tx_descriptions = {
                     "Bastelmaterial": ["Papier und Stifte", "Klebstoff und Scheren", "Farben und Pinsel"],
                     "Ausflüge": ["Eintritt Tierpark", "Busfahrt Wandertag", "Eintritt Museum"],
-                    "Verpflegung": ["Obst und Gemuese", "Getraenke", "Jause fuer Ausflug"],
-                    "Sportgeraete": ["Baelle und Seile", "Turnmatten"],
-                    "Bueromaterial": ["Druckerpapier", "Ordner und Mappen"],
+                    "Verpflegung": ["Obst und Gemüse", "Getränke", "Jause für Ausflug"],
+                    "Sportgeräte": ["Bälle und Seile", "Turnmatten"],
+                    "Büromaterial": ["Druckerpapier", "Ordner und Mappen"],
                     "Spiele": ["Brettspiele", "Kartenspiele"],
                 }
 
@@ -1524,7 +1531,7 @@ class Command(BaseCommand):
 
                     tx, _ = Transaction.objects.update_or_create(
                         group=group,
-                        description=f"{cat.name} {tx_date.strftime('%B %Y')}",
+                        description=f"{cat.name} {GERMAN_MONTHS[tx_date.month]} {tx_date.year}",
                         transaction_date=tx_date,
                         defaults={
                             "organization": org,
@@ -1582,7 +1589,7 @@ class Command(BaseCommand):
             "sports": [
                 ("Bewegung im Turnsaal", "Spiele und Gymnastik"),
                 ("Fussball", "Spiel auf dem Sportplatz"),
-                ("Yoga fuer Kinder", "Entspannung und Bewegung"),
+                ("Yoga für Kinder", "Entspannung und Bewegung"),
                 ("Laufspiele", "Fangspiele und Staffellaeufe"),
                 ("Tanzen", "Kindertaenze und Rhythmik"),
             ],
@@ -1610,7 +1617,7 @@ class Command(BaseCommand):
             "meal": [
                 ("Mittagessen", "Gemeinsames Essen"),
                 ("Jause", "Gesunde Pause"),
-                ("Fruehstueck", "Gemeinsamer Start"),
+                ("Frühstück", "Gemeinsamer Start"),
             ],
             "free_time": [
                 ("Freispiel", "Freie Wahl der Aktivitaet"),
