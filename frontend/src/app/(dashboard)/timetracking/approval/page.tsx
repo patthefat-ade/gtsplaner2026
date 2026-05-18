@@ -39,7 +39,7 @@ import {
   XCircle,
   Clock,
   CalendarOff,
-  Wallet,
+  Coins,
   Loader2,
   AlertCircle,
 } from "lucide-react";
@@ -184,7 +184,7 @@ export default function ApprovalDashboardPage() {
         <StatCard
           title="Transaktionen"
           value={txCount}
-          icon={Wallet}
+          icon={Coins}
           loading={loadingTx}
         />
       </div>
@@ -202,7 +202,7 @@ export default function ApprovalDashboardPage() {
             )}
           </TabsTrigger>
           <TabsTrigger value="transactions" className="gap-2">
-            <Wallet className="h-4 w-4" />
+            <Coins className="h-4 w-4" />
             Transaktionen
             {txCount > 0 && (
               <Badge variant="warning" className="ml-1">
