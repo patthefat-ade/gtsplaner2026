@@ -74,6 +74,35 @@ layout_header($label, $navActive);
   <div class="card"><p class="hint">Noch keine <?= $label ?> vorhanden.</p></div>
 <?php else: ?>
 
+<!-- Filter-Toolbar -->
+<div class="card" id="filterBar" style="padding:0.7rem 1rem;margin-bottom:0.75rem;display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap">
+  <label style="font-size:0.85rem;font-weight:600">Filter:</label>
+  <?php if ($isInvoice): ?>
+  <select id="filterStatus" style="border:1px solid var(--grau-linie);border-radius:6px;padding:0.25rem 0.5rem;font-size:0.85rem">
+    <option value="">Alle Status</option>
+    <?php foreach ($invoiceStatuses as $s): ?>
+      <option value="<?= $s ?>"><?= $statusLabels[$s] ?></option>
+    <?php endforeach; ?>
+  </select>
+  <?php endif; ?>
+  <input type="text" id="filterSearch" placeholder="Kunde oder Rechnungsnr. suchen…"
+         style="border:1px solid var(--grau-linie);border-radius:6px;padding:0.25rem 0.6rem;font-size:0.85rem;min-width:200px;font-family:var(--font)">
+  <select id="filterZeitraum" style="border:1px solid var(--grau-linie);border-radius:6px;padding:0.25rem 0.5rem;font-size:0.85rem">
+    <option value="">Alle Zeiträume</option>
+    <option value="heute">Heute</option>
+    <option value="woche">Diese Woche</option>
+    <option value="monat">Dieser Monat</option>
+    <option value="letzter_monat">Letzter Monat</option>
+    <option value="custom">Von – Bis</option>
+  </select>
+  <span id="customDateRange" style="display:none;align-items:center;gap:0.4rem">
+    <input type="date" id="filterVon" style="border:1px solid var(--grau-linie);border-radius:6px;padding:0.2rem 0.4rem;font-size:0.85rem;font-family:var(--font)">
+    <span style="font-size:0.85rem">–</span>
+    <input type="date" id="filterBis" style="border:1px solid var(--grau-linie);border-radius:6px;padding:0.2rem 0.4rem;font-size:0.85rem;font-family:var(--font)">
+  </span>
+  <span class="hint" id="filterCount"></span>
+</div>
+
 <?php if ($isInvoice): ?>
 <!-- Bulk-Formular AUSSERHALB der Tabelle – keine verschachtelten Forms -->
 <form method="post" action="index.php?page=documents&type=<?= $type ?>&action=bulk_status" id="bulkForm">
@@ -103,7 +132,10 @@ layout_header($label, $navActive);
     </tr></thead>
     <tbody>
     <?php foreach ($docs as $d): ?>
-      <tr>
+      <tr data-status="<?= e($d['status']) ?>"
+          data-kunde="<?= e(strtolower(customer_display_name($d))) ?>"
+          data-nummer="<?= e(strtolower($d['doc_number'])) ?>"
+          data-datum="<?= e($d['doc_date']) ?>">
         <?php if ($isInvoice): ?><td><input type="checkbox" data-doc-id="<?= $d['id'] ?>" class="doc-check"></td><?php endif; ?>
         <td><a href="index.php?page=document_view&id=<?= $d['id'] ?>"><strong><?= e($d['doc_number']) ?></strong></a>
           <?php if ($d["source_quote_id"]): ?><br><span class="hint">aus Angebot</span><?php endif; ?>
@@ -173,6 +205,115 @@ layout_header($label, $navActive);
 })();
 </script>
 <?php endif; ?>
+
+<!-- Filter-Script (clientseitig) -->
+<script>
+(function() {
+  var rows = document.querySelectorAll('.list tbody tr');
+  var filterStatus = document.getElementById('filterStatus');
+  var filterSearch = document.getElementById('filterSearch');
+  var filterZeitraum = document.getElementById('filterZeitraum');
+  var filterVon = document.getElementById('filterVon');
+  var filterBis = document.getElementById('filterBis');
+  var customRange = document.getElementById('customDateRange');
+  var filterCount = document.getElementById('filterCount');
+
+  function parseDE(str) {
+    // Datum im Format YYYY-MM-DD (aus data-datum)
+    if (!str) return null;
+    var d = new Date(str + 'T00:00:00');
+    return isNaN(d) ? null : d;
+  }
+
+  function startOfDay(d) { return new Date(d.getFullYear(), d.getMonth(), d.getDate()); }
+
+  function getZeitraumRange(val) {
+    var now = new Date();
+    var today = startOfDay(now);
+    var von, bis;
+    switch (val) {
+      case 'heute':
+        von = bis = today;
+        break;
+      case 'woche':
+        var dow = today.getDay() || 7; // Montag=1
+        von = new Date(today); von.setDate(today.getDate() - (dow - 1));
+        bis = new Date(von); bis.setDate(von.getDate() + 6);
+        break;
+      case 'monat':
+        von = new Date(today.getFullYear(), today.getMonth(), 1);
+        bis = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+        break;
+      case 'letzter_monat':
+        von = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+        bis = new Date(today.getFullYear(), today.getMonth(), 0);
+        break;
+      case 'custom':
+        von = filterVon.value ? startOfDay(new Date(filterVon.value)) : null;
+        bis = filterBis.value ? startOfDay(new Date(filterBis.value)) : null;
+        break;
+      default:
+        return null;
+    }
+    return { von: von, bis: bis };
+  }
+
+  function applyFilters() {
+    var statusVal = filterStatus ? filterStatus.value : '';
+    var searchVal = filterSearch.value.toLowerCase().trim();
+    var zeitraumVal = filterZeitraum.value;
+    var range = getZeitraumRange(zeitraumVal);
+    var visible = 0;
+
+    // Custom-Datumsfelder ein-/ausblenden
+    customRange.style.display = zeitraumVal === 'custom' ? 'flex' : 'none';
+
+    rows.forEach(function(row) {
+      var show = true;
+
+      // Status-Filter
+      if (statusVal && row.getAttribute('data-status') !== statusVal) {
+        show = false;
+      }
+
+      // Suchfeld (Kunde oder Nummer)
+      if (show && searchVal) {
+        var kunde = row.getAttribute('data-kunde') || '';
+        var nummer = row.getAttribute('data-nummer') || '';
+        if (kunde.indexOf(searchVal) === -1 && nummer.indexOf(searchVal) === -1) {
+          show = false;
+        }
+      }
+
+      // Zeitraum-Filter
+      if (show && range) {
+        var datum = parseDE(row.getAttribute('data-datum'));
+        if (datum) {
+          if (range.von && datum < range.von) show = false;
+          if (range.bis && datum > range.bis) show = false;
+        } else {
+          show = false;
+        }
+      }
+
+      row.style.display = show ? '' : 'none';
+      if (show) visible++;
+    });
+
+    filterCount.textContent = visible + ' von ' + rows.length + ' angezeigt';
+  }
+
+  // Event-Listener
+  if (filterStatus) filterStatus.addEventListener('change', applyFilters);
+  filterSearch.addEventListener('input', applyFilters);
+  filterZeitraum.addEventListener('change', applyFilters);
+  filterVon.addEventListener('change', applyFilters);
+  filterBis.addEventListener('change', applyFilters);
+
+  // Initial
+  applyFilters();
+})();
+</script>
 
 <?php endif; ?>
 <?php layout_footer(); ?>
