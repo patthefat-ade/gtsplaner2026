@@ -22,7 +22,6 @@ function layout_header(string $title, string $active = ''): void {
             ['type' => 'group', 'label' => 'Verkauf', 'icon' => 'cart', 'keys' => ['quotes', 'invoices', 'services', 'planning'], 'items' => [
                 'quotes'   => ['index.php?page=documents&type=quote', 'Angebote', 'file'],
                 'invoices' => ['index.php?page=documents&type=invoice', 'Rechnungen', 'invoice'],
-        'credit' => '<path d="M3 10h10a5 5 0 0 1 0 10H9M3 10l4-4M3 10l4 4"/>',
                 'credit_notes' => ['index.php?page=documents&type=credit_note', 'Gutschriften', 'credit'],
                 'services' => ['index.php?page=services', 'Dienstleistungen', 'broom'],
                 'planning' => ['index.php?page=planning', 'Planrechnung', 'chart'],
