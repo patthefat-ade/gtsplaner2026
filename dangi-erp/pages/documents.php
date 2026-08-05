@@ -73,7 +73,9 @@ layout_header($label, $navActive);
 <?php if (!$docs): ?>
   <div class="card"><p class="hint">Noch keine <?= $label ?> vorhanden.</p></div>
 <?php else: ?>
+
 <?php if ($isInvoice): ?>
+<!-- Bulk-Formular AUSSERHALB der Tabelle – keine verschachtelten Forms -->
 <form method="post" action="index.php?page=documents&type=<?= $type ?>&action=bulk_status" id="bulkForm">
   <?= csrf_field() ?>
   <div class="card" style="padding:0.6rem 1rem;margin-bottom:0.75rem;display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap">
@@ -86,7 +88,11 @@ layout_header($label, $navActive);
     <button type="submit" class="btn btn-sm btn-primary" onclick="return confirm('Status für alle ausgewählten Rechnungen ändern?')">Status setzen</button>
     <span class="hint" id="bulkCount">0 ausgewählt</span>
   </div>
+  <!-- Versteckte Inputs für ausgewählte IDs werden per JS eingefügt -->
+  <div id="bulkIds"></div>
+</form>
 <?php endif; ?>
+
 <div class="table-wrap">
   <table class="list">
     <thead><tr>
@@ -98,7 +104,7 @@ layout_header($label, $navActive);
     <tbody>
     <?php foreach ($docs as $d): ?>
       <tr>
-        <?php if ($isInvoice): ?><td><input type="checkbox" name="doc_ids[]" value="<?= $d['id'] ?>" class="doc-check"></td><?php endif; ?>
+        <?php if ($isInvoice): ?><td><input type="checkbox" data-doc-id="<?= $d['id'] ?>" class="doc-check"></td><?php endif; ?>
         <td><a href="index.php?page=document_view&id=<?= $d['id'] ?>"><strong><?= e($d['doc_number']) ?></strong></a>
           <?php if ($d["source_quote_id"]): ?><br><span class="hint">aus Angebot</span><?php endif; ?>
           <?php if ($d["source_invoice_id"] ?? null): ?><br><span class="hint" style="color:#c0392b">zu Rechnung</span><?php endif; ?>
@@ -132,19 +138,41 @@ layout_header($label, $navActive);
     </tbody>
   </table>
 </div>
+
 <?php if ($isInvoice): ?>
-</form>
 <script>
-document.getElementById('checkAll').addEventListener('change', function() {
-  document.querySelectorAll('.doc-check').forEach(cb => cb.checked = this.checked);
-  updateBulkCount();
-});
-document.querySelectorAll('.doc-check').forEach(cb => cb.addEventListener('change', updateBulkCount));
-function updateBulkCount() {
-  const n = document.querySelectorAll('.doc-check:checked').length;
-  document.getElementById('bulkCount').textContent = n + ' ausgewählt';
-}
+(function() {
+  var checkAll = document.getElementById('checkAll');
+  var checks = document.querySelectorAll('.doc-check');
+  var bulkIds = document.getElementById('bulkIds');
+  var bulkCount = document.getElementById('bulkCount');
+  var bulkForm = document.getElementById('bulkForm');
+
+  checkAll.addEventListener('change', function() {
+    checks.forEach(function(cb) { cb.checked = checkAll.checked; });
+    updateBulkCount();
+  });
+  checks.forEach(function(cb) { cb.addEventListener('change', updateBulkCount); });
+
+  function updateBulkCount() {
+    var n = document.querySelectorAll('.doc-check:checked').length;
+    bulkCount.textContent = n + ' ausgewählt';
+  }
+
+  /* Vor dem Absenden des Bulk-Formulars: ausgewählte IDs als hidden inputs einfügen */
+  bulkForm.addEventListener('submit', function() {
+    bulkIds.innerHTML = '';
+    document.querySelectorAll('.doc-check:checked').forEach(function(cb) {
+      var input = document.createElement('input');
+      input.type = 'hidden';
+      input.name = 'doc_ids[]';
+      input.value = cb.getAttribute('data-doc-id');
+      bulkIds.appendChild(input);
+    });
+  });
+})();
 </script>
 <?php endif; ?>
+
 <?php endif; ?>
 <?php layout_footer(); ?>
