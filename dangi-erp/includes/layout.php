@@ -102,9 +102,9 @@ function layout_header(string $title, string $active = ''): void {
         <?php foreach ($nav as $entry): ?>
           <?php if ($entry['type'] === 'link'): ?>
             <li><a href="<?= e($entry['url']) ?>" class="<?= $entry['key'] === $active ? 'active' : '' ?>"><?= nav_icon($entry['icon'] ?? '') ?><?= e($entry['label']) ?></a></li>
-          <?php else: $isOpen = in_array($active, $entry['keys'], true); ?>
-            <li class="nav-group <?= $isOpen ? 'open' : '' ?>">
-              <button type="button" class="nav-group-btn <?= $isOpen ? 'active' : '' ?>" aria-expanded="<?= $isOpen ? 'true' : 'false' ?>">
+          <?php else: $isActive = in_array($active, $entry['keys'], true); ?>
+            <li class="nav-group">
+              <button type="button" class="nav-group-btn <?= $isActive ? 'active' : '' ?>" aria-expanded="false">
                 <?= nav_icon($entry['icon'] ?? '') ?><?= e($entry['label']) ?> <span class="nav-caret">▾</span>
               </button>
               <ul class="nav-sub">
